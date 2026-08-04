@@ -25,7 +25,7 @@ contract DeployTestnet is Script {
         int256[3] memory prices = [int256(230e8), int256(1150e8), int256(310e8)];
         address[] memory pool = new address[](3);
 
-        JackpotVault vault = new JackpotVault(IERC20(address(usdg)), uint64(block.timestamp + 30 days));
+        JackpotVault vault = new JackpotVault(IERC20(address(usdg)));
         PackSale sale = new PackSale(IERC20(address(usdg)), IJackpotVault(address(vault)));
         vault.setPackSale(address(sale));
 

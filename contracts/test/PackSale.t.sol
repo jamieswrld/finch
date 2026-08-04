@@ -18,13 +18,12 @@ contract PackSaleTest is Test {
 
     address alice = makeAddr("alice");
     address bob = makeAddr("bob");
+    address fees = makeAddr("fees");
 
     uint128 constant PRICE = 10e6; // $10, USDG has 6 decimals
-    uint64 payoutDate;
 
     function setUp() public {
         vm.warp(1_760_000_000);
-        payoutDate = uint64(block.timestamp + 30 days);
 
         usdg = new MockERC20("Global Dollar", "USDG", 6);
         aapl = new MockERC20("Apple Stock Token", "AAPL", 18);
@@ -32,9 +31,10 @@ contract PackSaleTest is Test {
         aaplFeed = new MockFeed(8, 200e8); // $200
         nvdaFeed = new MockFeed(8, 1000e8); // $1000
 
-        vault = new JackpotVault(IERC20(address(usdg)), payoutDate);
+        vault = new JackpotVault(IERC20(address(usdg)));
         sale = new PackSale(IERC20(address(usdg)), IJackpotVault(address(vault)));
         vault.setPackSale(address(sale));
+        sale.setFee(fees, 100); // 1% protocol fee
 
         sale.setFeed(address(aapl), address(aaplFeed));
         sale.setFeed(address(nvda), address(nvdaFeed));
@@ -44,9 +44,10 @@ contract PackSaleTest is Test {
         pool[1] = address(nvda);
         sale.addPack(PRICE, pool);
 
-        // inventory
+        // inventory + USDG float backing the solvency reserve
         aapl.mint(address(sale), 1000e18);
         nvda.mint(address(sale), 1000e18);
+        usdg.mint(address(sale), 500e6);
 
         usdg.mint(alice, 1000e6);
         usdg.mint(bob, 1000e6);
@@ -80,8 +81,33 @@ contract PackSaleTest is Test {
         vm.prank(alice);
         sale.buyPack(0);
         assertEq(usdg.balanceOf(address(vault)), 2e6); // 20% cut
-        assertEq(usdg.balanceOf(address(sale)), 8e6);
+        assertEq(usdg.balanceOf(fees), 0.1e6); // 1% protocol fee
+        assertEq(usdg.balanceOf(address(sale)), 500e6 + 7.9e6);
         assertEq(vault.tickets(1, alice), PRICE);
+        assertEq(sale.reservedLiability(), 30e6); // 3x worst case reserved
+    }
+
+    function test_buyBlockedWhenUnderfunded() public {
+        // drain the float so the treasury can't cover a worst-case card
+        sale.withdraw(address(usdg), address(this), 500e6);
+        vm.prank(alice);
+        vm.expectRevert(PackSale.InsufficientReserves.selector);
+        sale.buyPack(0);
+    }
+
+    function test_withdrawCannotBreakReserve() public {
+        vm.prank(alice);
+        sale.buyPack(0); // reserves 30e6
+        vm.expectRevert(PackSale.InsufficientReserves.selector);
+        sale.withdraw(address(usdg), address(this), 490e6); // would leave < 30e6
+        sale.withdraw(address(usdg), address(this), 470e6); // leaves 37.9e6 >= 30e6, fine
+    }
+
+    function test_liabilityReleasedOnSettle() public {
+        uint256 id = _buyAndArm(alice, false);
+        assertEq(sale.reservedLiability(), 30e6);
+        sale.open(id);
+        assertEq(sale.reservedLiability(), 0);
     }
 
     function test_openDeliversStock() public {
@@ -168,11 +194,12 @@ contract PackSaleTest is Test {
         uint256 pot = usdg.balanceOf(address(vault));
         assertEq(pot, 8e6);
 
-        vm.expectRevert(JackpotVault.RoundNotClaimable.selector);
-        vault.closeRound(uint64(block.timestamp + 60 days));
+        vm.prank(alice);
+        vm.expectRevert(JackpotVault.NotOwner.selector);
+        vault.closeRound();
 
-        vm.warp(payoutDate);
-        vault.closeRound(uint64(block.timestamp + 60 days));
+        // owner closes whenever the team decides — no schedule
+        vault.closeRound();
 
         assertEq(vault.claimable(1, alice), pot / 4);
         assertEq(vault.claimable(1, bob), (pot * 3) / 4);

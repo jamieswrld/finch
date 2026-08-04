@@ -192,7 +192,7 @@ export function Docs() {
         <table className="doc-table">
           <tbody>
             <tr>
-              <td>{Math.round((1 - JACKPOT_CUT) * 100)}%</td>
+              <td>79%</td>
               <td>
                 PackSale treasury — backs the stock inventory the contract holds and pays your card
               </td>
@@ -200,6 +200,10 @@ export function Docs() {
             <tr>
               <td>{Math.round(JACKPOT_CUT * 100)}%</td>
               <td>JackpotVault — the shared pot, paid back out to players (hidden cards + round payouts)</td>
+            </tr>
+            <tr>
+              <td>1%</td>
+              <td>Protocol fee (capped at 5% in the contract)</td>
             </tr>
           </tbody>
         </table>
@@ -273,11 +277,11 @@ export function Docs() {
       <section className="doc-section" id="rounds">
         <h2>Jackpot rounds</h2>
         <p>
-          Every USDG you spend on packs adds the same amount of tickets for the current round. When
-          the round's payout date passes, the open pot is frozen and every ticket holder claims
-          their pro-rata share directly from the vault contract — hidden cards can only ever pay
-          from the open pot, never from frozen claims. Unclaimed shares stay locked in the vault;
-          the contract has no operator withdrawal.
+          Every USDG you spend on packs adds the same amount of tickets for the current round.
+          Rounds close at the team's discretion; when one closes, the open pot is frozen on-chain
+          and every ticket holder claims their pro-rata share directly from the vault contract —
+          hidden cards can only ever pay from the open pot, never from frozen claims. Unclaimed
+          shares stay locked in the vault; the contract has no operator withdrawal.
         </p>
       </section>
 

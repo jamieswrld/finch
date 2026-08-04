@@ -22,6 +22,8 @@ contract PackSale {
 
     uint16 public jackpotCutBps = 2_000; // 20% of every sale → vault
     uint16 public hiddenCardBps = 100; // 1% of opens are hidden jackpot cards
+    uint16 public feeBps = 100; // 1% protocol fee on every purchase
+    address public feeRecipient;
     uint256 public maxPriceAge = 3 days; // generous: equity feeds run 24/5, pause weekends
 
     struct Pack {
@@ -44,6 +46,9 @@ contract PackSale {
 
     Purchase[] public purchases;
 
+    /// @notice USDG reserved for the worst-case payout of every unsettled pack.
+    uint256 public reservedLiability;
+
     event PackAdded(uint256 indexed packId, uint128 price);
     event Purchased(uint256 indexed purchaseId, address indexed buyer, uint256 indexed packId);
     event OpenedStock(
@@ -64,6 +69,7 @@ contract PackSale {
     error TooEarly();
     error StalePrice();
     error TransferFailed();
+    error InsufficientReserves();
 
     modifier onlyOwner() {
         if (msg.sender != owner) revert NotOwner();
@@ -75,6 +81,7 @@ contract PackSale {
         vault = _vault;
         usdgDecimals = _usdg.decimals();
         owner = msg.sender;
+        feeRecipient = msg.sender;
     }
 
     // ---------- admin ----------
@@ -104,8 +111,18 @@ contract PackSale {
         maxPriceAge = _maxPriceAge;
     }
 
-    /// @notice Withdraw treasury USDG or excess stock inventory.
+    function setFee(address _recipient, uint16 _feeBps) external onlyOwner {
+        require(_feeBps <= 500 && _recipient != address(0), "bounds");
+        feeRecipient = _recipient;
+        feeBps = _feeBps;
+    }
+
+    /// @notice Withdraw treasury USDG or excess stock inventory. USDG withdrawals can
+    ///         never dip below the reserve backing unsettled packs.
     function withdraw(address token, address to, uint256 amount) external onlyOwner {
+        if (token == address(usdg) && usdg.balanceOf(address(this)) - amount < reservedLiability) {
+            revert InsufficientReserves();
+        }
         if (!IERC20(token).transfer(to, amount)) revert TransferFailed();
     }
 
@@ -135,9 +152,18 @@ contract PackSale {
         if (!p.live) revert PackNotLive();
 
         uint256 cut = (uint256(p.price) * jackpotCutBps) / 10_000;
+        uint256 fee = (uint256(p.price) * feeBps) / 10_000;
         if (!usdg.transferFrom(msg.sender, address(vault), cut)) revert TransferFailed();
-        if (!usdg.transferFrom(msg.sender, address(this), p.price - cut)) revert TransferFailed();
+        if (fee > 0 && !usdg.transferFrom(msg.sender, feeRecipient, fee)) revert TransferFailed();
+        if (!usdg.transferFrom(msg.sender, address(this), p.price - cut - fee)) revert TransferFailed();
         vault.addTickets(msg.sender, p.price);
+
+        // Solvency guarantee: every unsettled pack reserves its worst-case card (3x
+        // legendary) in USDG. A pack can only be sold while the treasury covers ALL
+        // outstanding packs at once — even with zero stock inventory, every sold pack
+        // is fully payable through the refund path.
+        reservedLiability += (uint256(p.price) * 30_000) / 10_000;
+        if (usdg.balanceOf(address(this)) < reservedLiability) revert InsufficientReserves();
 
         purchaseId = purchases.length;
         purchases.push(
@@ -163,6 +189,7 @@ contract PackSale {
         q.settled = true;
         uint256 rand = uint256(keccak256(abi.encode(bh, purchaseId)));
         Pack storage p = _packs[q.packId];
+        reservedLiability -= (uint256(p.price) * 30_000) / 10_000;
 
         if (rand % 10_000 < hiddenCardBps) {
             uint256 pctBps = _luckCurve((rand >> 16) % 10_000, rand >> 32);

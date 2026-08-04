@@ -6,14 +6,14 @@ import {IERC20} from "./Interfaces.sol";
 /// @title JackpotVault
 /// @notice Accrues a USDG cut of every pack sale. Pays hidden-card winners a % of the
 ///         open pot immediately, and distributes the remaining pot pro-rata to ticket
-///         holders after each round's payout date. Tickets = USDG spent on packs.
+///         holders when the owner closes a round — rounds close at the team's call,
+///         not on a schedule. Tickets = USDG spent on packs.
 contract JackpotVault {
     IERC20 public immutable usdg;
     address public owner;
     address public packSale;
 
     struct Round {
-        uint64 payoutDate;
         bool closed;
         uint256 snapshot; // pot frozen for this round's claims
         uint256 totalTickets;
@@ -48,10 +48,9 @@ contract JackpotVault {
         _;
     }
 
-    constructor(IERC20 _usdg, uint64 firstPayoutDate) {
+    constructor(IERC20 _usdg) {
         usdg = _usdg;
         owner = msg.sender;
-        rounds[1].payoutDate = firstPayoutDate;
     }
 
     /// @notice Open pot available for hidden cards / the next snapshot.
@@ -80,17 +79,16 @@ contract JackpotVault {
         emit HiddenCardAward(user, pctBps, amount);
     }
 
-    /// @notice After the payout date, freeze the open pot for pro-rata claims and roll
-    ///         into the next round.
-    function closeRound(uint64 nextPayoutDate) external onlyOwner {
+    /// @notice Freeze the open pot for pro-rata claims and roll into the next round.
+    ///         Owner-triggered, any time — the payout happens when the team says so.
+    function closeRound() external onlyOwner {
         Round storage r = rounds[currentRound];
-        if (r.closed || block.timestamp < r.payoutDate) revert RoundNotClaimable();
+        if (r.closed) revert RoundNotClaimable();
         r.closed = true;
         r.snapshot = available();
         reserved += r.snapshot;
         emit RoundClosed(currentRound, r.snapshot, r.totalTickets);
         currentRound += 1;
-        rounds[currentRound].payoutDate = nextPayoutDate;
     }
 
     function claimable(uint256 roundId, address user) public view returns (uint256) {

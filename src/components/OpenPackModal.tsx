@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAccount } from 'wagmi'
 import { robinhoodChain } from '../chain'
-import { JACKPOT_CUT, asset, type Pack } from '../data'
+import { JACKPOT_CUT, PROTOCOL_FEE, asset, type Pack } from '../data'
 import { buyAndOpenOnchain, isOnchainEnabled } from '../onchain'
 import { fmtUsd, openPack, shortAddr, type Card } from '../rng'
 import { PackVisual } from './PackCard'
@@ -344,6 +344,12 @@ export function OpenPackModal({ pack, jackpotUsd, onClose, onPulled }: Props) {
             <li>
               <span className="muted">To jackpot vault</span>
               <span>{fmtUsd(pack.priceUsd * JACKPOT_CUT)}</span>
+            </li>
+            <li>
+              <span className="muted">Protocol fee</span>
+              <span>
+                {PROTOCOL_FEE * 100}% · {fmtUsd(pack.priceUsd * PROTOCOL_FEE)}
+              </span>
             </li>
             <li>
               <span className="muted">Hidden card odds</span>

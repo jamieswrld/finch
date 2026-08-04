@@ -60,7 +60,7 @@ contract DeployMainnet is Script {
         uint256 pk = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(pk);
 
-        JackpotVault vault = new JackpotVault(IERC20(USDG), uint64(vm.envUint("PAYOUT_DATE")));
+        JackpotVault vault = new JackpotVault(IERC20(USDG));
         PackSale sale = new PackSale(IERC20(USDG), IJackpotVault(address(vault)));
         vault.setPackSale(address(sale));
 

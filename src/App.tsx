@@ -1,14 +1,12 @@
 import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
 import { useAccount, useReadContract } from 'wagmi'
 import { ConnectButton } from './components/ConnectButton'
-import { Countdown } from './components/Countdown'
 import { LiveFeed, makeFeedEntry, type FeedEntry } from './components/LiveFeed'
 import { OpenPackModal } from './components/OpenPackModal'
 import { PackCard, PackVisual } from './components/PackCard'
 import { StockLogo } from './components/StockLogo'
 import {
   JACKPOT_CUT,
-  JACKPOT_PAYOUT_DATE,
   JACKPOT_SEED_USD,
   PACKS,
   RARITY_TIERS,
@@ -172,18 +170,10 @@ export default function App() {
               <p className="eyebrow">Jackpot Vault</p>
               <p className="jackpot-amount">{fmtUsd(jackpotUsd)}</p>
               <p className="muted">
-                {Math.round(JACKPOT_CUT * 100)}% of every pack flows in. Paid out to holders on{' '}
-                {JACKPOT_PAYOUT_DATE.toLocaleDateString('en-US', {
-                  month: 'long',
-                  day: 'numeric',
-                  year: 'numeric',
-                })}
-                . Hidden cards cash out a % early.
+                {Math.round(JACKPOT_CUT * 100)}% of every pack purchase accrues here on-chain.
+                When a round closes, the pot is distributed pro-rata to every buyer — and hidden
+                cards claim a share of it instantly, any time.
               </p>
-            </div>
-            <div className="jackpot-side">
-              <p className="eyebrow">Payout in</p>
-              <Countdown target={JACKPOT_PAYOUT_DATE} />
             </div>
           </div>
         </section>

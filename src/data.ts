@@ -31,10 +31,11 @@ export const asset = (p: string): string => import.meta.env.BASE_URL + p.replace
 /** USDG (Global Dollar, Paxos) — natively issued on Robinhood Chain */
 export const USDG_ADDRESS = '0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168'
 
-export const JACKPOT_PAYOUT_DATE = new Date('2026-10-01T00:00:00Z')
 export const JACKPOT_SEED_USD = 12_430.55
-/** Share of every pack purchase routed from the creator wallet into the jackpot vault */
+/** Share of every pack purchase routed into the jackpot vault */
 export const JACKPOT_CUT = 0.2
+/** Protocol fee on every purchase */
+export const PROTOCOL_FEE = 0.01
 /** Chance a pull is a hidden jackpot card instead of a stock */
 export const HIDDEN_CARD_CHANCE = 0.01
 

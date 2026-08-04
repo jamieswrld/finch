@@ -1,5 +1,6 @@
 // Compress pack artwork: public/packs/*.png → .webp (display size, q82).
 // Originals are moved to art-src/ so they aren't shipped with the site.
+// Requires sharp (not in package.json to keep CI lean): npm i --no-save sharp
 //   node scripts/compress-packs.mjs
 import { mkdirSync, readdirSync, renameSync } from 'node:fs'
 import sharp from 'sharp'

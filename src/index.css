@@ -178,10 +178,19 @@ a {
 }
 
 .wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
   font-family: var(--serif);
   font-style: italic;
   font-size: 1.5rem;
   letter-spacing: 0.01em;
+}
+
+.brand-mark {
+  height: 26px;
+  width: auto;
+  display: block;
 }
 
 .wordmark-accent {
@@ -1637,11 +1646,9 @@ a {
   justify-content: center;
 }
 
-.card-back-mark {
-  font-family: var(--serif);
-  font-style: italic;
-  font-size: 3.4rem;
-  color: var(--border-strong);
+.card-back-mark-img {
+  width: 96px;
+  opacity: 0.9;
 }
 
 .card-glare {

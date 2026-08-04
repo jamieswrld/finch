@@ -1,5 +1,5 @@
 import { robinhoodChain } from '../chain'
-import { HIDDEN_CARD_CHANCE, JACKPOT_CUT, RARITY_TIERS, STOCKS, USDG_ADDRESS } from '../data'
+import { HIDDEN_CARD_CHANCE, JACKPOT_CUT, RARITY_TIERS, STOCKS, USDG_ADDRESS, asset } from '../data'
 import { PACK_SALE_ADDRESS, VAULT_ADDRESS, isOnchainEnabled } from '../onchain'
 
 const explorer = robinhoodChain.blockExplorers.default.url
@@ -44,6 +44,7 @@ export function DocsPage() {
       <header className="docs-header">
         <div className="docs-header-brand">
           <a className="wordmark" href="#/">
+            <img className="brand-mark" src={asset('/brand/mark.webp')} alt="" />
             finch<span className="wordmark-accent">.</span>
           </a>
           <span className="docs-header-label">docs</span>

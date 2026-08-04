@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAccount } from 'wagmi'
 import { robinhoodChain } from '../chain'
-import { JACKPOT_CUT, type Pack } from '../data'
+import { JACKPOT_CUT, asset, type Pack } from '../data'
 import { buyAndOpenOnchain, isOnchainEnabled } from '../onchain'
 import { fmtUsd, openPack, shortAddr, type Card } from '../rng'
 import { PackVisual } from './PackCard'
@@ -254,7 +254,7 @@ function RevealCard3D({ card }: { card: Card }) {
             <div className="card-shine" />
           </div>
           <div className="card-face card-back">
-            <span className="card-back-mark">f.</span>
+            <img className="card-back-mark-img" src={asset('/brand/mark.webp')} alt="" />
           </div>
         </div>
       </div>

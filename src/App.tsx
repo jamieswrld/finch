@@ -14,6 +14,7 @@ import {
   PACKS,
   RARITY_TIERS,
   STOCKS,
+  asset,
   type Pack,
 } from './data'
 import { fmtUsd, randomAddr, shortAddr, type Card } from './rng'
@@ -64,6 +65,7 @@ export default function App() {
     <div className="page">
       <header className="header">
         <a className="wordmark" href="#top">
+          <img className="brand-mark" src={asset('/brand/mark.webp')} alt="" />
           finch<span className="wordmark-accent">.</span>
         </a>
         <nav className="nav">

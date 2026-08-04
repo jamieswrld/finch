@@ -18,8 +18,8 @@ import {
 } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 
-const SALE = process.env.PACK_SALE ?? '0x70c79a6c80073e88812b1fe9D13147e79468818E'
-const VAULT = process.env.VAULT ?? '0xcad9224b9D9Ed6Bbf40eA7C9D8480FbAFE723873'
+const SALE = process.env.PACK_SALE ?? '0x9e44cAE4D95D267984167219C832eFcFcb8d5B8F'
+const VAULT = process.env.VAULT ?? '0x9894B6Bc322347ee4D32b3042d89537BbEfD8b7E'
 const USDG = '0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168'
 
 const chain = defineChain({

@@ -33,3 +33,6 @@ airdrops/
 *.njsproj
 *.sln
 *.sw?
+
+.vercel
+.env*

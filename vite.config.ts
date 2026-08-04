@@ -1,9 +1,9 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// Production base matches the GitHub Pages project path: https://<user>.github.io/finch/
-// Dev stays at / so localhost works normally. Override with VITE_BASE for other hosts.
+// GitHub Pages serves under /finch/ (set by its CI); every other host — Vercel,
+// local dev, local builds — serves at the root.
 export default defineConfig(({ command }) => ({
   plugins: [react()],
-  base: command === 'build' ? (process.env.VITE_BASE ?? '/finch/') : '/',
+  base: command === 'build' && process.env.GITHUB_ACTIONS ? '/finch/' : '/',
 }))

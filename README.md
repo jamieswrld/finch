@@ -4,6 +4,9 @@ Open a pack, pull a real tokenized stock straight to your wallet on Robinhood Ch
 Heavenly all-white UI; stock-terminal reveal cards; transparent on-chain mechanics
 (in-app docs at `#/docs`).
 
+**Live:** [finch-trial-1303b717.vercel.app](https://finch-trial-1303b717.vercel.app) (Vercel, auto-deploys from `main`)
+· mirror: [jamieswrld.github.io/finch](https://jamieswrld.github.io/finch/) (GitHub Pages)
+
 ## Run it
 
 ```

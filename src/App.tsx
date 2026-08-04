@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useState } from 'react'
-import { useReadContract } from 'wagmi'
+import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
+import { useAccount, useReadContract } from 'wagmi'
 import { ConnectButton } from './components/ConnectButton'
-import { DocsPage } from './components/Docs'
 import { Countdown } from './components/Countdown'
 import { LiveFeed, makeFeedEntry, type FeedEntry } from './components/LiveFeed'
 import { OpenPackModal } from './components/OpenPackModal'
@@ -19,9 +18,14 @@ import {
 } from './data'
 import { fmtUsd, randomAddr, shortAddr, type Card } from './rng'
 import { robinhoodChain } from './chain'
+import { recordPull } from './history'
 import { VAULT_ADDRESS, isOnchainEnabled, vaultAbi } from './onchain'
 
+// Docs is its own screen — split it out of the main bundle.
+const DocsPage = lazy(() => import('./components/Docs').then((m) => ({ default: m.DocsPage })))
+
 export default function App() {
+  const { address } = useAccount()
   const [openingPack, setOpeningPack] = useState<Pack | null>(null)
   const [demoJackpotUsd, setDemoJackpotUsd] = useState(JACKPOT_SEED_USD)
   const [myPulls, setMyPulls] = useState<FeedEntry[]>([])
@@ -44,6 +48,7 @@ export default function App() {
     isOnchainEnabled() && vaultBalance !== undefined ? Number(vaultBalance) / 1e6 : demoJackpotUsd
 
   const handlePulled = useCallback((card: Card, pack: Pack) => {
+    recordPull(address, card, pack)
     setDemoJackpotUsd((j) => {
       const afterContribution = j + pack.priceUsd * JACKPOT_CUT
       return card.kind === 'jackpot' ? afterContribution - card.valueUsd : afterContribution
@@ -57,9 +62,15 @@ export default function App() {
         packName: pack.name,
       }),
     ])
-  }, [])
+  }, [address])
 
-  if (route.startsWith('#/docs')) return <DocsPage />
+  if (route.startsWith('#/docs')) {
+    return (
+      <Suspense fallback={null}>
+        <DocsPage />
+      </Suspense>
+    )
+  }
 
   return (
     <div className="page">

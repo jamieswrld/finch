@@ -1,5 +1,5 @@
-import { parseEventLogs, type Address } from 'viem'
-import { getAccount, readContract, waitForTransactionReceipt, writeContract } from 'wagmi/actions'
+import { parseAbiItem, parseEventLogs, type Address } from 'viem'
+import { getAccount, getPublicClient, readContract, waitForTransactionReceipt, writeContract } from 'wagmi/actions'
 import { wagmiConfig } from './chain'
 import { RARITY_TIERS, STOCKS, USDG_ADDRESS, type Pack } from './data'
 import type { Card } from './rng'
@@ -100,6 +100,32 @@ async function stockFromAddress(address: Address): Promise<Card & { kind: 'stock
     valueUsd: 0,
     rarity: RARITY_TIERS[0],
   }
+}
+
+export interface HiddenCardWin {
+  jackpotPct: number
+  valueUsd: number
+  txHash: string
+}
+
+/** All hidden-card wins for a wallet, straight from OpenedJackpot events on-chain. */
+export async function fetchHiddenCards(buyer: Address): Promise<HiddenCardWin[]> {
+  const client = getPublicClient(wagmiConfig)
+  if (!client || !isOnchainEnabled()) return []
+  const logs = await client.getLogs({
+    address: PACK_SALE_ADDRESS,
+    event: parseAbiItem(
+      'event OpenedJackpot(uint256 indexed purchaseId, address indexed buyer, uint256 pctBps, uint256 amountUsdg)',
+    ),
+    args: { buyer },
+    fromBlock: 0n,
+    toBlock: 'latest',
+  })
+  return logs.map((log) => ({
+    jackpotPct: Number(log.args.pctBps ?? 0n) / 100,
+    valueUsd: Number(log.args.amountUsdg ?? 0n) / 10 ** USDG_DECIMALS,
+    txHash: log.transactionHash ?? '',
+  }))
 }
 
 /** Opening progress for the gacha UI: 0 payment · 1 randomness locked · 2 settling.

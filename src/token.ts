@@ -7,9 +7,9 @@
  * stay hidden until it is set.
  */
 
-export const TOKEN_ADDRESS = (import.meta.env.VITE_TOKEN_ADDRESS ?? '') as string
+export const TOKEN_ADDRESS = String(import.meta.env.VITE_TOKEN_ADDRESS ?? '').trim()
 
-export const TOKEN_SYMBOL = (import.meta.env.VITE_TOKEN_SYMBOL as string) ?? 'FINCH'
+export const TOKEN_SYMBOL = String(import.meta.env.VITE_TOKEN_SYMBOL ?? 'FINCH').trim()
 
 /** Where the buy button points. Defaults to a Uniswap v4 swap on Robinhood Chain. */
 export const tokenBuyUrl = (): string =>

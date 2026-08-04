@@ -5,13 +5,18 @@ import { RARITY_TIERS, STOCKS, USDG_ADDRESS, type Pack } from './data'
 import type { Card } from './rng'
 
 /** Set these in .env(.local) after deploying contracts/ — until then the site runs in demo mode. */
-export const PACK_SALE_ADDRESS = (import.meta.env.VITE_PACK_SALE_ADDRESS ?? '') as Address
-export const VAULT_ADDRESS = (import.meta.env.VITE_VAULT_ADDRESS ?? '') as Address
+/** Env values can arrive with stray whitespace/newlines depending on how they were set;
+ *  normalise here so a trailing "\n" can never silently drop the app into demo mode. */
+const addr = (v: unknown, fallback = ''): Address => (String(v ?? '').trim() || fallback) as Address
+const isAddr = (v: string): boolean => /^0x[0-9a-fA-F]{40}$/.test(v)
+
+export const PACK_SALE_ADDRESS = addr(import.meta.env.VITE_PACK_SALE_ADDRESS)
+export const VAULT_ADDRESS = addr(import.meta.env.VITE_VAULT_ADDRESS)
 /** Treasury / protocol-fee recipient. */
 export const TREASURY_ADDRESS = '0xd589cF06C304e91BEc4432278e9E852914631733'
-const USDG = (import.meta.env.VITE_USDG_ADDRESS ?? USDG_ADDRESS) as Address
+const USDG = addr(import.meta.env.VITE_USDG_ADDRESS, USDG_ADDRESS)
 
-export const isOnchainEnabled = (): boolean => PACK_SALE_ADDRESS.length === 42 && VAULT_ADDRESS.length === 42
+export const isOnchainEnabled = (): boolean => isAddr(PACK_SALE_ADDRESS) && isAddr(VAULT_ADDRESS)
 
 const erc20Abi = [
   {

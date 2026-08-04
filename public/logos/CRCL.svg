@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60">
+  <circle cx="30" cy="30" r="30" fill="#0acb8e"/>
+  <circle cx="30" cy="30" r="13" fill="none" stroke="#fff" stroke-width="7" stroke-dasharray="66 16" stroke-linecap="round" transform="rotate(-40 30 30)"/>
+</svg>

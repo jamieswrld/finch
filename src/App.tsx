@@ -1,7 +1,7 @@
 import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
-import { useAccount, useReadContract } from 'wagmi'
+import { useAccount, useSwitchChain } from 'wagmi'
 import { ConnectButton } from './components/ConnectButton'
-import { LiveFeed, makeFeedEntry, type FeedEntry } from './components/LiveFeed'
+import { LiveFeed } from './components/LiveFeed'
 import { OpenPackModal } from './components/OpenPackModal'
 import { PackCard, PackVisual } from './components/PackCard'
 import { StockLogo } from './components/StockLogo'
@@ -14,20 +14,23 @@ import {
   asset,
   type Pack,
 } from './data'
-import { fmtUsd, randomAddr, shortAddr, type Card } from './rng'
+import { fmtUsd, shortAddr, type Card } from './rng'
 import { robinhoodChain } from './chain'
 import { recordPull } from './history'
-import { VAULT_ADDRESS, isOnchainEnabled, vaultAbi } from './onchain'
+import { isOnchainEnabled } from './onchain'
+import { TOKEN_ADDRESS, TOKEN_SYMBOL, isTokenLive, tokenBuyUrl } from './token'
+import { useChainStats } from './useChainData'
 
 // Docs is its own screen — split it out of the main bundle.
 const DocsPage = lazy(() => import('./components/Docs').then((m) => ({ default: m.DocsPage })))
 
 export default function App() {
-  const { address } = useAccount()
+  const { address, isConnected, chainId } = useAccount()
+  const { switchChain } = useSwitchChain()
   const [openingPack, setOpeningPack] = useState<Pack | null>(null)
   const [demoJackpotUsd, setDemoJackpotUsd] = useState(JACKPOT_SEED_USD)
-  const [myPulls, setMyPulls] = useState<FeedEntry[]>([])
   const [route, setRoute] = useState(window.location.hash)
+  const wrongNetwork = isConnected && chainId !== robinhoodChain.id
 
   useEffect(() => {
     const onHash = () => setRoute(window.location.hash)
@@ -35,32 +38,20 @@ export default function App() {
     return () => window.removeEventListener('hashchange', onHash)
   }, [])
 
-  // Live vault balance once contracts are deployed; demo counter until then.
-  const { data: vaultBalance } = useReadContract({
-    address: VAULT_ADDRESS,
-    abi: vaultAbi,
-    functionName: 'available',
-    query: { enabled: isOnchainEnabled(), refetchInterval: 5000 },
-  })
-  const jackpotUsd =
-    isOnchainEnabled() && vaultBalance !== undefined ? Number(vaultBalance) / 1e6 : demoJackpotUsd
+  // Everything below is read live from chain once contracts are configured.
+  const stats = useChainStats()
+  const jackpotUsd = isOnchainEnabled() ? stats.jackpotUsd : demoJackpotUsd
 
-  const handlePulled = useCallback((card: Card, pack: Pack) => {
-    recordPull(address, card, pack)
-    setDemoJackpotUsd((j) => {
-      const afterContribution = j + pack.priceUsd * JACKPOT_CUT
-      return card.kind === 'jackpot' ? afterContribution - card.valueUsd : afterContribution
-    })
-    setMyPulls((prev) => [
-      ...prev,
-      makeFeedEntry({
-        addr: randomAddr(),
-        ticker: card.kind === 'stock' ? card.stock.ticker : card.kind === 'jackpot' ? 'JACKPOT' : 'REFUND',
-        valueUsd: card.valueUsd,
-        packName: pack.name,
-      }),
-    ])
-  }, [address])
+  const handlePulled = useCallback(
+    (card: Card, pack: Pack) => {
+      recordPull(address, card, pack)
+      setDemoJackpotUsd((j) => {
+        const afterContribution = j + pack.priceUsd * JACKPOT_CUT
+        return card.kind === 'jackpot' ? afterContribution - card.valueUsd : afterContribution
+      })
+    },
+    [address],
+  )
 
   if (route.startsWith('#/docs')) {
     return (
@@ -81,11 +72,26 @@ export default function App() {
           <a href="#packs">Packs</a>
           <a href="#jackpot">Jackpot</a>
           <a href="#stocks">Stocks</a>
-          <a href="#how">How it works</a>
           <a href="#/docs">Docs</a>
         </nav>
-        <ConnectButton />
+        <div className="header-actions">
+          {isTokenLive() && (
+            <a className="btn btn-token" href={tokenBuyUrl()} target="_blank" rel="noreferrer">
+              Buy ${TOKEN_SYMBOL}
+            </a>
+          )}
+          <ConnectButton />
+        </div>
       </header>
+
+      {wrongNetwork && (
+        <div className="net-banner">
+          <span>Wrong network — finch runs on {robinhoodChain.name}.</span>
+          <button className="btn btn-dark btn-sm" onClick={() => switchChain({ chainId: robinhoodChain.id })}>
+            Switch network
+          </button>
+        </div>
+      )}
 
       <main id="top">
         <section className="hero">
@@ -123,16 +129,16 @@ export default function App() {
             <span className="stat-label">Jackpot vault</span>
           </div>
           <div className="stat">
+            <span className="stat-value">{isOnchainEnabled() ? stats.packsOpened : '—'}</span>
+            <span className="stat-label">Packs opened</span>
+          </div>
+          <div className="stat">
+            <span className="stat-value">{isOnchainEnabled() ? fmtUsd(stats.volumeUsd) : '—'}</span>
+            <span className="stat-label">Total volume</span>
+          </div>
+          <div className="stat">
             <span className="stat-value">{STOCKS.length}</span>
             <span className="stat-label">Tokenized stocks</span>
-          </div>
-          <div className="stat">
-            <span className="stat-value">{fmtUsd(Math.min(...PACKS.map((p) => p.priceUsd)))}</span>
-            <span className="stat-label">Pack floor</span>
-          </div>
-          <div className="stat">
-            <span className="stat-value">1 in 100</span>
-            <span className="stat-label">Hidden card odds</span>
           </div>
         </div>
 
@@ -186,7 +192,7 @@ export default function App() {
                 <h2>Live feed</h2>
               </div>
             </div>
-            <LiveFeed pinned={myPulls} />
+            <LiveFeed />
           </div>
           <div>
             <div className="section-head">
@@ -213,6 +219,32 @@ export default function App() {
             </ul>
           </div>
         </section>
+
+        {isTokenLive() && (
+          <section className="section" id="token">
+            <div className="token-card">
+              <div>
+                <p className="eyebrow">${TOKEN_SYMBOL}</p>
+                <h2>The finch token</h2>
+                <p className="muted">
+                  Trades on {robinhoodChain.name}. Contract{' '}
+                  <a
+                    className="mono"
+                    href={`${robinhoodChain.blockExplorers.default.url}/token/${TOKEN_ADDRESS}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {shortAddr(TOKEN_ADDRESS)}
+                  </a>{' '}
+                  — always verify the address before you buy.
+                </p>
+              </div>
+              <a className="btn btn-token btn-lg" href={tokenBuyUrl()} target="_blank" rel="noreferrer">
+                Buy ${TOKEN_SYMBOL}
+              </a>
+            </div>
+          </section>
+        )}
 
         <section className="section" id="stocks">
           <div className="section-head">

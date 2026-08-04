@@ -27,6 +27,10 @@ const erc20Abi = [
   {
     type: 'function', name: 'symbol', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }],
   },
+  {
+    type: 'function', name: 'balanceOf', stateMutability: 'view',
+    inputs: [{ name: 'owner', type: 'address' }], outputs: [{ type: 'uint256' }],
+  },
 ] as const
 
 export const vaultAbi = [
@@ -37,6 +41,10 @@ const packSaleAbi = [
   {
     type: 'function', name: 'buyPack', stateMutability: 'nonpayable',
     inputs: [{ name: 'packId', type: 'uint256' }], outputs: [{ type: 'uint256' }],
+  },
+  {
+    type: 'function', name: 'reservedLiability', stateMutability: 'view',
+    inputs: [], outputs: [{ type: 'uint256' }],
   },
   {
     type: 'function', name: 'open', stateMutability: 'nonpayable',
@@ -102,6 +110,67 @@ async function stockFromAddress(address: Address): Promise<Card & { kind: 'stock
     valueUsd: 0,
     rarity: RARITY_TIERS[0],
   }
+}
+
+export interface BuyPreflight {
+  ok: boolean
+  /** Reason a purchase would fail right now, phrased for the user. */
+  reason?: string
+  usdgBalance: number
+  headroomUsd: number
+}
+
+/** Everything that can block a purchase, checked before the wallet is ever opened. */
+export async function preflightBuy(account: Address, priceUsd: number): Promise<BuyPreflight> {
+  const client = getPublicClient(wagmiConfig)
+  const price = BigInt(Math.round(priceUsd * 10 ** USDG_DECIMALS))
+  if (!client || !isOnchainEnabled()) {
+    return { ok: false, reason: 'Contracts are not configured yet.', usdgBalance: 0, headroomUsd: 0 }
+  }
+
+  const [balance, float, liability] = await Promise.all([
+    readContract(wagmiConfig, {
+      address: USDG,
+      abi: erc20Abi,
+      functionName: 'balanceOf',
+      args: [account],
+    }) as Promise<bigint>,
+    readContract(wagmiConfig, {
+      address: USDG,
+      abi: erc20Abi,
+      functionName: 'balanceOf',
+      args: [PACK_SALE_ADDRESS],
+    }) as Promise<bigint>,
+    readContract(wagmiConfig, {
+      address: PACK_SALE_ADDRESS,
+      abi: packSaleAbi,
+      functionName: 'reservedLiability',
+    }) as Promise<bigint>,
+  ])
+
+  const usdgBalance = Number(balance) / 10 ** USDG_DECIMALS
+  const free = float > liability ? float - liability : 0n
+  const headroomUsd = Number(free) / 10 ** USDG_DECIMALS
+  // the contract reserves 3x price against every unsettled pack
+  const needed = price * 3n
+
+  if (balance < price) {
+    return {
+      ok: false,
+      reason: `You need ${priceUsd.toFixed(2)} USDG — your balance is ${usdgBalance.toFixed(2)}.`,
+      usdgBalance,
+      headroomUsd,
+    }
+  }
+  if (free < needed) {
+    return {
+      ok: false,
+      reason: 'This pack is temporarily sold out — the vault is restocking. Try a smaller pack or check back shortly.',
+      usdgBalance,
+      headroomUsd,
+    }
+  }
+  return { ok: true, usdgBalance, headroomUsd }
 }
 
 export interface HiddenCardWin {

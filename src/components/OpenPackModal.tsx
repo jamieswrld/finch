@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useAccount } from 'wagmi'
+import { useAccount, useSwitchChain } from 'wagmi'
 import { robinhoodChain } from '../chain'
 import { JACKPOT_CUT, PROTOCOL_FEE, asset, type Pack } from '../data'
-import { buyAndOpenOnchain, isOnchainEnabled } from '../onchain'
+import { buyAndOpenOnchain, isOnchainEnabled, preflightBuy } from '../onchain'
 import { fmtUsd, openPack, shortAddr, type Card } from '../rng'
 import { PackVisual } from './PackCard'
 import { StockLogo } from './StockLogo'
@@ -270,7 +270,10 @@ interface Props {
 }
 
 export function OpenPackModal({ pack, jackpotUsd, onClose, onPulled }: Props) {
-  const { isConnected } = useAccount()
+  const { isConnected, address, chainId } = useAccount()
+  const { switchChain, isPending: switching } = useSwitchChain()
+  const wrongNetwork = isConnected && chainId !== robinhoodChain.id
+  const [preflight, setPreflight] = useState<{ ok: boolean; reason?: string } | null>(null)
   const [stage, setStage] = useState<Stage>('confirm')
   const [step, setStep] = useState(0)
   const [card, setCard] = useState<Card | null>(null)
@@ -279,9 +282,22 @@ export function OpenPackModal({ pack, jackpotUsd, onClose, onPulled }: Props) {
   const [elapsed, setElapsed] = useState(0)
   const [factIdx, setFactIdx] = useState(0)
 
-  const onchain = isOnchainEnabled() && isConnected
+  const onchain = isOnchainEnabled() && isConnected && !wrongNetwork
   const tier = tierOf(card)
   const fx = TIER_FX[tier]
+
+  // Check balance + contract headroom before the wallet ever opens, so failures are
+  // explained in plain language instead of a raw revert.
+  useEffect(() => {
+    if (!onchain || !address || stage !== 'confirm') return
+    let alive = true
+    preflightBuy(address, pack.priceUsd)
+      .then((p) => alive && setPreflight({ ok: p.ok, reason: p.reason }))
+      .catch(() => alive && setPreflight(null))
+    return () => {
+      alive = false
+    }
+  }, [onchain, address, pack.priceUsd, stage])
 
   useEffect(() => {
     if (stage !== 'charging') return
@@ -321,7 +337,18 @@ export function OpenPackModal({ pack, jackpotUsd, onClose, onPulled }: Props) {
       onPulled(pulled, pack)
       setStage('rip')
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Transaction failed')
+      const raw = e instanceof Error ? e.message : 'Transaction failed'
+      // wallet rejections and reverts read like stack traces; translate the common ones
+      const msg = /User rejected|denied transaction/i.test(raw)
+        ? 'Transaction cancelled in your wallet.'
+        : /InsufficientReserves/i.test(raw)
+          ? 'Sold out for the moment — the vault is restocking. Try again shortly.'
+          : /StalePrice/i.test(raw)
+            ? 'Price feed is paused right now (markets closed or a corporate action). Try again later.'
+            : /insufficient funds/i.test(raw)
+              ? 'Not enough ETH for gas on Robinhood Chain.'
+              : raw.split('\n')[0].slice(0, 160)
+      setError(msg)
       setStage('confirm')
     }
   }
@@ -357,16 +384,36 @@ export function OpenPackModal({ pack, jackpotUsd, onClose, onPulled }: Props) {
             </li>
           </ul>
           {error && <p className="small error">{error}</p>}
-          {!onchain && (
-            <p className="muted small">
-              {isConnected
-                ? 'Contracts not configured — opening in demo mode.'
-                : 'Wallet not connected — opening in demo mode.'}
-            </p>
+          {wrongNetwork ? (
+            <>
+              <p className="small error">Your wallet is on the wrong network.</p>
+              <button
+                className="btn btn-green btn-full"
+                disabled={switching}
+                onClick={() => switchChain({ chainId: robinhoodChain.id })}
+              >
+                {switching ? 'Switching…' : `Switch to ${robinhoodChain.name}`}
+              </button>
+            </>
+          ) : (
+            <>
+              {preflight && !preflight.ok && <p className="small error">{preflight.reason}</p>}
+              {!onchain && (
+                <p className="muted small">
+                  {isConnected
+                    ? 'Contracts not configured — opening in demo mode.'
+                    : 'Connect a wallet to buy with USDG. Opening in demo mode.'}
+                </p>
+              )}
+              <button
+                className="btn btn-green btn-full"
+                disabled={onchain && preflight ? !preflight.ok : false}
+                onClick={handleOpen}
+              >
+                {onchain ? 'Buy & Open Pack' : 'Open Pack (demo)'}
+              </button>
+            </>
           )}
-          <button className="btn btn-green btn-full" onClick={handleOpen}>
-            {onchain ? 'Buy & Open Pack' : 'Open Pack (demo)'}
-          </button>
         </div>
       </div>
     )

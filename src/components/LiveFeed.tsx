@@ -1,74 +1,75 @@
-import { useEffect, useRef, useState } from 'react'
-import { PACKS, STOCKS } from '../data'
-import { fmtUsd, randomAddr, shortAddr } from '../rng'
+import { robinhoodChain } from '../chain'
+import { STOCKS } from '../data'
+import { fmtUsd, shortAddr } from '../rng'
+import { isOnchainEnabled } from '../onchain'
+import { useLivePulls } from '../useChainData'
 import { StockLogo } from './StockLogo'
 
-export interface FeedEntry {
-  id: number
-  addr: string
-  ticker: string
-  valueUsd: number
-  packName: string
-}
+const explorer = robinhoodChain.blockExplorers.default.url
+const stockByAddress = (a?: string) =>
+  a ? STOCKS.find((s) => s.address.toLowerCase() === a.toLowerCase()) : undefined
 
-let nextId = 1
+/** Real pack openings, read from PackSale events on-chain. */
+export function LiveFeed() {
+  const pulls = useLivePulls()
 
-export function makeFeedEntry(overrides?: Partial<FeedEntry>): FeedEntry {
-  const stock = STOCKS[Math.floor(Math.random() * STOCKS.length)]
-  const pack = PACKS[Math.floor(Math.random() * PACKS.length)]
-  return {
-    id: nextId++,
-    addr: randomAddr(),
-    ticker: stock.ticker,
-    valueUsd: pack.priceUsd * (0.6 + Math.random() * 1.2),
-    packName: pack.name,
-    ...overrides,
+  if (!isOnchainEnabled()) {
+    return (
+      <div className="feed">
+        <div className="feed-header">
+          <span className="dot" style={{ background: 'var(--muted)' }} /> Live openings
+        </div>
+        <p className="feed-empty muted small">Contracts not configured.</p>
+      </div>
+    )
   }
-}
-
-export function LiveFeed({ pinned }: { pinned: FeedEntry[] }) {
-  const [entries, setEntries] = useState<FeedEntry[]>(() =>
-    Array.from({ length: 4 }, () => makeFeedEntry()),
-  )
-  const pinnedCount = useRef(0)
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      setEntries((prev) => [makeFeedEntry(), ...prev].slice(0, 6))
-    }, 6000)
-    return () => clearInterval(id)
-  }, [])
-
-  useEffect(() => {
-    if (pinned.length > pinnedCount.current) {
-      const fresh = pinned.slice(pinnedCount.current)
-      pinnedCount.current = pinned.length
-      setEntries((prev) => [...fresh.reverse(), ...prev].slice(0, 6))
-    }
-  }, [pinned])
 
   return (
     <div className="feed">
       <div className="feed-header">
         <span className="dot dot-green pulse" /> Live openings
+        <span className="feed-header-note muted small">on-chain</span>
       </div>
-      <ul>
-        {entries.map((e) => (
-          <li key={e.id} className="feed-row">
-            <span className="mono muted">{shortAddr(e.addr)}</span>
-            <span className="feed-pull">
-              pulled{' '}
-              {(() => {
-                const stock = STOCKS.find((s) => s.ticker === e.ticker)
-                return stock ? <StockLogo stock={stock} size={16} /> : null
-              })()}
-              <strong>{e.ticker}</strong>
-            </span>
-            <span className="feed-value">{fmtUsd(e.valueUsd)}</span>
-            <span className="muted small">{e.packName}</span>
-          </li>
-        ))}
-      </ul>
+      {pulls.length === 0 ? (
+        <p className="feed-empty muted small">
+          No packs opened yet — the first pull on finch shows up here.
+        </p>
+      ) : (
+        <ul>
+          {pulls.map((p) => {
+            const stock = stockByAddress(p.stock)
+            return (
+              <li key={p.id} className="feed-row">
+                <a
+                  className="mono muted"
+                  href={`${explorer}/address/${p.buyer}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {shortAddr(p.buyer)}
+                </a>
+                <span className="feed-pull">
+                  pulled{' '}
+                  {p.kind === 'stock' && stock && <StockLogo stock={stock} size={16} />}
+                  <strong>
+                    {p.kind === 'jackpot'
+                      ? `HIDDEN ${((p.pctBps ?? 0) / 100).toFixed(2)}%`
+                      : p.kind === 'refund'
+                        ? 'REFUND'
+                        : (stock?.ticker ?? 'STOCK')}
+                  </strong>
+                </span>
+                <span className={`feed-value ${p.kind === 'jackpot' ? 'feed-value-gold' : ''}`}>
+                  {fmtUsd(p.valueUsd)}
+                </span>
+                <a className="feed-tx muted small" href={`${explorer}/tx/${p.txHash}`} target="_blank" rel="noreferrer">
+                  ↗
+                </a>
+              </li>
+            )
+          })}
+        </ul>
+      )}
     </div>
   )
 }

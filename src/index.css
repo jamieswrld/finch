@@ -505,6 +505,94 @@ a {
   letter-spacing: 0.12em;
 }
 
+/* ---------- header actions, network banner, token ---------- */
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-sm {
+  padding: 7px 14px;
+  font-size: 0.8rem;
+}
+
+.btn-token {
+  background: var(--gold);
+  color: #fff;
+  font-weight: 600;
+}
+
+.btn-token:hover {
+  background: var(--gold-dark);
+  box-shadow: 0 12px 28px -12px rgba(179, 144, 63, 0.7);
+}
+
+.net-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 10px 16px;
+  margin-top: 12px;
+  border: 1px solid rgba(179, 64, 47, 0.3);
+  background: rgba(179, 64, 47, 0.06);
+  border-radius: 12px;
+  font-size: 0.86rem;
+}
+
+.token-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 32px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 36px 40px;
+  background: radial-gradient(70% 120% at 12% 0%, var(--gold-soft), transparent 60%), #fff;
+}
+
+.token-card h2 {
+  margin-top: 4px;
+}
+
+.token-card .btn {
+  flex-shrink: 0;
+}
+
+.feed-header-note {
+  margin-left: auto;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.feed-empty {
+  padding: 20px 18px;
+  margin: 0;
+}
+
+.feed-value-gold {
+  color: var(--gold-dark);
+}
+
+.feed-tx {
+  text-decoration: none;
+}
+
+.feed-pull {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+@media (max-width: 860px) {
+  .token-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
 /* ---------- pons ---------- */
 
 .pons-card {

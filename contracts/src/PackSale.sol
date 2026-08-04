@@ -156,7 +156,7 @@ contract PackSale {
         if (!usdg.transferFrom(msg.sender, address(vault), cut)) revert TransferFailed();
         if (fee > 0 && !usdg.transferFrom(msg.sender, feeRecipient, fee)) revert TransferFailed();
         if (!usdg.transferFrom(msg.sender, address(this), p.price - cut - fee)) revert TransferFailed();
-        vault.addTickets(msg.sender, p.price);
+        vault.recordSale(msg.sender, cut);
 
         // Solvency guarantee: every unsettled pack reserves its worst-case card (3x
         // legendary) in USDG. A pack can only be sold while the treasury covers ALL

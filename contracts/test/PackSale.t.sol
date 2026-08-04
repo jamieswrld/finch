@@ -77,14 +77,31 @@ contract PackSaleTest is Test {
         vm.roll(block.number + 1);
     }
 
-    function test_buySplitsFundsAndAddsTickets() public {
+    function test_buySplitsFundsAndRecordsVolume() public {
         vm.prank(alice);
         sale.buyPack(0);
         assertEq(usdg.balanceOf(address(vault)), 2e6); // 20% cut
         assertEq(usdg.balanceOf(fees), 0.1e6); // 1% protocol fee
         assertEq(usdg.balanceOf(address(sale)), 500e6 + 7.9e6);
-        assertEq(vault.tickets(1, alice), PRICE);
+        assertEq(vault.totalAccrued(), 2e6); // volume counter the site displays
+        assertEq(vault.available(), 2e6);
         assertEq(sale.reservedLiability(), 30e6); // 3x worst case reserved
+    }
+
+    function test_operatorWithdrawsForManualDistribution() public {
+        vm.prank(alice);
+        sale.buyPack(0);
+        uint256 pot = vault.available();
+        assertEq(pot, 2e6);
+
+        vm.prank(alice);
+        vm.expectRevert(JackpotVault.NotOwner.selector);
+        vault.withdraw(alice, pot);
+
+        vault.withdraw(address(this), pot);
+        assertEq(vault.available(), 0);
+        assertEq(vault.totalWithdrawn(), pot);
+        assertEq(vault.totalAccrued(), pot); // lifetime volume is never reduced
     }
 
     function test_buyBlockedWhenUnderfunded() public {
@@ -184,39 +201,16 @@ contract PackSaleTest is Test {
         assertTrue(settled);
     }
 
-    function test_roundCloseAndProRataClaims() public {
+    function test_volumeAccumulatesAcrossBuyers() public {
         vm.prank(alice);
-        sale.buyPack(0); // 10 tickets-worth
+        sale.buyPack(0);
         for (uint256 i = 0; i < 3; i++) {
             vm.prank(bob);
-            sale.buyPack(0); // 30 tickets-worth
+            sale.buyPack(0);
         }
-        uint256 pot = usdg.balanceOf(address(vault));
-        assertEq(pot, 8e6);
-
-        vm.prank(alice);
-        vm.expectRevert(JackpotVault.NotOwner.selector);
-        vault.closeRound();
-
-        // owner closes whenever the team decides — no schedule
-        vault.closeRound();
-
-        assertEq(vault.claimable(1, alice), pot / 4);
-        assertEq(vault.claimable(1, bob), (pot * 3) / 4);
-
-        uint256 before = usdg.balanceOf(alice);
-        vm.prank(alice);
-        vault.claim(1);
-        assertEq(usdg.balanceOf(alice) - before, pot / 4);
-
-        vm.prank(alice);
-        vm.expectRevert(JackpotVault.AlreadyClaimed.selector);
-        vault.claim(1);
-
-        // new round keeps accruing separately
-        vm.prank(bob);
-        sale.buyPack(0);
-        assertEq(vault.tickets(2, bob), PRICE);
+        // 4 packs x $2 cut — the jackpot figure the site displays
+        assertEq(vault.totalAccrued(), 8e6);
+        assertEq(vault.available(), 8e6);
     }
 
     function test_onlyPackSaleCanAward() public {

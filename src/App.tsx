@@ -170,28 +170,11 @@ export default function App() {
               <p className="eyebrow">Jackpot Vault</p>
               <p className="jackpot-amount">{fmtUsd(jackpotUsd)}</p>
               <p className="muted">
-                {Math.round(JACKPOT_CUT * 100)}% of every pack purchase accrues here on-chain.
-                When a round closes, the pot is distributed pro-rata to every buyer — and hidden
-                cards claim a share of it instantly, any time.
+                {Math.round(JACKPOT_CUT * 100)}% of every pack purchase accrues here on-chain — this
+                is the vault's live balance. Hidden cards pay out of it instantly and automatically;
+                the rest is distributed by the finch team at its discretion.
               </p>
             </div>
-          </div>
-        </section>
-
-        <section className="section" id="pons">
-          <div className="pons-card">
-            <div>
-              <p className="eyebrow">$PONS · memecoin</p>
-              <h2>Hold the bird, catch the drop.</h2>
-              <p className="muted">
-                Creator fees from the PONS launch fly straight back to holders as real tokenized
-                stocks. Every drop is split on-chain: the top 10 wallets share 95%, every other
-                holder shares the rest — snapshot and merkle tree published every epoch.
-              </p>
-            </div>
-            <a className="btn btn-ghost" href="#/docs">
-              Read the mechanics
-            </a>
           </div>
         </section>
 

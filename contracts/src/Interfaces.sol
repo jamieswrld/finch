@@ -18,6 +18,6 @@ interface IAggregatorV3 {
 }
 
 interface IJackpotVault {
-    function addTickets(address user, uint256 amount) external;
+    function recordSale(address buyer, uint256 amount) external;
     function awardHiddenCard(address user, uint256 pctBps) external returns (uint256 amount);
 }

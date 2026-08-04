@@ -1046,12 +1046,21 @@ a {
   text-decoration: underline;
 }
 
-.doc-list {
+.doc-list,
+.doc-steps {
   margin: 0;
   padding-left: 20px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
+}
+
+.doc-steps li {
+  padding-left: 4px;
+}
+
+.doc-steps strong {
+  font-weight: 650;
 }
 
 .docs a {

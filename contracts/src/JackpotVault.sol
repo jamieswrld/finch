@@ -4,38 +4,28 @@ pragma solidity ^0.8.24;
 import {IERC20} from "./Interfaces.sol";
 
 /// @title JackpotVault
-/// @notice Accrues a USDG cut of every pack sale. Pays hidden-card winners a % of the
-///         open pot immediately, and distributes the remaining pot pro-rata to ticket
-///         holders when the owner closes a round — rounds close at the team's call,
-///         not on a schedule. Tickets = USDG spent on packs.
+/// @notice Holds the jackpot: 20% of every pack sale accrues here in USDG, and the
+///         site displays this balance as the live jackpot. Hidden cards pay out of it
+///         instantly and automatically. Everything else is distributed manually by the
+///         operator — there is no on-chain claim mechanism and no automatic payout.
 contract JackpotVault {
     IERC20 public immutable usdg;
     address public owner;
     address public packSale;
 
-    struct Round {
-        bool closed;
-        uint256 snapshot; // pot frozen for this round's claims
-        uint256 totalTickets;
-    }
+    /// @notice Lifetime USDG accrued from pack sales (never decreases) — the volume figure.
+    uint256 public totalAccrued;
+    /// @notice Lifetime USDG paid out to hidden-card winners.
+    uint256 public totalHiddenCardPaid;
+    /// @notice Lifetime USDG withdrawn by the operator for manual distribution.
+    uint256 public totalWithdrawn;
 
-    uint256 public currentRound = 1;
-    mapping(uint256 => Round) public rounds;
-    mapping(uint256 => mapping(address => uint256)) public tickets;
-    mapping(uint256 => mapping(address => bool)) public claimed;
-
-    /// @notice USDG earmarked for closed-round claims; hidden cards can't touch it.
-    uint256 public reserved;
-
-    event TicketsAdded(uint256 indexed round, address indexed user, uint256 amount);
+    event Accrued(address indexed buyer, uint256 amount, uint256 totalAccrued);
     event HiddenCardAward(address indexed user, uint256 pctBps, uint256 amount);
-    event RoundClosed(uint256 indexed round, uint256 snapshot, uint256 totalTickets);
-    event Claimed(uint256 indexed round, address indexed user, uint256 amount);
+    event Withdrawn(address indexed to, uint256 amount);
 
     error NotOwner();
     error NotPackSale();
-    error RoundNotClaimable();
-    error AlreadyClaimed();
     error TransferFailed();
 
     modifier onlyOwner() {
@@ -53,9 +43,9 @@ contract JackpotVault {
         owner = msg.sender;
     }
 
-    /// @notice Open pot available for hidden cards / the next snapshot.
+    /// @notice Current jackpot balance — what the site shows.
     function available() public view returns (uint256) {
-        return usdg.balanceOf(address(this)) - reserved;
+        return usdg.balanceOf(address(this));
     }
 
     function setPackSale(address _packSale) external onlyOwner {
@@ -66,47 +56,26 @@ contract JackpotVault {
         owner = newOwner;
     }
 
-    function addTickets(address user, uint256 amount) external onlyPackSale {
-        Round storage r = rounds[currentRound];
-        r.totalTickets += amount;
-        tickets[currentRound][user] += amount;
-        emit TicketsAdded(currentRound, user, amount);
+    /// @notice Called by PackSale on every purchase to record volume.
+    function recordSale(address buyer, uint256 amount) external onlyPackSale {
+        totalAccrued += amount;
+        emit Accrued(buyer, amount, totalAccrued);
     }
 
+    /// @notice Hidden cards pay a % of the current jackpot, instantly, to the puller.
     function awardHiddenCard(address user, uint256 pctBps) external onlyPackSale returns (uint256 amount) {
         amount = (available() * pctBps) / 10_000;
-        if (amount > 0 && !usdg.transfer(user, amount)) revert TransferFailed();
+        if (amount > 0) {
+            totalHiddenCardPaid += amount;
+            if (!usdg.transfer(user, amount)) revert TransferFailed();
+        }
         emit HiddenCardAward(user, pctBps, amount);
     }
 
-    /// @notice Freeze the open pot for pro-rata claims and roll into the next round.
-    ///         Owner-triggered, any time — the payout happens when the team says so.
-    function closeRound() external onlyOwner {
-        Round storage r = rounds[currentRound];
-        if (r.closed) revert RoundNotClaimable();
-        r.closed = true;
-        r.snapshot = available();
-        reserved += r.snapshot;
-        emit RoundClosed(currentRound, r.snapshot, r.totalTickets);
-        currentRound += 1;
-    }
-
-    function claimable(uint256 roundId, address user) public view returns (uint256) {
-        Round storage r = rounds[roundId];
-        if (!r.closed || r.totalTickets == 0 || claimed[roundId][user]) return 0;
-        return (r.snapshot * tickets[roundId][user]) / r.totalTickets;
-    }
-
-    function claim(uint256 roundId) external {
-        Round storage r = rounds[roundId];
-        if (!r.closed) revert RoundNotClaimable();
-        if (claimed[roundId][msg.sender]) revert AlreadyClaimed();
-        uint256 share = claimable(roundId, msg.sender);
-        claimed[roundId][msg.sender] = true;
-        if (share > 0) {
-            reserved -= share;
-            if (!usdg.transfer(msg.sender, share)) revert TransferFailed();
-        }
-        emit Claimed(roundId, msg.sender, share);
+    /// @notice Operator withdraws to distribute the jackpot manually.
+    function withdraw(address to, uint256 amount) external onlyOwner {
+        totalWithdrawn += amount;
+        if (!usdg.transfer(to, amount)) revert TransferFailed();
+        emit Withdrawn(to, amount);
     }
 }

@@ -89,6 +89,15 @@ export const STOCKS: Stock[] = [
 
 export const stockByTicker = (t: string): Stock => STOCKS.find((s) => s.ticker === t)!
 
+/** Only stocks with a live Chainlink feed can sit in pack pools — the contract
+ *  prices every card through its feed, so feedless stocks would brick opens.
+ *  Mirrors the sets wired in contracts/script/DeployMainnet.s.sol exactly. */
+export const FEED_BACKED = [
+  'NVDA', 'AAPL', 'TSLA', 'MSFT', 'AMZN', 'GOOGL', 'META', 'AMD', 'PLTR', 'COIN',
+  'MSTR', 'GME', 'SPCX', 'SPY', 'QQQ', 'TSM', 'INTC', 'ASML', 'MU', 'CRWV',
+  'IONQ', 'SNDK', 'ORCL', 'DELL', 'BABA', 'CRCL', 'USO', 'SLV',
+]
+
 export const PACKS: Pack[] = [
   {
     id: 'starter',
@@ -96,7 +105,7 @@ export const PACKS: Pack[] = [
     tagline: 'One random stock from the full board',
     priceUsd: 10,
     tint: '#dfeadb',
-    pool: STOCKS.map((s) => s.ticker),
+    pool: FEED_BACKED,
     live: true,
     chainPackId: 0,
     image: '/packs/starter.webp',
@@ -107,7 +116,7 @@ export const PACKS: Pack[] = [
     tagline: 'Mag-7 heavyweights only',
     priceUsd: 25,
     tint: '#dbe6f6',
-    pool: ['AAPL', 'MSFT', 'AMZN', 'GOOGL', 'META', 'NVDA', 'TSLA', 'AVGO', 'LLY', 'XOM', 'COST', 'ORCL'],
+    pool: ['AAPL', 'MSFT', 'AMZN', 'GOOGL', 'META', 'NVDA', 'TSLA', 'ORCL'],
     live: true,
     chainPackId: 1,
     image: '/packs/bluechip.webp',
@@ -118,7 +127,7 @@ export const PACKS: Pack[] = [
     tagline: 'Chips and compute',
     priceUsd: 50,
     tint: '#eae2f5',
-    pool: ['NVDA', 'AMD', 'AVGO', 'TSM', 'MU', 'QCOM', 'ASML', 'INTC', 'SMCI', 'CRWV', 'IONQ', 'PLTR', 'MSFT', 'NOW', 'SOXX'],
+    pool: ['NVDA', 'AMD', 'TSM', 'MU', 'ASML', 'INTC', 'CRWV', 'IONQ', 'PLTR', 'MSFT'],
     live: true,
     chainPackId: 2,
     image: '/packs/ai.webp',
@@ -129,7 +138,7 @@ export const PACKS: Pack[] = [
     tagline: 'Max stakes, max upside',
     priceUsd: 100,
     tint: '#f3ead6',
-    pool: STOCKS.map((s) => s.ticker),
+    pool: FEED_BACKED,
     live: false,
     chainPackId: 3,
     image: '/packs/whale.webp',

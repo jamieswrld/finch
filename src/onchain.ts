@@ -48,6 +48,10 @@ const packSaleAbi = [
     inputs: [{ name: 'packId', type: 'uint256' }], outputs: [{ type: 'uint256' }],
   },
   {
+    type: 'function', name: 'buyPackETH', stateMutability: 'payable',
+    inputs: [{ name: 'packId', type: 'uint256' }], outputs: [{ type: 'uint256' }],
+  },
+  {
     type: 'function', name: 'reservedLiability', stateMutability: 'view',
     inputs: [], outputs: [{ type: 'uint256' }],
   },
@@ -117,12 +121,44 @@ async function stockFromAddress(address: Address): Promise<Card & { kind: 'stock
   }
 }
 
+export type PayWith = 'usdg' | 'eth'
+
 export interface BuyPreflight {
   ok: boolean
   /** Reason a purchase would fail right now, phrased for the user. */
   reason?: string
   usdgBalance: number
+  ethBalance: number
   headroomUsd: number
+  /** Best payment method given what the wallet actually holds. */
+  suggested: PayWith
+  canPayUsdg: boolean
+  canPayEth: boolean
+}
+
+const CHAINLINK_ETH_USD = '0x78F3556b67E17Df817D51Ef5a990cDaF09E8d3A9' as Address
+const feedAbi = [
+  {
+    type: 'function', name: 'latestRoundData', stateMutability: 'view', inputs: [],
+    outputs: [
+      { type: 'uint80' }, { type: 'int256' }, { type: 'uint256' }, { type: 'uint256' }, { type: 'uint80' },
+    ],
+  },
+] as const
+
+/** ETH needed for a pack, with a buffer for pool fees. Surplus returns as USDG change. */
+export async function quoteEthForPack(priceUsd: number): Promise<bigint> {
+  const client = getPublicClient(wagmiConfig)
+  if (!client) return 0n
+  const round = (await client.readContract({
+    address: CHAINLINK_ETH_USD,
+    abi: feedAbi,
+    functionName: 'latestRoundData',
+  })) as readonly [bigint, bigint, bigint, bigint, bigint]
+  const ethUsd = Number(round[1]) / 1e8
+  if (!ethUsd) return 0n
+  // +4% covers the 0.05% pool fee plus price drift between quote and execution
+  return BigInt(Math.ceil((priceUsd / ethUsd) * 1.04 * 1e18))
 }
 
 /** Everything that can block a purchase, checked before the wallet is ever opened. */
@@ -130,10 +166,19 @@ export async function preflightBuy(account: Address, priceUsd: number): Promise<
   const client = getPublicClient(wagmiConfig)
   const price = BigInt(Math.round(priceUsd * 10 ** USDG_DECIMALS))
   if (!client || !isOnchainEnabled()) {
-    return { ok: false, reason: 'Contracts are not configured yet.', usdgBalance: 0, headroomUsd: 0 }
+    return {
+      ok: false,
+      reason: 'Contracts are not configured yet.',
+      usdgBalance: 0,
+      ethBalance: 0,
+      headroomUsd: 0,
+      suggested: 'usdg',
+      canPayUsdg: false,
+      canPayEth: false,
+    }
   }
 
-  const [balance, float, liability] = await Promise.all([
+  const [balance, float, liability, ethWei] = await Promise.all([
     readContract(wagmiConfig, {
       address: USDG,
       abi: erc20Abi,
@@ -151,31 +196,33 @@ export async function preflightBuy(account: Address, priceUsd: number): Promise<
       abi: packSaleAbi,
       functionName: 'reservedLiability',
     }) as Promise<bigint>,
+    client ? client.getBalance({ address: account }) : Promise.resolve(0n),
   ])
 
   const usdgBalance = Number(balance) / 10 ** USDG_DECIMALS
+  const ethBalance = Number(ethWei) / 1e18
   const free = float > liability ? float - liability : 0n
   const headroomUsd = Number(free) / 10 ** USDG_DECIMALS
-  // the contract reserves 3x price against every unsettled pack
-  const needed = price * 3n
 
-  if (balance < price) {
+  const ethNeeded = await quoteEthForPack(priceUsd).catch(() => 0n)
+  // leave a little ETH for gas rather than letting the buy consume the whole balance
+  const canPayEth = ethNeeded > 0n && ethWei > ethNeeded + 300_000_000_000_000n
+  const canPayUsdg = balance >= price
+  const suggested: PayWith = canPayUsdg ? 'usdg' : 'eth'
+
+  if (free < price * 3n) {
     return {
       ok: false,
-      reason: `You need ${priceUsd.toFixed(2)} USDG — your balance is ${usdgBalance.toFixed(2)}.`,
+      reason: 'Packs are momentarily at capacity — one is settling. Try again in a few seconds.',
       usdgBalance,
+      ethBalance,
       headroomUsd,
+      suggested,
+      canPayUsdg,
+      canPayEth,
     }
   }
-  if (free < needed) {
-    return {
-      ok: false,
-      reason: 'This pack is temporarily sold out — the vault is restocking. Try a smaller pack or check back shortly.',
-      usdgBalance,
-      headroomUsd,
-    }
-  }
-  return { ok: true, usdgBalance, headroomUsd }
+  return { ok: canPayUsdg || canPayEth, usdgBalance, ethBalance, headroomUsd, suggested, canPayUsdg, canPayEth }
 }
 
 export interface HiddenCardWin {
@@ -209,25 +256,40 @@ export async function fetchHiddenCards(buyer: Address): Promise<HiddenCardWin[]>
 export type OpenProgress = (step: number, txHash?: `0x${string}`) => void
 
 /** Real flow: approve USDG if needed → buyPack → open (retrying across the commit block). */
-export async function buyAndOpenOnchain(pack: Pack, onProgress?: OpenProgress): Promise<Card> {
+export async function buyAndOpenOnchain(
+  pack: Pack,
+  onProgress?: OpenProgress,
+  payWith: PayWith = 'usdg',
+): Promise<Card> {
   onProgress?.(0)
   const account = getAccount(wagmiConfig).address
   if (!account) throw new Error('Wallet not connected')
   const price = BigInt(Math.round(pack.priceUsd * 10 ** USDG_DECIMALS))
 
-  const allowance = await readContract(wagmiConfig, {
-    address: USDG, abi: erc20Abi, functionName: 'allowance', args: [account, PACK_SALE_ADDRESS],
-  })
-  if (allowance < price) {
-    const approveHash = await writeContract(wagmiConfig, {
-      address: USDG, abi: erc20Abi, functionName: 'approve', args: [PACK_SALE_ADDRESS, price * 100n],
+  let buyHash: `0x${string}`
+  if (payWith === 'eth') {
+    const value = await quoteEthForPack(pack.priceUsd)
+    buyHash = await writeContract(wagmiConfig, {
+      address: PACK_SALE_ADDRESS,
+      abi: packSaleAbi,
+      functionName: 'buyPackETH',
+      args: [BigInt(pack.chainPackId)],
+      value,
     })
-    await waitForTransactionReceipt(wagmiConfig, { hash: approveHash })
+  } else {
+    const allowance = await readContract(wagmiConfig, {
+      address: USDG, abi: erc20Abi, functionName: 'allowance', args: [account, PACK_SALE_ADDRESS],
+    })
+    if (allowance < price) {
+      const approveHash = await writeContract(wagmiConfig, {
+        address: USDG, abi: erc20Abi, functionName: 'approve', args: [PACK_SALE_ADDRESS, price * 100n],
+      })
+      await waitForTransactionReceipt(wagmiConfig, { hash: approveHash })
+    }
+    buyHash = await writeContract(wagmiConfig, {
+      address: PACK_SALE_ADDRESS, abi: packSaleAbi, functionName: 'buyPack', args: [BigInt(pack.chainPackId)],
+    })
   }
-
-  const buyHash = await writeContract(wagmiConfig, {
-    address: PACK_SALE_ADDRESS, abi: packSaleAbi, functionName: 'buyPack', args: [BigInt(pack.chainPackId)],
-  })
   const buyReceipt = await waitForTransactionReceipt(wagmiConfig, { hash: buyHash })
   const purchased = parseEventLogs({ abi: packSaleAbi, logs: buyReceipt.logs, eventName: 'Purchased' })
   if (purchased.length === 0) throw new Error('Purchased event not found')

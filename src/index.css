@@ -1342,6 +1342,36 @@ a {
   white-space: nowrap;
 }
 
+.pay-with {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  width: 100%;
+}
+
+.pay-opt {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 14px;
+  background: #fff;
+  cursor: pointer;
+  font: inherit;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.pay-opt:hover {
+  border-color: var(--border-strong);
+}
+
+.pay-opt-on {
+  border-color: var(--text);
+  background: #fafafb;
+}
+
 /* ---------- cinema — full-screen pack opening ---------- */
 
 .cinema {

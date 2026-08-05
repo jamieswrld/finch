@@ -21,3 +21,38 @@ interface IJackpotVault {
     function recordSale(address buyer, uint256 amount) external;
     function awardHiddenCard(address user, uint256 pctBps) external returns (uint256 amount);
 }
+
+/// ---------------------------------------------------------------------------
+/// Uniswap v4 — minimal surface needed to swap from inside a contract
+/// ---------------------------------------------------------------------------
+
+type Currency is address;
+type BalanceDelta is int256;
+
+struct PoolKey {
+    Currency currency0;
+    Currency currency1;
+    uint24 fee;
+    int24 tickSpacing;
+    address hooks;
+}
+
+struct SwapParams {
+    bool zeroForOne;
+    int256 amountSpecified;
+    uint160 sqrtPriceLimitX96;
+}
+
+interface IPoolManager {
+    function unlock(bytes calldata data) external returns (bytes memory);
+    function swap(PoolKey memory key, SwapParams memory params, bytes calldata hookData)
+        external
+        returns (BalanceDelta);
+    function sync(Currency currency) external;
+    function settle() external payable returns (uint256);
+    function take(Currency currency, address to, uint256 amount) external;
+}
+
+interface IUnlockCallback {
+    function unlockCallback(bytes calldata data) external returns (bytes memory);
+}

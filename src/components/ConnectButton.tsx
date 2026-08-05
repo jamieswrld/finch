@@ -1,32 +1,22 @@
-import { useState } from 'react'
 import { useAccount, useConnect, useDisconnect } from 'wagmi'
 import { shortAddr } from '../rng'
-import { WalletDrawer } from './WalletDrawer'
 
 export function ConnectButton() {
   const { address, isConnected } = useAccount()
   const { connect, connectors, isPending } = useConnect()
   const { disconnect } = useDisconnect()
-  const [open, setOpen] = useState(false)
 
   if (isConnected && address) {
     return (
-      <>
-        <button className="btn btn-ghost" onClick={() => setOpen(true)} title="Wallet">
+      <div className="wallet-chip">
+        <a className="btn btn-ghost" href="#/wallet" title="Your wallet">
           <span className="dot dot-green" />
           {shortAddr(address)}
+        </a>
+        <button className="wallet-disconnect" onClick={() => disconnect()} title="Disconnect">
+          ×
         </button>
-        {open && (
-          <WalletDrawer
-            address={address}
-            onClose={() => setOpen(false)}
-            onDisconnect={() => {
-              disconnect()
-              setOpen(false)
-            }}
-          />
-        )}
-      </>
+      </div>
     )
   }
 

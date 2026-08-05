@@ -5,6 +5,7 @@ import { LiveFeed } from './components/LiveFeed'
 import { OpenPackModal } from './components/OpenPackModal'
 import { PackCard, PackVisual } from './components/PackCard'
 import { StockLogo } from './components/StockLogo'
+import { WalletPage } from './components/WalletPage'
 import {
   JACKPOT_CUT,
   JACKPOT_SEED_USD,
@@ -31,6 +32,7 @@ export default function App() {
   const [demoJackpotUsd, setDemoJackpotUsd] = useState(JACKPOT_SEED_USD)
   const [route, setRoute] = useState(window.location.hash)
   const wrongNetwork = isConnected && chainId !== robinhoodChain.id
+  const showWallet = route.startsWith('#/wallet')
 
   useEffect(() => {
     const onHash = () => setRoute(window.location.hash)
@@ -72,6 +74,7 @@ export default function App() {
           <a href="#packs">Packs</a>
           <a href="#jackpot">Jackpot</a>
           <a href="#stocks">Stocks</a>
+          <a href="#/wallet">Wallet</a>
           <a href="#/docs">Docs</a>
         </nav>
         <div className="header-actions">
@@ -93,6 +96,11 @@ export default function App() {
         </div>
       )}
 
+      {showWallet ? (
+        <main id="top">
+          <WalletPage />
+        </main>
+      ) : (
       <main id="top">
         <section className="hero">
           <div className="hero-copy">
@@ -177,8 +185,7 @@ export default function App() {
               <p className="jackpot-amount">{fmtUsd(jackpotUsd)}</p>
               <p className="muted">
                 {Math.round(JACKPOT_CUT * 100)}% of every pack purchase accrues here on-chain — this
-                is the vault's live balance. Hidden cards pay out of it instantly and automatically;
-                the rest is distributed by the finch team at its discretion.
+                is the vault's live balance. Hidden cards pay out of it instantly and automatically.
               </p>
             </div>
           </div>
@@ -309,6 +316,7 @@ export default function App() {
           </div>
         </section>
       </main>
+      )}
 
       <footer className="footer">
         <span className="muted small">

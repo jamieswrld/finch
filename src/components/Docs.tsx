@@ -1,5 +1,5 @@
 import { robinhoodChain } from '../chain'
-import { HIDDEN_CARD_CHANCE, JACKPOT_CUT, PACKS, RARITY_TIERS, STOCKS, USDG_ADDRESS, asset } from '../data'
+import { HIDDEN_CARD_CHANCE, JACKPOT_CUT, PACKS, STOCKS, USDG_ADDRESS, asset } from '../data'
 import { PACK_SALE_ADDRESS, TREASURY_ADDRESS, VAULT_ADDRESS, isOnchainEnabled } from '../onchain'
 import { fmtUsd } from '../rng'
 
@@ -132,11 +132,16 @@ export function Docs() {
             </tr>
           </thead>
           <tbody>
-            {RARITY_TIERS.map((t) => (
-              <tr key={t.key}>
-                <td style={{ color: t.color, fontWeight: 700 }}>{t.label}</td>
-                <td>{(t.weight * 100).toFixed(0)}%</td>
-                <td>{t.multiplier}× pack price</td>
+            {[
+              ['Common', '78%', '0.60× – 0.85×', '#9ca3af'],
+              ['Rare', '15%', '0.85× – 1.20×', '#2b6cb0'],
+              ['Epic', '5%', '1.20× – 1.80×', '#7c3aed'],
+              ['Legendary', '2%', '1.80× – 3.00×', '#d97706'],
+            ].map(([label, odds, range, color]) => (
+              <tr key={label}>
+                <td style={{ color, fontWeight: 700 }}>{label}</td>
+                <td>{odds}</td>
+                <td>{range} pack price</td>
               </tr>
             ))}
             <tr>
@@ -152,10 +157,11 @@ export function Docs() {
           what you pay for it.
         </p>
         <p className="muted small">
-          If the contract cannot cover your card's stock from inventory at settlement, it refunds
-          the full card value in USDG in the same transaction. A purchase is rejected outright
-          unless the treasury already holds enough USDG to cover the largest possible payout on
-          every unsettled pack — so a pack can never be sold that we cannot pay.
+          Card values are randomised inside each band, so a $10 pack pays an uneven amount like
+          $8.43 rather than a flat multiple. The contract buys your stock on Uniswap v4 at the
+          moment you open, using the minimum output implied by the Chainlink price — a thin or
+          manipulated pool cannot hand you a worthless amount. There is no refund path: every
+          card is a real stock.
         </p>
       </section>
 
@@ -167,11 +173,10 @@ export function Docs() {
           as packs sell, and you can verify it on Blockscout at any time.
         </p>
         <p>
-          Two things come out of it. <strong>Hidden cards</strong> pay automatically and instantly:
-          pull one and the contract sends you your percentage of the pot in the same transaction,
-          no claim needed. <strong>Everything else is distributed manually by the finch team</strong>{' '}
-          at its own discretion — there is no automatic payout, no schedule, and no on-chain claim
-          you can make against the pot. Treat the jackpot as a prize pool the team runs, not as a
+          <strong>Hidden cards</strong> pay out of it automatically and instantly: pull one and the
+          contract sends you your percentage of the pot in the same transaction, no claim needed.
+          Outside of a hidden card there is no automatic payout and no on-chain claim you can make
+          against the pot — treat the jackpot as the prize pool that funds hidden cards, not as a
           balance you are owed.
         </p>
       </section>

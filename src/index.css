@@ -752,6 +752,109 @@ a {
   margin-right: 0;
 }
 
+.pack-roster {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.pack-roster-open {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.pack-roster-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(74px, 1fr));
+  gap: 7px;
+  width: 100%;
+}
+
+.pack-roster-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px 6px;
+  background: #fff;
+}
+
+.pack-roster-toggle {
+  flex-shrink: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* wallet page */
+
+.wallet-chip {
+  display: inline-flex;
+  align-items: center;
+}
+
+.wallet-disconnect {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 1.15rem;
+  line-height: 1;
+  color: var(--muted);
+  padding: 0 4px;
+}
+
+.wallet-disconnect:hover {
+  color: var(--text);
+}
+
+.wallet-id {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.wallet-addr {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.wallet-addr:hover {
+  border-color: var(--text);
+}
+
+.wallet-split {
+  margin-top: 36px;
+}
+
+.wallet-empty,
+.wallet-none {
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  padding: 28px;
+  text-align: center;
+}
+
+.drawer-pulls li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 /* pack visual — pale foil wrapper */
 
 .pack-visual {

@@ -7,8 +7,8 @@ Every push to `main` auto-deploys to Vercel and the GitHub Pages mirror.
 
 | | Address |
 |---|---|
-| PackSale | `0x9e44cAE4D95D267984167219C832eFcFcb8d5B8F` |
-| JackpotVault | `0x9894B6Bc322347ee4D32b3042d89537BbEfD8b7E` |
+| PackSale | `0x7e427a08a9d8fdfcC49d84a0471c0C064c08C64D` |
+| JackpotVault | `0xb9F3125Ae55712aE9F4c15F7b18308549F587A2F` |
 | Treasury (1% fee) | `0xd589cF06C304e91BEc4432278e9E852914631733` |
 | USDG (payment) | `0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168` |
 | Owner/operator | `0x3F46489093ea0697d36272cBDab8C65f5F14D243` (key in `contracts/.env`) |
@@ -23,7 +23,7 @@ cannot be sold unless the treasury already covers the worst-case payout (3x pric
 every unsettled pack.
 
 ```
-send USDG  ->  0x9e44cAE4D95D267984167219C832eFcFcb8d5B8F
+send USDG  ->  0x7e427a08a9d8fdfcC49d84a0471c0C064c08C64D
 ```
 
 | Float | Concurrent $10 packs | Notes |
@@ -32,9 +32,13 @@ send USDG  ->  0x9e44cAE4D95D267984167219C832eFcFcb8d5B8F
 | $300 | 10 | comfortable public launch |
 | $1,000 | 33 | crowd |
 
-Float is a *concurrency* limit, not a sales cap — it frees the moment each pack settles
-(seconds). Stock tokens sent to the same address are delivered as cards; without them
-the contract refunds the card value in USDG instead, so partial inventory is always safe.
+Float is a *concurrency* limit, not a sales cap. Each unsettled pack locks 3x its price as
+a reserve, released the moment it opens (seconds later). $205 means roughly 6 packs can be
+mid-purchase at once — sequential sales are unlimited.
+
+**No stock inventory is needed.** The contract buys each card on Uniswap v4 at open time
+with the buyer's own money and sends it straight to them. There is no refund path: every
+card is a real stock.
 
 Check status any time:
 

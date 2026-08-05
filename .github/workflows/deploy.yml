@@ -26,8 +26,8 @@ jobs:
       - run: npm ci
       - run: npm run build
         env:
-          VITE_PACK_SALE_ADDRESS: '0x9e44cAE4D95D267984167219C832eFcFcb8d5B8F'
-          VITE_VAULT_ADDRESS: '0x9894B6Bc322347ee4D32b3042d89537BbEfD8b7E'
+          VITE_PACK_SALE_ADDRESS: '0x7e427a08a9d8fdfcC49d84a0471c0C064c08C64D'
+          VITE_VAULT_ADDRESS: '0xb9F3125Ae55712aE9F4c15F7b18308549F587A2F'
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

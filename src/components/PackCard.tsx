@@ -47,12 +47,9 @@ function useTilt() {
   return { style, onMouseMove, onMouseLeave }
 }
 
-const MAX_LOGOS = 6
-
 export function PackCard({ pack, onOpen }: { pack: Pack; onOpen: (p: Pack) => void }) {
   const tilt = useTilt()
-  const shown = pack.pool.slice(0, MAX_LOGOS)
-  const extra = pack.pool.length - shown.length
+  const [showAll, setShowAll] = useState(false)
 
   return (
     <div className="pack-card">
@@ -73,14 +70,39 @@ export function PackCard({ pack, onOpen }: { pack: Pack; onOpen: (p: Pack) => vo
         <p className="muted small">
           {pack.tagline} · 1 of {pack.pool.length} stocks
         </p>
-        <div className="pack-logos" title={pack.pool.join(' · ')}>
-          {shown.map((t) => (
-            <span className="pack-logo-slot" key={t}>
-              <StockLogo stock={stockByTicker(t)} size={24} />
+        <button
+          className={`pack-roster ${showAll ? 'pack-roster-open' : ''}`}
+          onClick={() => setShowAll((v) => !v)}
+          aria-expanded={showAll}
+        >
+          {showAll ? (
+            <span className="pack-roster-grid">
+              {pack.pool.map((t) => {
+                const s = stockByTicker(t)
+                return (
+                  <span className="pack-roster-item" key={t}>
+                    <StockLogo stock={s} size={20} />
+                    <span>{s.ticker}</span>
+                  </span>
+                )
+              })}
             </span>
-          ))}
-          {extra > 0 && <span className="pack-logo-slot pack-logo-more">+{extra}</span>}
-        </div>
+          ) : (
+            <span className="pack-logos">
+              {pack.pool.slice(0, 6).map((t) => (
+                <span className="pack-logo-slot" key={t}>
+                  <StockLogo stock={stockByTicker(t)} size={24} />
+                </span>
+              ))}
+              {pack.pool.length > 6 && (
+                <span className="pack-logo-slot pack-logo-more">+{pack.pool.length - 6}</span>
+              )}
+            </span>
+          )}
+          <span className="pack-roster-toggle muted small">
+            {showAll ? 'hide' : `see all ${pack.pool.length}`}
+          </span>
+        </button>
         <button className="btn btn-green btn-full" disabled={!pack.live} onClick={() => onOpen(pack)}>
           {pack.live ? 'Buy & Open' : 'Coming Soon'}
         </button>

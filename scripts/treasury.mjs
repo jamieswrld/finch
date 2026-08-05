@@ -76,6 +76,59 @@ function capacity(freeUsd) {
   return [10, 25, 50, 100].map((p) => `${p === 10 ? '' : ' '}$${p}: ${Math.floor(freeUsd / (p * 3))}`).join('   ')
 }
 
+const SWAPPER = '0x8b959dB2bd9835DFD8a575E3cb696Fcab7Dbd8Dd'
+/** Keep this much ETH in the operator wallet for gas; sweep only the excess. */
+const GAS_RESERVE = parseUnits('0.03', 18)
+
+const swapperAbi = parseAbi([
+  'function swap(address tokenIn, address tokenOut, uint24 fee, int24 tickSpacing, uint256 amountIn, uint256 minOut) payable',
+  'function sweep(address token, address to)',
+])
+
+/** Turn creator-fee income sitting in the operator wallet into PackSale float.
+ *  Pons pays creator fees in ETH to the launching wallet, so this is the path
+ *  from "fees claimed" to "packs sellable". */
+async function sweepIncome() {
+  const w = wallet()
+  const me = w.account.address
+  const moved = []
+
+  // 1. ETH above the gas reserve -> USDG
+  const eth = await pub.getBalance({ address: me })
+  if (eth > GAS_RESERVE + parseUnits('0.005', 18)) {
+    const amount = eth - GAS_RESERVE
+    let hash = await w.sendTransaction({ to: SWAPPER, value: amount })
+    await pub.waitForTransactionReceipt({ hash })
+    hash = await w.writeContract({
+      address: SWAPPER,
+      abi: swapperAbi,
+      functionName: 'swap',
+      args: ['0x0000000000000000000000000000000000000000', USDG, 500, 10, amount, 1n],
+    })
+    await pub.waitForTransactionReceipt({ hash })
+    hash = await w.writeContract({
+      address: SWAPPER, abi: swapperAbi, functionName: 'sweep', args: [USDG, me],
+    })
+    await pub.waitForTransactionReceipt({ hash })
+    moved.push(`${formatUnits(amount, 18)} ETH -> USDG`)
+  }
+
+  // 2. all USDG in the wallet -> the float
+  const bal = await pub.readContract({ address: USDG, abi: erc20, functionName: 'balanceOf', args: [me] })
+  if (bal > 0n) {
+    const hash = await w.writeContract({
+      address: USDG,
+      abi: parseAbi(['function transfer(address,uint256) returns (bool)']),
+      functionName: 'transfer',
+      args: [SALE, bal],
+    })
+    await pub.waitForTransactionReceipt({ hash })
+    moved.push(`${usd(bal)} -> float`)
+  }
+
+  return moved.length ? moved.join(', ') : 'nothing to sweep'
+}
+
 const cmd = process.argv[2] ?? 'status'
 const target = Number(process.argv[3] ?? DEFAULT_TARGET)
 
@@ -93,6 +146,8 @@ if (cmd === 'status') {
 
   concurrent packs sellable:  ${capacity(Number(formatUnits(free, 6)))}
 `)
+} else if (cmd === 'sweep') {
+  console.log(await sweepIncome())
 } else if (cmd === 'topup' || cmd === 'watch') {
   const targetWei = parseUnits(String(target), 6)
 
@@ -119,6 +174,11 @@ if (cmd === 'status') {
     console.log(`watching — keeping float at ${usd(targetWei)}`)
     for (;;) {
       try {
+        // pull in any creator-fee income first, then rebalance vault -> float
+        if (process.env.SWEEP_INCOME === '1') {
+          const swept = await sweepIncome()
+          if (swept !== 'nothing to sweep') console.log(new Date().toISOString(), 'swept:', swept)
+        }
         const msg = await once()
         if (!msg.includes('nothing to do')) console.log(new Date().toISOString(), msg)
       } catch (e) {

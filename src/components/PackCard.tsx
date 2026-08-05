@@ -91,7 +91,7 @@ export function PackCard({ pack, onOpen }: { pack: Pack; onOpen: (p: Pack) => vo
             <span className="pack-logos">
               {pack.pool.slice(0, 6).map((t) => (
                 <span className="pack-logo-slot" key={t}>
-                  <StockLogo stock={stockByTicker(t)} size={24} />
+                  <StockLogo stock={stockByTicker(t)} size={21} />
                 </span>
               ))}
               {pack.pool.length > 6 && (
@@ -100,7 +100,7 @@ export function PackCard({ pack, onOpen }: { pack: Pack; onOpen: (p: Pack) => vo
             </span>
           )}
           <span className="pack-roster-toggle muted small">
-            {showAll ? 'hide' : `see all ${pack.pool.length}`}
+            {showAll ? 'hide' : 'see all'}
           </span>
         </button>
         <button className="btn btn-green btn-full" disabled={!pack.live} onClick={() => onOpen(pack)}>

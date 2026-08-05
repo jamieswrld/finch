@@ -705,12 +705,20 @@ a {
   box-shadow: 0 30px 60px -30px rgba(22, 22, 26, 0.2);
 }
 
+/* Fixed 4:5 box so every card's media is the same height regardless of the
+   artwork's own aspect ratio — otherwise the info blocks below start at
+   different heights and the row looks ragged. */
 .pack-media {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 32px 0 28px;
+  aspect-ratio: 4 / 5;
+  /* .pack-card is a column flex container, so min-height:auto would let the
+     image's intrinsic height win and the aspect-ratio would never apply. */
+  min-height: 0;
+  flex: none;
+  padding: 26px 0;
   background:
     radial-gradient(80% 70% at 50% 30%, rgba(140, 170, 255, 0.06), transparent 70%),
     linear-gradient(#fbfbfc, #f4f4f6);
@@ -718,12 +726,26 @@ a {
 }
 
 .pack-media-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
   transition: transform 0.25s ease;
   will-change: transform;
 }
 
+/* Letterbox each pack inside that box — scaled to fit, never cropped, never
+   stretched. Scoped to .pack-media so the hero fan and modal are untouched. */
+.pack-media .pack-visual {
+  width: 100%;
+  max-width: 150px;
+  height: 100%;
+}
+
 .pack-visual-img {
   width: 100%;
+  height: 100%;
+  object-fit: contain;
   display: block;
   -webkit-user-select: none;
   user-select: none;
@@ -753,10 +775,17 @@ a {
 
 .pack-card-info {
   width: 100%;
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 10px;
   padding: 16px 18px 18px;
+}
+
+/* Taglines wrap to different line counts, so push the CTA to the card floor —
+   equal media height alone still leaves the buttons ragged. */
+.pack-card-info .btn-full {
+  margin-top: auto;
 }
 
 .pack-card-row {
@@ -779,9 +808,11 @@ a {
   align-items: center;
 }
 
+/* 28px at -10px overlap keeps six logos plus the "+N" chip inside a 235px
+   column without squeezing the "see all" label off the card. */
 .pack-logo-slot {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   border: 1.5px solid #fff;
   background: #f4f4f6;
@@ -789,7 +820,7 @@ a {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  margin-right: -8px;
+  margin-right: -10px;
   box-shadow: 0 1px 4px rgba(22, 22, 26, 0.12);
   transition: transform 0.15s ease;
 }
@@ -846,6 +877,7 @@ a {
 
 .pack-roster-toggle {
   flex-shrink: 0;
+  white-space: nowrap;
   text-decoration: underline;
   text-underline-offset: 2px;
 }

@@ -6,12 +6,15 @@ import { OpenPackModal } from './components/OpenPackModal'
 import { PackCard, PackVisual } from './components/PackCard'
 import { StockLogo } from './components/StockLogo'
 import { WalletPage } from './components/WalletPage'
+import { XButton, XIcon } from './components/XLink'
 import {
   JACKPOT_CUT,
   JACKPOT_SEED_USD,
   PACKS,
   RARITY_TIERS,
   STOCKS,
+  X_HANDLE,
+  X_URL,
   asset,
   type Pack,
 } from './data'
@@ -78,6 +81,7 @@ export default function App() {
           <a href="#/docs">Docs</a>
         </nav>
         <div className="header-actions">
+          <XButton />
           {isTokenLive() && (
             <a className="btn btn-token" href={tokenBuyUrl()} target="_blank" rel="noreferrer">
               Buy ${TOKEN_SYMBOL}
@@ -322,6 +326,10 @@ export default function App() {
       )}
 
       <footer className="footer">
+        <a className="footer-x" href={X_URL} target="_blank" rel="noreferrer">
+          <XIcon />
+          @{X_HANDLE}
+        </a>
         <span className="muted small">
           finch · <a href="#/docs">docs</a> · not investment advice · tokenized stocks carry risk
         </span>

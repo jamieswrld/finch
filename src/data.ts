@@ -28,6 +28,10 @@ export interface Pack {
 /** Resolve a public/ asset path against the deploy base (GitHub Pages serves under a subpath). */
 export const asset = (p: string): string => import.meta.env.BASE_URL + p.replace(/^\//, '')
 
+/** Official finch account on X. */
+export const X_HANDLE = 'finchdotfun'
+export const X_URL = `https://x.com/${X_HANDLE}`
+
 /** USDG (Global Dollar, Paxos) — natively issued on Robinhood Chain */
 export const USDG_ADDRESS = '0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168'
 

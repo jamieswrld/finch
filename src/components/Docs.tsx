@@ -2,6 +2,7 @@ import { robinhoodChain } from '../chain'
 import { HIDDEN_CARD_CHANCE, JACKPOT_CUT, PACKS, STOCKS, USDG_ADDRESS, asset } from '../data'
 import { PACK_SALE_ADDRESS, TREASURY_ADDRESS, VAULT_ADDRESS, isOnchainEnabled } from '../onchain'
 import { fmtUsd } from '../rng'
+import { XButton } from './XLink'
 
 const explorer = robinhoodChain.blockExplorers.default.url
 
@@ -39,9 +40,12 @@ export function DocsPage() {
           </a>
           <span className="docs-header-label">docs</span>
         </div>
-        <a className="btn btn-ghost" href="#/">
-          ← Back to app
-        </a>
+        <div className="header-actions">
+          <XButton />
+          <a className="btn btn-ghost" href="#/">
+            ← Back to app
+          </a>
+        </div>
       </header>
       <div className="docs-layout">
         <aside className="docs-side">

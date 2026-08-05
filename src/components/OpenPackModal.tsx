@@ -364,7 +364,7 @@ export function OpenPackModal({ pack, onClose, onPulled }: Props) {
             </li>
             <li>
               <span className="muted">You receive</span>
-              <span>a random tokenized stock, avg ~{fmtUsd(pack.priceUsd * 0.8)}</span>
+              <span>a random tokenized stock</span>
             </li>
             <li>
               <span className="muted">To jackpot vault</span>

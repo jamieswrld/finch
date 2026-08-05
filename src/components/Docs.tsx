@@ -156,9 +156,8 @@ export function Docs() {
           </tbody>
         </table>
         <p>
-          Cards average roughly 80% of pack price in stock value. finch is entertainment with real
-          assets attached, not an investment product — the expected value of a pack is less than
-          what you pay for it.
+          finch is entertainment with real assets attached, not an investment product — the
+          expected value of a pack is less than what you pay for it.
         </p>
         <p className="muted small">
           Card values are randomised inside each band, so a $10 pack pays an uneven amount like
@@ -275,7 +274,7 @@ export function Docs() {
         <ul className="doc-list">
           <li>
             Packs are randomized. You can pay {fmtUsd(10)} and receive a card worth substantially
-            less. Average card value is below pack price by design.
+            less.
           </li>
           <li>
             Stocks move. A tokenized share can lose value after it reaches your wallet, like any

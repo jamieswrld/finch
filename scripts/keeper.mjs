@@ -41,8 +41,20 @@ const wallet = createWalletClient({ account, chain, transport: http() })
 const saleAbi = parseAbi([
   'function open(uint256 purchaseId)',
   'function purchaseCount() view returns (uint256)',
-  'function purchases(uint256) view returns (address buyer, uint64 packId, uint64 commitBlock, bool settled)',
+  'function purchases(uint256) view returns (address buyer, uint64 packId, bool settled)',
+  'function randomness() view returns (address)',
 ])
+
+const rngAbi = parseAbi([
+  'function isReadyFor(address caller, uint256 requestId) view returns (bool)',
+])
+
+/** Randomness module address, read from the core so a module swap needs no redeploy. */
+let RNG = null
+async function rngAddress() {
+  if (!RNG) RNG = await pub.readContract({ address: SALE, abi: saleAbi, functionName: 'randomness' })
+  return RNG
+}
 
 const PURCHASED = parseAbiItem(
   'event Purchased(uint256 indexed purchaseId, address indexed buyer, uint256 indexed packId)',
@@ -53,17 +65,23 @@ const pending = new Set()
 async function settle(id) {
   try {
     const p = await pub.readContract({ address: SALE, abi: saleAbi, functionName: 'purchases', args: [id] })
-    if (p[3]) {
+    if (p[2]) {
       pending.delete(id)
       return
     }
-    const block = await pub.getBlockNumber()
-    if (block <= p[2]) return // commit block not behind us yet
+    // block.number tracks L1 here (~12s), so readiness lags the L2 block rate
+    const ready = await pub.readContract({
+      address: await rngAddress(),
+      abi: rngAbi,
+      functionName: 'isReadyFor',
+      args: [SALE, id],
+    })
+    if (!ready) return
 
     const hash = await wallet.writeContract({ address: SALE, abi: saleAbi, functionName: 'open', args: [id] })
     await pub.waitForTransactionReceipt({ hash })
     const after = await pub.readContract({ address: SALE, abi: saleAbi, functionName: 'purchases', args: [id] })
-    if (after[3]) {
+    if (after[2]) {
       pending.delete(id)
       console.log(`settled #${id} for ${p[0]}  ${chain.blockExplorers.default.url}/tx/${hash}`)
     } else {
@@ -79,7 +97,7 @@ async function settle(id) {
 const count = await pub.readContract({ address: SALE, abi: saleAbi, functionName: 'purchaseCount' })
 for (let i = 0n; i < count; i++) {
   const p = await pub.readContract({ address: SALE, abi: saleAbi, functionName: 'purchases', args: [i] })
-  if (!p[3]) pending.add(i)
+  if (!p[2]) pending.add(i)
 }
 console.log(`keeper up on ${SALE}`)
 console.log(`settler ${account.address}`)

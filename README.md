@@ -25,7 +25,7 @@ straight to your wallet. No inventory, no custody, no refunds — every card is 
 [![Audit](https://img.shields.io/badge/audit-pre--audit-orange?style=flat-square)](#security)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 
-**[finch.fun](https://finch.fun)** · **[Docs](https://finch.fun/#/docs)** · **[Contracts on Blockscout](https://robinhoodchain.blockscout.com/address/0x7e427a08a9d8fdfcC49d84a0471c0C064c08C64D)**
+**[finch.fun](https://finch.fun)** · **[Docs](https://finch.fun/#/docs)** · **[Contracts on Blockscout](https://robinhoodchain.blockscout.com/address/0x933C7F2F72e8FD5b57afB7a9Ee1ad36Fc5a6D45c)**
 
 </div>
 
@@ -81,7 +81,7 @@ settles at an uneven number like **$8.43** — never a flat multiple.
 ## Odds
 
 Rarity picks a band; the value lands anywhere inside it. Both are hardcoded in
-[`PackSale.sol`](contracts/src/PackSale.sol) — read them yourself.
+[`PackSaleCore.sol`](contracts/src/PackSaleCore.sol) — read them yourself.
 
 | Rarity | Odds | Card value |
 |---|---|---|
@@ -91,23 +91,34 @@ Rarity picks a band; the value lands anywhere inside it. Both are hardcoded in
 | Legendary | 2% | 1.80× – 3.00× |
 | **Hidden card** | **1%** | **0.5% – 25% of the jackpot vault, paid in USDG** |
 
-Expected card value is **84.2%** of pack price. finch is entertainment with real assets
-attached — the expected value of a pack is less than what you pay for it.
+finch is entertainment with real assets attached — the expected value of a pack is
+less than what you pay for it.
 
 ## Contracts
 
 Robinhood Chain · chain ID **4663**
 
-| Contract | Address |
-|---|---|
-| `PackSale` | [`0x7e427a08a9d8fdfcC49d84a0471c0C064c08C64D`](https://robinhoodchain.blockscout.com/address/0x7e427a08a9d8fdfcC49d84a0471c0C064c08C64D) |
-| `JackpotVault` | [`0xb9F3125Ae55712aE9F4c15F7b18308549F587A2F`](https://robinhoodchain.blockscout.com/address/0xb9F3125Ae55712aE9F4c15F7b18308549F587A2F) |
-| `Swapper` | [`0x8b959dB2bd9835DFD8a575E3cb696Fcab7Dbd8Dd`](https://robinhoodchain.blockscout.com/address/0x8b959dB2bd9835DFD8a575E3cb696Fcab7Dbd8Dd) |
-| Treasury | [`0xd589cF06C304e91BEc4432278e9E852914631733`](https://robinhoodchain.blockscout.com/address/0xd589cF06C304e91BEc4432278e9E852914631733) |
-| `USDG` (payment) | [`0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168`](https://robinhoodchain.blockscout.com/address/0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168) |
-| Uniswap v4 `PoolManager` | [`0x8366a39CC670B4001A1121B8F6A443A643e40951`](https://robinhoodchain.blockscout.com/address/0x8366a39CC670B4001A1121B8F6A443A643e40951) |
+All five finch contracts are source-verified on Blockscout.
 
-**$PONS** — *pending launch. The address will be published here and in the app on release.*
+| Contract | Address | |
+|---|---|---|
+| `PackSaleCore` | [`0x933C7F2F72e8FD5b57afB7a9Ee1ad36Fc5a6D45c`](https://robinhoodchain.blockscout.com/address/0x933C7F2F72e8FD5b57afB7a9Ee1ad36Fc5a6D45c) | ✅ verified |
+| `CommitRevealRandomness` | [`0x731fCC2FCd8DaD81e8d6c11b84F05701CAdd9CC8`](https://robinhoodchain.blockscout.com/address/0x731fCC2FCd8DaD81e8d6c11b84F05701CAdd9CC8) | ✅ verified |
+| `UniswapV4Adapter` | [`0x76dfFEfec7302D548D8D53b299e051460CD87907`](https://robinhoodchain.blockscout.com/address/0x76dfFEfec7302D548D8D53b299e051460CD87907) | ✅ verified |
+| `JackpotVault` | [`0xe7353a598229d1ce4c8ac15E731c380D92dfb137`](https://robinhoodchain.blockscout.com/address/0xe7353a598229d1ce4c8ac15E731c380D92dfb137) | ✅ verified |
+| `Swapper` | [`0x8b959dB2bd9835DFD8a575E3cb696Fcab7Dbd8Dd`](https://robinhoodchain.blockscout.com/address/0x8b959dB2bd9835DFD8a575E3cb696Fcab7Dbd8Dd) | ✅ verified |
+| Treasury | [`0xd589cF06C304e91BEc4432278e9E852914631733`](https://robinhoodchain.blockscout.com/address/0xd589cF06C304e91BEc4432278e9E852914631733) | |
+| `USDG` (payment) | [`0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168`](https://robinhoodchain.blockscout.com/address/0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168) | Paxos |
+| Uniswap v4 `PoolManager` | [`0x8366a39CC670B4001A1121B8F6A443A643e40951`](https://robinhoodchain.blockscout.com/address/0x8366a39CC670B4001A1121B8F6A443A643e40951) | |
+
+### $FINCH
+
+| | |
+|---|---|
+| Token | [`0x81eb5f0f49a077d82a2421037ddb1710d8153772`](https://robinhoodchain.blockscout.com/token/0x81eb5f0f49a077d82a2421037ddb1710d8153772) |
+| Supply | 1,000,000,000 · 18 decimals |
+
+Creator fees from the token spill into the jackpot vault.
 
 > ⚠️ Verify addresses against this file and the in-app docs. There are tokens on this
 > chain using real tickers at fake addresses — a matching symbol is not proof of anything.
@@ -116,7 +127,8 @@ Robinhood Chain · chain ID **4663**
 
 ```
 contracts/        Solidity (Foundry)
-  src/            PackSale, JackpotVault, Swapper
+  src/            PackSaleCore, CommitRevealRandomness,
+                  UniswapV4Adapter, JackpotVault, Swapper
   script/         deploy scripts (mainnet, testnet)
   test/           unit + forked-mainnet tests
 src/              React + Vite frontend, wagmi/viem
@@ -152,7 +164,7 @@ node scripts/keeper.mjs            # settle packs for buyers
 | One-signature buying via keeper | ✅ Live |
 | Oracle-guarded swap minimums | ✅ Live |
 | Automated treasury recycling | ✅ Live |
-| $PONS token + creator-fee recycling | 🔨 In progress |
+| $FINCH token + creator-fee recycling | ✅ Live |
 | Chainlink VRF when available on 4663 | 📋 Planned |
 | Collection completion rewards | 📋 Planned |
 

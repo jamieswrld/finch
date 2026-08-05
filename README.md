@@ -1,11 +1,20 @@
 <div align="center">
 
+<img src="public/brand/mark.webp" alt="finch" width="110" />
+
 # finch
 
 ### Open a pack. Own real stocks.
 
 Randomized packs of tokenized equities, bought on-chain at settlement and delivered
 straight to your wallet. No inventory, no custody, no refunds — every card is a real stock.
+
+<img src="public/packs/starter.webp" alt="Starter Pack" width="132" />
+<img src="public/packs/bluechip.webp" alt="Blue Chip Pack" width="132" />
+<img src="public/packs/ai.webp" alt="AI Pack" width="132" />
+<img src="public/packs/whale.webp" alt="Whale Pack" width="132" />
+
+<sub>Starter · Blue Chip · AI · Whale</sub>
 
 [![Chain](https://img.shields.io/badge/Robinhood%20Chain-4663-00C805?style=flat-square)](https://robinhoodchain.blockscout.com)
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.28-363636?style=flat-square&logo=solidity)](contracts/)
@@ -16,7 +25,7 @@ straight to your wallet. No inventory, no custody, no refunds — every card is 
 [![Audit](https://img.shields.io/badge/audit-pre--audit-orange?style=flat-square)](#security)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 
-**[Live app](https://finch-trial-1303b717.vercel.app)** · **[Docs](https://finch-trial-1303b717.vercel.app/#/docs)** · **[Contracts on Blockscout](https://robinhoodchain.blockscout.com/address/0x7e427a08a9d8fdfcC49d84a0471c0C064c08C64D)**
+**[finch.fun](https://finch.fun)** · **[Docs](https://finch.fun/#/docs)** · **[Contracts on Blockscout](https://robinhoodchain.blockscout.com/address/0x7e427a08a9d8fdfcC49d84a0471c0C064c08C64D)**
 
 </div>
 

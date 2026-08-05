@@ -582,6 +582,76 @@ a {
   box-shadow: 0 12px 28px -12px rgba(179, 144, 63, 0.7);
 }
 
+/* ---------- contract address bar ---------- */
+
+/* A card rather than a pill — the full 42-char address plus three actions will
+   not fit one line in the hero column, and a wrapped pill reads as broken. */
+.ca-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 26px;
+  padding: 14px 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: #fff;
+  max-width: max-content;
+}
+
+.ca-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.ca-addr {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85rem;
+  color: var(--text);
+  overflow-wrap: anywhere;
+  /* one click selects the whole address */
+  -webkit-user-select: all;
+  user-select: all;
+}
+
+.ca-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.ca-btn {
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: #fff;
+  padding: 6px 14px;
+  font: inherit;
+  font-size: 0.78rem;
+  color: var(--muted);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.ca-btn:hover {
+  border-color: var(--text);
+  color: var(--text);
+}
+
+@media (max-width: 620px) {
+  .ca-bar {
+    max-width: 100%;
+  }
+
+  .ca-addr {
+    font-size: 0.74rem;
+  }
+}
+
 .net-banner {
   display: flex;
   align-items: center;

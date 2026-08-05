@@ -6,6 +6,7 @@ import { OpenPackModal } from './components/OpenPackModal'
 import { PackCard, PackVisual } from './components/PackCard'
 import { StockLogo } from './components/StockLogo'
 import { WalletPage } from './components/WalletPage'
+import { TokenBar } from './components/TokenBar'
 import { XButton, XIcon } from './components/XLink'
 import {
   JACKPOT_CUT,
@@ -80,13 +81,10 @@ export default function App() {
           <a href="#/wallet">Wallet</a>
           <a href="#/docs">Docs</a>
         </nav>
+        {/* Two controls only — the token CTA and contract address live in the
+            hero bar so the header does not turn into a row of buttons. */}
         <div className="header-actions">
           <XButton />
-          {isTokenLive() && (
-            <a className="btn btn-token" href={tokenBuyUrl()} target="_blank" rel="noreferrer">
-              Buy ${TOKEN_SYMBOL}
-            </a>
-          )}
           <ConnectButton />
         </div>
       </header>
@@ -125,6 +123,7 @@ export default function App() {
                 Read the docs
               </a>
             </div>
+            <TokenBar />
           </div>
           <div className="hero-fan" aria-hidden>
             {PACKS.slice(0, 3).map((p, i) => (

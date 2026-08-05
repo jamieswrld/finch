@@ -115,7 +115,7 @@ All five finch contracts are source-verified on Blockscout.
 
 | | |
 |---|---|
-| Token | [`0x81eb5f0f49a077d82a2421037ddb1710d8153772`](https://robinhoodchain.blockscout.com/token/0x81eb5f0f49a077d82a2421037ddb1710d8153772) |
+| Token | [`0x34f6888acf2fd791c9c94da0b9cb7480c4877777`](https://robinhoodchain.blockscout.com/token/0x34f6888acf2fd791c9c94da0b9cb7480c4877777) |
 | Supply | 1,000,000,000 · 18 decimals |
 
 Creator fees from the token spill into the jackpot vault.

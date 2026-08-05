@@ -107,6 +107,56 @@ const packSaleAbi = [
 const USDG_DECIMALS = 6
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
+/** Watch for the keeper settling this purchase; returns the card if it does. */
+async function waitForKeeper(purchaseId: bigint, timeoutMs: number): Promise<Card | null> {
+  const client = getPublicClient(wagmiConfig)
+  if (!client) return null
+  const started = Date.now()
+  const fromBlock = await client.getBlockNumber().catch(() => null)
+  if (fromBlock === null) return null
+
+  while (Date.now() - started < timeoutMs) {
+    await sleep(1200)
+    try {
+      const logs = await client.getLogs({
+        address: PACK_SALE_ADDRESS,
+        fromBlock: fromBlock > 50n ? fromBlock - 50n : 0n,
+        toBlock: 'latest',
+      })
+      const parsed = parseEventLogs({ abi: packSaleAbi, logs })
+      for (const log of parsed) {
+        if (
+          (log.eventName === 'OpenedStock' || log.eventName === 'OpenedJackpot') &&
+          log.args.purchaseId === purchaseId
+        ) {
+          if (log.eventName === 'OpenedStock') {
+            const card = await stockFromAddress(log.args.stock as Address)
+            card.valueUsd = Number(log.args.valueUsdg) / 10 ** USDG_DECIMALS
+            card.rarity = rarityFromBps(Number(log.args.rarityBps))
+            return card
+          }
+          return {
+            kind: 'jackpot',
+            jackpotPct: Number(log.args.pctBps) / 100,
+            valueUsd: Number(log.args.amountUsdg) / 10 ** USDG_DECIMALS,
+          }
+        }
+      }
+    } catch {
+      /* keep waiting */
+    }
+  }
+  return null
+}
+
+/** Map an on-chain value-bps to the rarity band it falls in. */
+function rarityFromBps(bps: number) {
+  if (bps < 8_500) return RARITY_TIERS[0]
+  if (bps < 12_000) return RARITY_TIERS[1]
+  if (bps < 18_000) return RARITY_TIERS[2]
+  return RARITY_TIERS[3]
+}
+
 async function stockFromAddress(address: Address): Promise<Card & { kind: 'stock' }> {
   const known = STOCKS.find((s) => s.address.toLowerCase() === address.toLowerCase())
   if (known) return { kind: 'stock', stock: known, valueUsd: 0, rarity: RARITY_TIERS[0] }
@@ -211,9 +261,13 @@ export async function preflightBuy(account: Address, priceUsd: number): Promise<
   const suggested: PayWith = canPayUsdg ? 'usdg' : 'eth'
 
   if (free < price * 3n) {
+    // distinguish "another pack is settling" from "this size needs a bigger vault"
+    const transient = float >= price * 3n
     return {
       ok: false,
-      reason: 'Packs are momentarily at capacity — one is settling. Try again in a few seconds.',
+      reason: transient
+        ? 'Packs are momentarily at capacity — one is settling. Try again in a few seconds.'
+        : 'This pack size is temporarily unavailable while the vault scales up. A smaller pack will open right now.',
       usdgBalance,
       ethBalance,
       headroomUsd,
@@ -295,6 +349,12 @@ export async function buyAndOpenOnchain(
   if (purchased.length === 0) throw new Error('Purchased event not found')
   const purchaseId = purchased[0].args.purchaseId
   onProgress?.(1, buyHash)
+
+  // The keeper settles packs automatically, so the buyer normally signs only once.
+  // Fall back to a self-settled open() if it hasn't landed in a few seconds.
+  onProgress?.(2)
+  const keeperCard = await waitForKeeper(purchaseId, 9_000)
+  if (keeperCard) return keeperCard
 
   for (let attempt = 0; attempt < 10; attempt++) {
     let openHash: `0x${string}`

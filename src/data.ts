@@ -140,7 +140,7 @@ export const PACKS: Pack[] = [
     priceUsd: 100,
     tint: '#f3ead6',
     pool: FEED_BACKED,
-    live: false,
+    live: true,
     chainPackId: 3,
     image: '/packs/whale.webp',
   },

@@ -1,16 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useAccount, useSwitchChain } from 'wagmi'
+import { useAccount, useConnect, useSwitchChain } from 'wagmi'
 import { robinhoodChain } from '../chain'
 import { JACKPOT_CUT, PROTOCOL_FEE, asset, type Pack } from '../data'
 import { buyAndOpenOnchain, isOnchainEnabled, preflightBuy, type BuyPreflight, type PayWith } from '../onchain'
-import { fmtUsd, openPack, shortAddr, type Card } from '../rng'
+import { fmtUsd, shortAddr, type Card } from '../rng'
 import { PackVisual } from './PackCard'
 import { StockLogo } from './StockLogo'
 
 type Stage = 'confirm' | 'charging' | 'rip' | 'reveal'
 type Tier = 'common' | 'rare' | 'epic' | 'legendary' | 'jackpot' | 'refund'
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 const OPEN_STEPS: Array<[string, string]> = [
   ['Payment', 'USDG in · jackpot cut split'],
@@ -264,14 +262,14 @@ function RevealCard3D({ card }: { card: Card }) {
 
 interface Props {
   pack: Pack
-  jackpotUsd: number
   onClose: () => void
   onPulled: (card: Card, pack: Pack) => void
 }
 
-export function OpenPackModal({ pack, jackpotUsd, onClose, onPulled }: Props) {
+export function OpenPackModal({ pack, onClose, onPulled }: Props) {
   const { isConnected, address, chainId } = useAccount()
   const { switchChain, isPending: switching } = useSwitchChain()
+  const { connect, connectors, isPending: connectPending } = useConnect()
   const wrongNetwork = isConnected && chainId !== robinhoodChain.id
   const [preflight, setPreflight] = useState<BuyPreflight | null>(null)
   const [payWith, setPayWith] = useState<PayWith>('usdg')
@@ -316,6 +314,7 @@ export function OpenPackModal({ pack, jackpotUsd, onClose, onPulled }: Props) {
   }, [stage])
 
   const handleOpen = async () => {
+    if (!onchain) return
     setError(null)
     setStep(0)
     setCard(null)
@@ -324,24 +323,14 @@ export function OpenPackModal({ pack, jackpotUsd, onClose, onPulled }: Props) {
     setFactIdx(Math.floor(Math.random() * CHARGE_FACTS.length))
     setStage('charging')
     try {
-      let pulled: Card
-      if (onchain) {
-        pulled = await buyAndOpenOnchain(
-          pack,
-          (s, hash) => {
-            setStep(s)
-            if (hash) setTxHash(hash)
-          },
-          payWith,
-        )
-      } else {
-        for (let i = 1; i <= OPEN_STEPS.length; i++) {
-          await sleep(320)
-          setStep(i)
-        }
-        await sleep(140)
-        pulled = openPack(pack, jackpotUsd)
-      }
+      const pulled = await buyAndOpenOnchain(
+        pack,
+        (s, hash) => {
+          setStep(s)
+          if (hash) setTxHash(hash)
+        },
+        payWith,
+      )
       setCard(pulled)
       onPulled(pulled, pack)
       setStage('rip')
@@ -425,20 +414,22 @@ export function OpenPackModal({ pack, jackpotUsd, onClose, onPulled }: Props) {
                 </div>
               )}
               {preflight?.reason && <p className="small error">{preflight.reason}</p>}
-              {!onchain && (
-                <p className="muted small">
-                  {isConnected
-                    ? 'Contracts not configured — opening in demo mode.'
-                    : 'Connect a wallet to buy. Opening in demo mode.'}
-                </p>
+              {!isConnected ? (
+                <>
+                  <p className="muted small">Connect a wallet to buy this pack.</p>
+                  <button
+                    className="btn btn-green btn-full"
+                    disabled={connectPending || connectors.length === 0}
+                    onClick={() => connect({ connector: connectors[0] })}
+                  >
+                    {connectPending ? 'Connecting…' : 'Connect Wallet'}
+                  </button>
+                </>
+              ) : (
+                <button className="btn btn-green btn-full" onClick={handleOpen} disabled={!onchain}>
+                  {payWith === 'eth' ? 'Buy with ETH & Open' : 'Buy & Open Pack'}
+                </button>
               )}
-              <button className="btn btn-green btn-full" onClick={handleOpen}>
-                {onchain
-                  ? payWith === 'eth'
-                    ? 'Buy with ETH & Open'
-                    : 'Buy & Open Pack'
-                  : 'Open Pack (demo)'}
-              </button>
               {onchain && payWith === 'eth' && (
                 <p className="muted small">
                   Paid in ETH at the live rate — any surplus comes straight back to you as USDG.

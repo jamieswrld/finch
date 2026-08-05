@@ -330,7 +330,6 @@ export default function App() {
       {openingPack && (
         <OpenPackModal
           pack={openingPack}
-          jackpotUsd={jackpotUsd}
           onClose={() => setOpeningPack(null)}
           onPulled={handlePulled}
         />

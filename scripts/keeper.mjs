@@ -10,7 +10,7 @@ import { readFileSync } from 'node:fs'
 import { createPublicClient, createWalletClient, defineChain, http, parseAbi, parseAbiItem } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 
-const SALE = process.env.PACK_SALE ?? '0x7e427a08a9d8fdfcC49d84a0471c0C064c08C64D'
+const SALE = process.env.PACK_SALE ?? '0x933C7F2F72e8FD5b57afB7a9Ee1ad36Fc5a6D45c'
 
 /** KEEPER_KEY in hosted environments; falls back to the local env file for dev.
  *  This wallet needs nothing but gas — open() is permissionless and always pays

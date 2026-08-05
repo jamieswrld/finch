@@ -1,107 +1,170 @@
+<div align="center">
+
 # finch
 
-Open a pack, pull a real tokenized stock straight to your wallet on Robinhood Chain.
-Heavenly all-white UI; stock-terminal reveal cards; transparent on-chain mechanics
-(in-app docs at `#/docs`).
+### Open a pack. Own real stocks.
 
-**Live:** [finch-trial-1303b717.vercel.app](https://finch-trial-1303b717.vercel.app) (Vercel, auto-deploys from `main`)
-· mirror: [jamieswrld.github.io/finch](https://jamieswrld.github.io/finch/) (GitHub Pages)
+Randomized packs of tokenized equities, bought on-chain at settlement and delivered
+straight to your wallet. No inventory, no custody, no refunds — every card is a real stock.
 
-## Run it
+[![Chain](https://img.shields.io/badge/Robinhood%20Chain-4663-00C805?style=flat-square)](https://robinhoodchain.blockscout.com)
+[![Solidity](https://img.shields.io/badge/Solidity-0.8.28-363636?style=flat-square&logo=solidity)](contracts/)
+[![Foundry](https://img.shields.io/badge/built%20with-Foundry-FFB000?style=flat-square)](https://getfoundry.sh)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat-square&logo=typescript)](src/)
+[![Uniswap v4](https://img.shields.io/badge/Uniswap-v4-FF007A?style=flat-square&logo=uniswap)](https://docs.uniswap.org)
+[![Chainlink](https://img.shields.io/badge/Chainlink-price%20feeds-375BD2?style=flat-square&logo=chainlink)](https://docs.chain.link)
+[![Audit](https://img.shields.io/badge/audit-pre--audit-orange?style=flat-square)](#security)
+[![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
+
+**[Live app](https://finch-trial-1303b717.vercel.app)** · **[Docs](https://finch-trial-1303b717.vercel.app/#/docs)** · **[Contracts on Blockscout](https://robinhoodchain.blockscout.com/address/0x7e427a08a9d8fdfcC49d84a0471c0C064c08C64D)**
+
+</div>
+
+---
 
 ```
-npm install
-npm run dev
+$10 USDG in  →  $7.90 buys your stock  ·  $2.00 shared jackpot  ·  $0.10 protocol
 ```
 
-Current state: full frontend with wallet connect (any injected EVM wallet, Robinhood Chain
-mainnet + testnet configured) **plus the on-chain layer in [contracts/](contracts/)**
-(Foundry: `PackSale` + `JackpotVault`, 10 passing tests, deploy scripts). The site runs in
-demo mode until you deploy and put the addresses in `.env` (see [.env.example](.env.example)) —
-then Buy & Open goes through the real contracts: approve USDG → `buyPack` → `open`,
-with the reveal parsed from on-chain events and the jackpot read live from the vault.
+Card value is rolled on-chain and randomized inside its rarity band, so a $10 pack
+settles at an uneven number like **$8.43** — never a flat multiple.
 
-## Deploy (testnet, fully playable with mocks)
+---
 
-```sh
-cd contracts
-$env:PRIVATE_KEY = "0x..."   # funded from https://faucet.testnet.chain.robinhood.com
-forge script script/DeployTestnet.s.sol --rpc-url https://rpc.testnet.chain.robinhood.com --broadcast
+## How it works
+
+```
+        buy                                    open  (keeper, ~2s later)
+         │                                       │
+    USDG or ETH                          blockhash(commitBlock)
+         │                                       │
+         ▼                                       ▼
+   ┌───────────┐   20%   ┌─────────────┐    rarity roll ──► card value
+   │ PackSale  ├────────►│ JackpotVault│         │
+   │           │   1%    └──────┬──────┘         ▼
+   │           ├────────► treasury      swap USDG ──► Uniswap v4
+   └─────┬─────┘                                 │
+         │                              minOut from Chainlink
+         │  79% held as the card budget          │
+         └───────────────────────────────────────┴──► stock to buyer
 ```
 
-Copy the printed PackSale/Vault/USDG addresses into `.env` as
-`VITE_PACK_SALE_ADDRESS` / `VITE_VAULT_ADDRESS` / `VITE_USDG_ADDRESS`, restart `npm run dev`,
-add chain 46630 to your wallet, and open packs for real. Mainnet:
-`script/DeployMainnet.s.sol` (real USDG + stock addresses baked in; set Chainlink feeds
-and transfer stock inventory to the PackSale address after deploy).
+1. **Buy** — pay in USDG or native ETH. One signature. The jackpot cut and protocol
+   fee split off immediately; the rest is your card budget.
+2. **Commit** — your outcome locks to a future block hash. Nobody, including us, can
+   see or influence it.
+3. **Settle** — a permissionless keeper calls `open()` a couple of seconds later. The
+   contract rolls rarity, buys that much stock on Uniswap v4, and transfers it to you.
 
-## Contract design
+## Features
 
-- **PackSale** — sells packs for USDG. 20% of every sale → vault (+ jackpot tickets),
-  80% stays as treasury. Commit-reveal randomness on a future blockhash: `buyPack` commits,
-  `open` (permissionless, ≥1 block later) settles — hidden card (1%, pays a luck-weighted
-  0.5–25% of the open pot instantly), or a rarity-weighted card value
-  (0.7×/1×/1.5×/3× at 78/15/5/2%) converted to stock via the Chainlink USD feed and paid
-  from the contract's inventory; USDG refund if inventory can't cover it. Blockhash
-  re-arms after 256 blocks; keeper bots can settle abandoned packs so nobody re-roll grinds.
-- **JackpotVault** — round-based. Tickets = USDG spent. After the payout date,
-  `closeRound` freezes the pot and holders claim pro-rata; hidden cards pay from the
-  open pot only, never from frozen claims. Swap blockhash RNG for VRF when it lands on
-  Robinhood Chain.
-
-## Robinhood Chain facts (verified Aug 2026)
-
-| Item | Value |
+| | |
 |---|---|
-| Mainnet chain ID | 4663 (testnet: 46630) |
-| RPC | `https://rpc.mainnet.chain.robinhood.com` (testnet: `rpc.testnet.chain.robinhood.com`) |
-| Gas currency | ETH |
-| Explorer | https://robinhoodchain.blockscout.com |
-| Docs | https://docs.robinhood.com/chain |
-| USDG (Paxos Global Dollar) | `0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168` |
-| WETH | `0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73` |
-| Testnet faucet | https://faucet.testnet.chain.robinhood.com |
+| **Commit–reveal randomness** | Outcome binds to a future block hash. No re-rolls, no cherry-picking — `open()` is permissionless so waiting gains you nothing. |
+| **Just-in-time settlement** | Cards are bought at open time on Uniswap v4. The protocol holds no stock inventory. |
+| **Oracle-guarded swaps** | Every swap's minimum output comes from the stock's Chainlink feed. A thin or manipulated pool is rejected and the next stock is tried. |
+| **No refund path** | Every card is a real stock. Nothing settles to cash. |
+| **Solvency by construction** | Each unsettled pack reserves 3× its price. A pack that cannot be settled cannot be sold. |
+| **One-signature UX** | A keeper settles for the buyer. They sign once and the card arrives. |
+| **Shared jackpot** | 20% of every sale accrues on-chain. Hidden cards (1%) pay a slice of it instantly. |
+| **Real equities** | Official Robinhood Stock Tokens only, verified against the on-chain registry. |
 
-Real Robinhood Stock Token addresses (AAPL, NVDA, TSLA, MSFT, AMZN, GOOGL, META, AMD,
-PLTR, COIN, MSTR, NFLX, GME, SPCX, SPY, QQQ) are wired into [src/data.ts](src/data.ts) —
-verified against the on-chain registry (canonical list: docs.robinhood.com/chain/contracts).
-No HOOD stock token exists on the chain yet.
+## Odds
 
-### Uniswap v4 on Robinhood Chain (for the pack contract's settlement swap)
+Rarity picks a band; the value lands anywhere inside it. Both are hardcoded in
+[`PackSale.sol`](contracts/src/PackSale.sol) — read them yourself.
 
-- PoolManager: `0x8366a39cc670b4001a1121b8f6a443a643e40951`
-- Universal Router: `0x8876789976decbfcbbbe364623c63652db8c0904` (⚠ fake look-alike routers reported on this chain — always re-verify against developers.uniswap.org/contracts/v4/deployments)
-- Quoter: `0x8dc178efb8111bb0973dd9d722ebeff267c98f94`
-- Permit2: `0x000000000022D473030F116dDEE9F6B43aC78BA3`
+| Rarity | Odds | Card value |
+|---|---|---|
+| Common | 78% | 0.60× – 0.85× pack price |
+| Rare | 15% | 0.85× – 1.20× |
+| Epic | 5% | 1.20× – 1.80× |
+| Legendary | 2% | 1.80× – 3.00× |
+| **Hidden card** | **1%** | **0.5% – 25% of the jackpot vault, paid in USDG** |
 
-Chainlink runs per-stock price feeds (24/5, paused during corporate actions —
-`oraclePaused()`), feed registry: docs.chain.link/data-feeds → Robinhood Chain.
+Expected card value is **84.2%** of pack price. finch is entertainment with real assets
+attached — the expected value of a pack is less than what you pay for it.
 
-### Stock token mechanics that shape our contract design
+## Contracts
 
-- Standard ERC-20s (18 decimals), **freely transferable** — restriction is a Robinhood
-  blocklist + pause + `adminBurn`, NOT a KYC allowlist. A pack contract that buys via
-  Uniswap v4 and forwards tokens to buyers works on-chain.
-- Tokens are upgradeable beacon proxies controlled by Robinhood — design the pack
-  contract to survive a token being paused mid-flow (refund path).
-- Legal note: Robinhood does not offer stock tokens to U.S./U.K. persons (distribution
-  restriction, not enforced on-chain). A pack product with jackpot mechanics layers
-  lottery/securities questions on top — get real legal advice before mainnet.
+Robinhood Chain · chain ID **4663**
 
-## Architecture
+| Contract | Address |
+|---|---|
+| `PackSale` | [`0x7e427a08a9d8fdfcC49d84a0471c0C064c08C64D`](https://robinhoodchain.blockscout.com/address/0x7e427a08a9d8fdfcC49d84a0471c0C064c08C64D) |
+| `JackpotVault` | [`0xb9F3125Ae55712aE9F4c15F7b18308549F587A2F`](https://robinhoodchain.blockscout.com/address/0xb9F3125Ae55712aE9F4c15F7b18308549F587A2F) |
+| `Swapper` | [`0x8b959dB2bd9835DFD8a575E3cb696Fcab7Dbd8Dd`](https://robinhoodchain.blockscout.com/address/0x8b959dB2bd9835DFD8a575E3cb696Fcab7Dbd8Dd) |
+| Treasury | [`0xd589cF06C304e91BEc4432278e9E852914631733`](https://robinhoodchain.blockscout.com/address/0xd589cF06C304e91BEc4432278e9E852914631733) |
+| `USDG` (payment) | [`0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168`](https://robinhoodchain.blockscout.com/address/0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168) |
+| Uniswap v4 `PoolManager` | [`0x8366a39CC670B4001A1121B8F6A443A643e40951`](https://robinhoodchain.blockscout.com/address/0x8366a39CC670B4001A1121B8F6A443A643e40951) |
 
-- [src/chain.ts](src/chain.ts) — Robinhood Chain definitions + wagmi config
-- [src/data.ts](src/data.ts) — packs, stock tokens, jackpot config (payout date, cut, hidden-card odds)
-- [src/rng.ts](src/rng.ts) — pull logic: rarity tiers, hidden jackpot card (% of vault, luck-weighted)
-- [src/components/](src/components/) — ConnectButton, PackCard (CSS foil pack), OpenPackModal (confirm → rip → reveal), LiveFeed, Countdown
+**$PONS** — *pending launch. The address will be published here and in the app on release.*
 
-## Next steps to go live
+> ⚠️ Verify addresses against this file and the in-app docs. There are tokens on this
+> chain using real tickers at fake addresses — a matching symbol is not proof of anything.
 
-1. Deploy to testnet (command above) and playtest end-to-end.
-2. Get Chainlink feed addresses for each pool stock from
-   docs.chain.link/data-feeds → Robinhood Chain, call `setFeed()` for each.
-3. Buy stock-token inventory (Uniswap v4 is live on the chain) and transfer it to the
-   PackSale address; keep the treasury topped up.
-4. Run a keeper (cron + `cast send ... "open(uint256)"`) to settle unopened packs.
-5. Robinhood is backing builders with $1M via Arbitrum Open House 2026 (buildathons +
-   founder houses, reserved Robinhood Chain prize slots) — worth entering.
+## Repository
+
+```
+contracts/        Solidity (Foundry)
+  src/            PackSale, JackpotVault, Swapper
+  script/         deploy scripts (mainnet, testnet)
+  test/           unit + forked-mainnet tests
+src/              React + Vite frontend, wagmi/viem
+  components/     packs, reveal cinema, wallet, docs
+scripts/          keeper, treasury manager, art + airdrop tooling
+```
+
+## Running it
+
+```bash
+npm install
+npm run dev                 # frontend at localhost:5173
+
+cd contracts
+forge test                  # unit tests
+forge test --fork-url https://rpc.mainnet.chain.robinhood.com   # against live pools
+```
+
+Deploy and operations are documented in [LAUNCH.md](LAUNCH.md).
+
+```bash
+node scripts/round.mjs status      # jackpot, volume, capacity
+node scripts/treasury.mjs status   # full money map
+node scripts/keeper.mjs            # settle packs for buyers
+```
+
+## Roadmap
+
+| | Status |
+|---|---|
+| Swap-at-settlement, no inventory | ✅ Live |
+| USDG and native ETH payment | ✅ Live |
+| One-signature buying via keeper | ✅ Live |
+| Oracle-guarded swap minimums | ✅ Live |
+| Automated treasury recycling | ✅ Live |
+| $PONS token + creator-fee recycling | 🔨 In progress |
+| Chainlink VRF when available on 4663 | 📋 Planned |
+| Collection completion rewards | 📋 Planned |
+
+## Security
+
+Pre-audit. The contracts are unaudited and should be treated as experimental software.
+
+Randomness is commit–reveal on a future block hash — appropriate for the stakes involved,
+but not VRF. It will move to Chainlink VRF when that lands on Robinhood Chain.
+
+Robinhood Stock Tokens are issued and controlled by Robinhood: upgradeable, pausable, and
+not offered to U.S. or U.K. persons. Chainlink equity feeds run 24/5 and pause during
+corporate actions; openings revert rather than settle on a stale price.
+
+Found something? Open an issue or disclose privately — responsible disclosure appreciated.
+
+## Disclaimer
+
+Not investment advice. Packs are randomized and the expected value of a pack is below its
+price. Tokenized equities carry market risk. Do not spend more than you are willing to lose.
+
+## License
+
+MIT

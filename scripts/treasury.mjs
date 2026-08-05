@@ -50,11 +50,26 @@ const saleAbi = parseAbi([
   'function purchaseCount() view returns (uint256)',
 ])
 
+function envKey(name) {
+  try {
+    return readFileSync('contracts/.env', 'utf8').match(new RegExp(`${name}=(0x[0-9a-fA-F]{64})`))?.[1]
+  } catch {
+    return undefined
+  }
+}
+
+/** Contract owner — the only key that can move vault -> float. */
 function wallet() {
-  const pk =
-    process.env.TREASURY_KEY?.trim() ??
-    readFileSync('contracts/.env', 'utf8').match(/PRIVATE_KEY=(0x[0-9a-fA-F]{64})/)?.[1]
+  const pk = process.env.TREASURY_KEY?.trim() ?? envKey('PRIVATE_KEY')
   if (!pk) throw new Error('set TREASURY_KEY or PRIVATE_KEY in contracts/.env')
+  return createWalletClient({ account: privateKeyToAccount(pk), chain, transport: http() })
+}
+
+/** Wallet that receives Pons creator fees. Separate from the contract owner so the
+ *  launch wallet never needs contract privileges, and vice versa. */
+function feeWallet() {
+  const pk = process.env.FEE_KEY?.trim() ?? envKey('FEE_KEY')
+  if (!pk) return null
   return createWalletClient({ account: privateKeyToAccount(pk), chain, transport: http() })
 }
 
@@ -89,7 +104,8 @@ const swapperAbi = parseAbi([
  *  Pons pays creator fees in ETH to the launching wallet, so this is the path
  *  from "fees claimed" to "packs sellable". */
 async function sweepIncome() {
-  const w = wallet()
+  // creator fees land in the fee wallet when configured, otherwise the owner wallet
+  const w = feeWallet() ?? wallet()
   const me = w.account.address
   const moved = []
 

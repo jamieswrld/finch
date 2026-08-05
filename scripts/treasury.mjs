@@ -100,49 +100,64 @@ const swapperAbi = parseAbi([
   'function sweep(address token, address to)',
 ])
 
-/** Turn creator-fee income sitting in the operator wallet into PackSale float.
- *  Pons pays creator fees in ETH to the launching wallet, so this is the path
- *  from "fees claimed" to "packs sellable". */
+/** Share of creator-fee income routed into the protocol, in bps. The remainder
+ *  stays in the fee wallet as ETH — untouched, never swapped. */
+const FLOAT_BPS = BigInt(process.env.FEE_TO_FLOAT_BPS ?? 2000) // 20% -> pack capacity
+const JACKPOT_BPS = BigInt(process.env.FEE_TO_JACKPOT_BPS ?? 2000) // 20% -> prize pool
+
+/** Recycle Pons creator fees. Only the routed share is converted; whatever you
+ *  keep stays as ETH in the fee wallet and is never touched.
+ *
+ *    fees in ETH ──► keep 60%  (stays put, as ETH)
+ *                └─► 20% ──┐
+ *                └─► 20% ──┴─► USDG ──► 20% float · 20% jackpot
+ */
 async function sweepIncome() {
   // creator fees land in the fee wallet when configured, otherwise the owner wallet
   const w = feeWallet() ?? wallet()
   const me = w.account.address
-  const moved = []
+  const routedBps = FLOAT_BPS + JACKPOT_BPS
+  if (routedBps === 0n) return 'routing disabled'
 
-  // 1. ETH above the gas reserve -> USDG
   const eth = await pub.getBalance({ address: me })
-  if (eth > GAS_RESERVE + parseUnits('0.005', 18)) {
-    const amount = eth - GAS_RESERVE
-    let hash = await w.sendTransaction({ to: SWAPPER, value: amount })
+  const spare = eth > GAS_RESERVE ? eth - GAS_RESERVE : 0n
+  const convert = (spare * routedBps) / 10_000n
+  // don't bother with dust — the swap would cost more than it moves
+  if (convert < parseUnits('0.002', 18)) return 'nothing to sweep'
+
+  // convert only the routed share
+  let hash = await w.sendTransaction({ to: SWAPPER, value: convert })
+  await pub.waitForTransactionReceipt({ hash })
+  hash = await w.writeContract({
+    address: SWAPPER,
+    abi: swapperAbi,
+    functionName: 'swap',
+    args: ['0x0000000000000000000000000000000000000000', USDG, 500, 10, convert, 1n],
+  })
+  await pub.waitForTransactionReceipt({ hash })
+  hash = await w.writeContract({
+    address: SWAPPER, abi: swapperAbi, functionName: 'sweep', args: [USDG, me],
+  })
+  await pub.waitForTransactionReceipt({ hash })
+
+  const got = await pub.readContract({ address: USDG, abi: erc20, functionName: 'balanceOf', args: [me] })
+  if (got === 0n) return 'swap produced nothing'
+
+  const toFloat = (got * FLOAT_BPS) / routedBps
+  const toJackpot = got - toFloat
+  const xfer = parseAbi(['function transfer(address,uint256) returns (bool)'])
+
+  if (toFloat > 0n) {
+    hash = await w.writeContract({ address: USDG, abi: xfer, functionName: 'transfer', args: [SALE, toFloat] })
     await pub.waitForTransactionReceipt({ hash })
-    hash = await w.writeContract({
-      address: SWAPPER,
-      abi: swapperAbi,
-      functionName: 'swap',
-      args: ['0x0000000000000000000000000000000000000000', USDG, 500, 10, amount, 1n],
-    })
+  }
+  if (toJackpot > 0n) {
+    hash = await w.writeContract({ address: USDG, abi: xfer, functionName: 'transfer', args: [VAULT, toJackpot] })
     await pub.waitForTransactionReceipt({ hash })
-    hash = await w.writeContract({
-      address: SWAPPER, abi: swapperAbi, functionName: 'sweep', args: [USDG, me],
-    })
-    await pub.waitForTransactionReceipt({ hash })
-    moved.push(`${formatUnits(amount, 18)} ETH -> USDG`)
   }
 
-  // 2. all USDG in the wallet -> the float
-  const bal = await pub.readContract({ address: USDG, abi: erc20, functionName: 'balanceOf', args: [me] })
-  if (bal > 0n) {
-    const hash = await w.writeContract({
-      address: USDG,
-      abi: parseAbi(['function transfer(address,uint256) returns (bool)']),
-      functionName: 'transfer',
-      args: [SALE, bal],
-    })
-    await pub.waitForTransactionReceipt({ hash })
-    moved.push(`${usd(bal)} -> float`)
-  }
-
-  return moved.length ? moved.join(', ') : 'nothing to sweep'
+  const kept = spare - convert
+  return `${formatUnits(convert, 18)} ETH routed -> ${usd(toFloat)} float + ${usd(toJackpot)} jackpot (kept ${formatUnits(kept, 18)} ETH)`
 }
 
 const cmd = process.argv[2] ?? 'status'

@@ -173,6 +173,11 @@ export function Docs() {
           as packs sell, and you can verify it on Blockscout at any time.
         </p>
         <p>
+          Creator fees from the finch token spill into the vault as well, so trading activity feeds
+          the prize pool on top of pack sales. Every contribution is an on-chain transfer you can
+          audit — the "fees recycled" figure on the home page is read directly from those transfers.
+        </p>
+        <p>
           <strong>Hidden cards</strong> pay out of it automatically and instantly: pull one and the
           contract sends you your percentage of the pot in the same transaction, no claim needed.
           Outside of a hidden card there is no automatic payout and no on-chain claim you can make

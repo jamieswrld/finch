@@ -15,7 +15,39 @@ export interface ChainStats {
   hiddenCardsFound: number
   /** USDG the sale contract can still commit to new packs */
   headroomUsd: number
+  /** Creator-fee income recycled from the token into the protocol */
+  feesRecycledUsd: number
   loading: boolean
+}
+
+/** Wallet that receives token creator fees and routes a share back in. */
+export const FEE_WALLET = '0xd589cF06C304e91BEc4432278e9E852914631733' as Address
+
+const TRANSFER = parseAbiItem(
+  'event Transfer(address indexed from, address indexed to, uint256 value)',
+)
+
+/** USDG the fee wallet has pushed into the float and the jackpot — the on-chain
+ *  record of creator fees flowing back to players. */
+async function readFeesRecycled(client: NonNullable<ReturnType<typeof getPublicClient>>): Promise<number> {
+  try {
+    const logs = await client.getLogs({
+      address: USDG_ADDRESS as Address,
+      event: TRANSFER,
+      args: { from: FEE_WALLET },
+      fromBlock: 0n,
+      toBlock: 'latest',
+    })
+    const targets = new Set([PACK_SALE_ADDRESS.toLowerCase(), VAULT_ADDRESS.toLowerCase()])
+    let total = 0n
+    for (const l of logs) {
+      const args = l.args as { to?: string; value?: bigint }
+      if (args.to && targets.has(args.to.toLowerCase())) total += args.value ?? 0n
+    }
+    return toUsd(total)
+  } catch {
+    return 0
+  }
 }
 
 const vaultAbi = parseAbi([
@@ -35,6 +67,7 @@ export function useChainStats(pollMs = 12_000): ChainStats {
     packsOpened: 0,
     hiddenCardsFound: 0,
     headroomUsd: 0,
+    feesRecycledUsd: 0,
     loading: true,
   })
 
@@ -61,6 +94,7 @@ export function useChainStats(pollMs = 12_000): ChainStats {
             args: [PACK_SALE_ADDRESS],
           }),
         ])
+        const feesRecycledUsd = await readFeesRecycled(client)
         if (!alive) return
         setStats({
           jackpotUsd: toUsd(pot),
@@ -69,6 +103,7 @@ export function useChainStats(pollMs = 12_000): ChainStats {
           packsOpened: Number(purchases),
           hiddenCardsFound: 0, // filled by the feed hook below
           headroomUsd: toUsd(float > liability ? float - liability : 0n),
+          feesRecycledUsd,
           loading: false,
         })
       } catch {

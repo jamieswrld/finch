@@ -145,8 +145,10 @@ export default function App() {
             <span className="stat-label">Total volume</span>
           </div>
           <div className="stat">
-            <span className="stat-value">{STOCKS.length}</span>
-            <span className="stat-label">Tokenized stocks</span>
+            <span className="stat-value">
+              {isOnchainEnabled() ? fmtUsd(stats.feesRecycledUsd) : '—'}
+            </span>
+            <span className="stat-label">Fees recycled</span>
           </div>
         </div>
 
@@ -185,7 +187,8 @@ export default function App() {
               <p className="jackpot-amount">{fmtUsd(jackpotUsd)}</p>
               <p className="muted">
                 {Math.round(JACKPOT_CUT * 100)}% of every pack purchase accrues here on-chain — this
-                is the vault's live balance. Hidden cards pay out of it instantly and automatically.
+                is the vault's live balance. Token creator fees spill into it too, so trading
+                activity grows the pool. Hidden cards pay out of it instantly and automatically.
               </p>
             </div>
           </div>

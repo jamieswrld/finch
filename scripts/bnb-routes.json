@@ -1,0 +1,130 @@
+{
+  "usdtWbnbFee": 100,
+  "routes": [
+    {
+      "sym": "BTCB",
+      "token": "0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c",
+      "venue": "V3_SINGLE",
+      "fee": 500,
+      "depthUsd": 6394475
+    },
+    {
+      "sym": "WBNB",
+      "token": "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
+      "venue": "V3_SINGLE",
+      "fee": 100,
+      "depthUsd": 18512
+    },
+    {
+      "sym": "ETH",
+      "token": "0x2170Ed0880ac9A755fd29B2688956BD959F933F8",
+      "venue": "V3_SINGLE",
+      "fee": 500,
+      "depthUsd": 685999
+    },
+    {
+      "sym": "CAKE",
+      "token": "0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82",
+      "venue": "V3_SINGLE",
+      "fee": 2500,
+      "depthUsd": 441644
+    },
+    {
+      "sym": "DOGE",
+      "token": "0xbA2aE424d960c26247Dd6c32edC70B295c744C43",
+      "venue": "V3_PATH",
+      "fee": 2500,
+      "depthUsd": 60453,
+      "path": "0x55d398326f99059ff775485246999027b3197955000064bb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c0009c4ba2ae424d960c26247dd6c32edc70b295c744c43"
+    },
+    {
+      "sym": "XRP",
+      "token": "0x1D2F0da169ceB9fC7B3144628dB156f3F6c60dBE",
+      "venue": "V3_SINGLE",
+      "fee": 2500,
+      "depthUsd": 125750
+    },
+    {
+      "sym": "SOL",
+      "token": "0x570A5D26f7765Ecb712C0924E4De545B89fD43dF",
+      "venue": "V3_SINGLE",
+      "fee": 2500,
+      "depthUsd": 92398
+    },
+    {
+      "sym": "UNI",
+      "token": "0xBf5140A22578168FD562DCcF235E5D43A02ce9B1",
+      "venue": "V2_PATH",
+      "hops": [
+        "0x55d398326f99059fF775485246999027B3197955",
+        "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
+        "0xBf5140A22578168FD562DCcF235E5D43A02ce9B1"
+      ],
+      "depthUsd": 120855
+    },
+    {
+      "sym": "LINK",
+      "token": "0xF8A0BF9cF54Bb92F17374d9e9A321E6a111a51bD",
+      "venue": "V3_PATH",
+      "fee": 2500,
+      "depthUsd": 245876,
+      "path": "0x55d398326f99059ff775485246999027b3197955000064bb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c0009c4f8a0bf9cf54bb92f17374d9e9a321e6a111a51bd"
+    },
+    {
+      "sym": "ADA",
+      "token": "0x3EE2200Efb3400fAbB9AacF31297cBdD1d435D47",
+      "venue": "V3_SINGLE",
+      "fee": 2500,
+      "depthUsd": 174913
+    },
+    {
+      "sym": "XVS",
+      "token": "0xcF6BB5389c92Bdda8a3747Ddb454cB7a64626C63",
+      "venue": "V3_PATH",
+      "fee": 2500,
+      "depthUsd": 47554,
+      "path": "0x55d398326f99059ff775485246999027b3197955000064bb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c0009c4cf6bb5389c92bdda8a3747ddb454cb7a64626c63"
+    },
+    {
+      "sym": "LTC",
+      "token": "0x4338665CBB7B2485A8855A139b75D5e34AB0DB94",
+      "venue": "V3_PATH",
+      "fee": 2500,
+      "depthUsd": 48538,
+      "path": "0x55d398326f99059ff775485246999027b3197955000064bb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c0009c44338665cbb7b2485a8855a139b75d5e34ab0db94"
+    },
+    {
+      "sym": "DOT",
+      "token": "0x7083609fCE4d1d8Dc0C979AAb8c869Ea2C873402",
+      "venue": "V2_PATH",
+      "hops": [
+        "0x55d398326f99059fF775485246999027B3197955",
+        "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
+        "0x7083609fCE4d1d8Dc0C979AAb8c869Ea2C873402"
+      ],
+      "depthUsd": 94418
+    },
+    {
+      "sym": "INJ",
+      "token": "0xa2B726B1145A4773F68593CF171187d8EBe4d495",
+      "venue": "V2_PATH",
+      "hops": [
+        "0x55d398326f99059fF775485246999027B3197955",
+        "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
+        "0xa2B726B1145A4773F68593CF171187d8EBe4d495"
+      ],
+      "depthUsd": 74124
+    },
+    {
+      "sym": "AVAX",
+      "token": "0x1CE0c2827e2eF14D5C4f29a091d735A204794041",
+      "venue": "V2_PATH",
+      "hops": [
+        "0x55d398326f99059fF775485246999027B3197955",
+        "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
+        "0x1CE0c2827e2eF14D5C4f29a091d735A204794041"
+      ],
+      "depthUsd": 75834
+    }
+  ]
+}

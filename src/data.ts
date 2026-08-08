@@ -50,8 +50,10 @@ export const PROTOCOL_FEE = 0.01
 /** Chance a pull is a hidden jackpot card instead of an asset */
 export const HIDDEN_CARD_CHANCE = 0.01
 
-/** The board, ordered by on-chain liquidity at the time of writing.
- *  Regenerate with `node scripts/verify-assets.mjs`. */
+/** The board. Every entry has a live Chainlink USD feed AND a PancakeSwap route
+ *  with enough depth to settle a whale pack without moving the price — assets that
+ *  failed either test are not listed, however well known they are.
+ *  Route plan lives in scripts/bnb-routes.json. */
 export const STOCKS: Stock[] = [
   { ticker: 'BTCB', name: 'Bitcoin', address: '0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c', decimals: 18, feed: '0x264990fbd0A4796A3E3d8E37C4d5F87a3aCa5Ebf', color: '#f7931a' },
   { ticker: 'WBNB', name: 'BNB', address: '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c', decimals: 18, feed: '0x0567F2323251f0Aab15c8dFb1967E4e8A7D42aeE', color: '#f0b90b' },
@@ -65,12 +67,9 @@ export const STOCKS: Stock[] = [
   { ticker: 'ADA', name: 'Cardano', address: '0x3EE2200Efb3400fAbB9AacF31297cBdD1d435D47', decimals: 18, feed: '0xa767f745331D267c7751297D982b050c93985627', color: '#0033ad' },
   { ticker: 'XVS', name: 'Venus', address: '0xcF6BB5389c92Bdda8a3747Ddb454cB7a64626C63', decimals: 18, feed: '0xBF63F430A79D4036A5900C19818aFf1fa710f206', color: '#2c60f5' },
   { ticker: 'LTC', name: 'Litecoin', address: '0x4338665CBB7B2485A8855A139b75D5e34AB0DB94', decimals: 18, feed: '0x74E72F37A8c415c8f1a98Ed42E78Ff997435791D', color: '#345d9d' },
-  { ticker: 'SHIB', name: 'Shiba Inu', address: '0x2859e4544C4bB03966803b044A93563Bd2D0DD4D', decimals: 18, feed: '0xA615Be6cb0f3F36A641858dB6F30B9242d0ABeD8', color: '#f00500' },
   { ticker: 'DOT', name: 'Polkadot', address: '0x7083609fCE4d1d8Dc0C979AAb8c869Ea2C873402', decimals: 18, feed: '0xC333eb0086309a16aa7c8308DfD32c8BBA0a2592', color: '#e6007a' },
   { ticker: 'INJ', name: 'Injective', address: '0xa2B726B1145A4773F68593CF171187d8EBe4d495', decimals: 18, feed: '0x63A9133cd7c611d6049761038C16f238FddA71d7', color: '#00a3ff' },
   { ticker: 'AVAX', name: 'Avalanche', address: '0x1CE0c2827e2eF14D5C4f29a091d735A204794041', decimals: 18, feed: '0x5974855ce31EE8E1fff2e76591CbF83D7110F151', color: '#e84142' },
-  { ticker: 'FIL', name: 'Filecoin', address: '0x0D8Ce2A99Bb6e3B7Db580eD848240e4a0F9aE153', decimals: 18, feed: '0xE5dbFD9003bFf9dF5feB2f4F445Ca00fb121fb83', color: '#0090ff' },
-  { ticker: 'BCH', name: 'Bitcoin Cash', address: '0x8fF795a6F4D97E7887C79beA79aba5cc76444aDf', decimals: 18, feed: '0x43d80f616DAf0b0B42a928EeD32147dC59027D41', color: '#8dc351' },
 ]
 
 export const stockByTicker = (t: string): Stock => STOCKS.find((s) => s.ticker === t)!
@@ -78,7 +77,7 @@ export const stockByTicker = (t: string): Stock => STOCKS.find((s) => s.ticker =
 /** Everything on the board has a Chainlink USD feed — that is the entry requirement. */
 export const FEED_BACKED = STOCKS.map((s) => s.ticker)
 
-const MAJORS = ['BTCB', 'ETH', 'WBNB', 'SOL', 'XRP', 'ADA', 'DOT', 'LTC', 'BCH']
+const MAJORS = ['BTCB', 'ETH', 'WBNB', 'SOL', 'XRP', 'ADA', 'DOT', 'LTC']
 const DEFI = ['CAKE', 'UNI', 'LINK', 'XVS', 'INJ', 'AVAX']
 
 export const PACKS: Pack[] = [

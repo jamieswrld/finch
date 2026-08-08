@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { robinhoodChain } from '../chain'
+import { bnbChain } from '../chain'
 import { getPulls } from '../history'
 import { fetchHiddenCards, isOnchainEnabled, type HiddenCardWin } from '../onchain'
 import { fmtUsd, shortAddr } from '../rng'
@@ -46,10 +46,10 @@ export function WalletDrawer({ address, onClose, onDisconnect }: Props) {
           </button>
           <a
             className="drawer-link"
-            href={`${robinhoodChain.blockExplorers.default.url}/address/${address}`}
+            href={`${bnbChain.blockExplorers.default.url}/address/${address}`}
             target="_blank"
             rel="noreferrer"
-            title="View on Blockscout"
+            title="View on BscScan"
           >
             ↗
           </a>
@@ -90,7 +90,7 @@ export function WalletDrawer({ address, onClose, onDisconnect }: Props) {
                     {w.txHash && (
                       <a
                         className="drawer-link"
-                        href={`${robinhoodChain.blockExplorers.default.url}/tx/${w.txHash}`}
+                        href={`${bnbChain.blockExplorers.default.url}/tx/${w.txHash}`}
                         target="_blank"
                         rel="noreferrer"
                       >

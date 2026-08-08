@@ -1,11 +1,11 @@
-import { robinhoodChain } from '../chain'
+import { bnbChain } from '../chain'
 import { STOCKS } from '../data'
 import { fmtUsd, shortAddr } from '../rng'
 import { isOnchainEnabled } from '../onchain'
 import { useLivePulls } from '../useChainData'
 import { StockLogo } from './StockLogo'
 
-const explorer = robinhoodChain.blockExplorers.default.url
+const explorer = bnbChain.blockExplorers.default.url
 const stockByAddress = (a?: string) =>
   a ? STOCKS.find((s) => s.address.toLowerCase() === a.toLowerCase()) : undefined
 

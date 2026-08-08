@@ -2,18 +2,19 @@ import { useEffect, useState } from 'react'
 import { formatUnits, parseAbi, parseAbiItem, type Address } from 'viem'
 import { getPublicClient } from 'wagmi/actions'
 import { wagmiConfig } from './chain'
-import { USDG_ADDRESS } from './data'
+import { USDT_ADDRESS } from './data'
 import { PACK_SALE_ADDRESS, VAULT_ADDRESS, isOnchainEnabled } from './onchain'
 
-const USDG_DECIMALS = 6
-const toUsd = (v: bigint) => Number(formatUnits(v, USDG_DECIMALS))
+// USDT on BSC is 18 decimals, unlike the 6-decimal USDT on Ethereum.
+const PAY_DECIMALS = 18
+const toUsd = (v: bigint) => Number(formatUnits(v, PAY_DECIMALS))
 
 export interface ChainStats {
   jackpotUsd: number
   volumeUsd: number
   packsOpened: number
   hiddenCardsFound: number
-  /** USDG the sale contract can still commit to new packs */
+  /** USDT the sale contract can still commit to new packs */
   headroomUsd: number
   /** Creator-fee income recycled from the token into the protocol */
   feesRecycledUsd: number
@@ -27,12 +28,12 @@ const TRANSFER = parseAbiItem(
   'event Transfer(address indexed from, address indexed to, uint256 value)',
 )
 
-/** USDG the fee wallet has pushed into the float and the jackpot — the on-chain
+/** USDT the fee wallet has pushed into the float and the jackpot — the on-chain
  *  record of creator fees flowing back to players. */
 async function readFeesRecycled(client: NonNullable<ReturnType<typeof getPublicClient>>): Promise<number> {
   try {
     const logs = await client.getLogs({
-      address: USDG_ADDRESS as Address,
+      address: USDT_ADDRESS as Address,
       event: TRANSFER,
       args: { from: FEE_WALLET },
       fromBlock: 0n,
@@ -88,7 +89,7 @@ export function useChainStats(pollMs = 12_000): ChainStats {
           client.readContract({ address: PACK_SALE_ADDRESS, abi: saleAbi, functionName: 'reservedLiability' }),
           client.readContract({ address: PACK_SALE_ADDRESS, abi: saleAbi, functionName: 'purchaseCount' }),
           client.readContract({
-            address: USDG_ADDRESS as Address,
+            address: USDT_ADDRESS as Address,
             abi: parseAbi(['function balanceOf(address) view returns (uint256)']),
             functionName: 'balanceOf',
             args: [PACK_SALE_ADDRESS],

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAccount, useConnect, useSwitchChain } from 'wagmi'
-import { robinhoodChain } from '../chain'
+import { bnbChain } from '../chain'
 import { JACKPOT_CUT, PROTOCOL_FEE, asset, type Pack } from '../data'
 import { buyAndOpenOnchain, isOnchainEnabled, preflightBuy, type BuyPreflight, type PayWith } from '../onchain'
 import { fmtUsd, shortAddr, type Card } from '../rng'
@@ -11,7 +11,7 @@ type Stage = 'confirm' | 'charging' | 'rip' | 'reveal'
 type Tier = 'common' | 'rare' | 'epic' | 'legendary' | 'jackpot' | 'refund'
 
 const OPEN_STEPS: Array<[string, string]> = [
-  ['Payment', 'USDG in · jackpot cut split'],
+  ['Payment', 'USDT in · jackpot cut split'],
   ['Randomness', 'outcome locked on-chain'],
   ['Settlement', 'card assigned to you'],
 ]
@@ -20,10 +20,10 @@ const OPEN_STEPS: Array<[string, string]> = [
 const CHARGE_FACTS = [
   'Randomness commits to a future blockhash — nobody can pick your card, including us.',
   '20% of this pack is flowing into the jackpot vault right now.',
-  'Your stock settles as a real ERC-20 to your wallet. Self-custody from block one.',
+  'Your asset settles as a real ERC-20 to your wallet. Self-custody from block one.',
   '1 in 100 packs hides a jackpot card worth up to 25% of the vault.',
-  'Prices come from Chainlink equity feeds, updated 24/5.',
-  'Every contract we run is verified on Blockscout — check the docs.',
+  'Prices come from Chainlink feeds, updated continuously.',
+  'Every contract we run is verified on BscScan — check the docs.',
 ]
 
 const TIER_FX: Record<Tier, { glow: string; particles: number; rays: boolean; shake: boolean }> = {
@@ -158,7 +158,7 @@ function CardFace({ card, value }: { card: Card; value: number }) {
               {card.rarity.label}
             </span>
           </div>
-          <p className="reveal-name">{card.stock.name} · Stock Token</p>
+          <p className="reveal-name">{card.stock.name}</p>
         </div>
         <Sparkline color={card.stock.color} />
         <div>
@@ -166,7 +166,7 @@ function CardFace({ card, value }: { card: Card; value: number }) {
             <span className="reveal-value">{fmtUsd(value)}</span>
             <span className="reveal-delta">▲ SETTLED</span>
           </div>
-          <p className="reveal-foot">delivered to your wallet · Robinhood Chain</p>
+          <p className="reveal-foot">delivered to your wallet · BNB Chain</p>
         </div>
       </div>
     )
@@ -189,7 +189,7 @@ function CardFace({ card, value }: { card: Card; value: number }) {
             <span className="reveal-value">{fmtUsd(value)}</span>
             <span className="reveal-delta">▲ JACKPOT</span>
           </div>
-          <p className="reveal-foot">paid instantly in USDG</p>
+          <p className="reveal-foot">paid instantly in USDT</p>
         </div>
       </div>
     )
@@ -198,7 +198,7 @@ function CardFace({ card, value }: { card: Card; value: number }) {
     <div className="reveal-card">
       <div>
         <div className="stock-card-top">
-          <span className="reveal-ticker">USDG</span>
+          <span className="reveal-ticker">USDT</span>
           <span className="rarity-chip">Refund</span>
         </div>
         <p className="reveal-name">inventory restocking</p>
@@ -209,7 +209,7 @@ function CardFace({ card, value }: { card: Card; value: number }) {
           <span className="reveal-value">{fmtUsd(value)}</span>
           <span className="reveal-delta">RETURNED</span>
         </div>
-        <p className="reveal-foot">card value returned in USDG</p>
+        <p className="reveal-foot">card value returned in USDT</p>
       </div>
     </div>
   )
@@ -270,7 +270,7 @@ export function OpenPackModal({ pack, onClose, onPulled }: Props) {
   const { isConnected, address, chainId } = useAccount()
   const { switchChain, isPending: switching } = useSwitchChain()
   const { connect, connectors, isPending: connectPending } = useConnect()
-  const wrongNetwork = isConnected && chainId !== robinhoodChain.id
+  const wrongNetwork = isConnected && chainId !== bnbChain.id
   const [preflight, setPreflight] = useState<BuyPreflight | null>(null)
   const [payWith, setPayWith] = useState<PayWith>('usdg')
   const [stage, setStage] = useState<Stage>('confirm')
@@ -344,7 +344,7 @@ export function OpenPackModal({ pack, onClose, onPulled }: Props) {
           : /StalePrice/i.test(raw)
             ? 'Price feed is paused right now (markets closed or a corporate action). Try again later.'
             : /insufficient funds/i.test(raw)
-              ? 'Not enough ETH for gas on Robinhood Chain.'
+              ? 'Not enough BNB for gas on BNB Chain.'
               : raw.split('\n')[0].slice(0, 160)
       setError(msg)
       setStage('confirm')
@@ -388,9 +388,9 @@ export function OpenPackModal({ pack, onClose, onPulled }: Props) {
               <button
                 className="btn btn-green btn-full"
                 disabled={switching}
-                onClick={() => switchChain({ chainId: robinhoodChain.id })}
+                onClick={() => switchChain({ chainId: bnbChain.id })}
               >
-                {switching ? 'Switching…' : `Switch to ${robinhoodChain.name}`}
+                {switching ? 'Switching…' : `Switch to ${bnbChain.name}`}
               </button>
             </>
           ) : (
@@ -402,7 +402,7 @@ export function OpenPackModal({ pack, onClose, onPulled }: Props) {
                     onClick={() => setPayWith('usdg')}
                   >
                     <strong>USDG</strong>
-                    <span className="muted small">{preflight.usdgBalance.toFixed(2)} available</span>
+                    <span className="muted small">{preflight.usdtBalance.toFixed(2)} available</span>
                   </button>
                   <button
                     className={`pay-opt ${payWith === 'eth' ? 'pay-opt-on' : ''}`}
@@ -475,7 +475,7 @@ export function OpenPackModal({ pack, onClose, onPulled }: Props) {
             {txHash && (
               <a
                 className="mono small charge-tx"
-                href={`${robinhoodChain.blockExplorers.default.url}/tx/${txHash}`}
+                href={`${bnbChain.blockExplorers.default.url}/tx/${txHash}`}
                 target="_blank"
                 rel="noreferrer"
               >

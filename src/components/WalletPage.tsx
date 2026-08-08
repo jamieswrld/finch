@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAccount } from 'wagmi'
-import { robinhoodChain } from '../chain'
+import { bnbChain } from '../chain'
 import { STOCKS } from '../data'
 import { getPulls } from '../history'
 import { fetchHiddenCards, isOnchainEnabled, type HiddenCardWin } from '../onchain'
 import { fmtUsd, shortAddr } from '../rng'
 import { StockLogo } from './StockLogo'
 
-const explorer = robinhoodChain.blockExplorers.default.url
+const explorer = bnbChain.blockExplorers.default.url
 
 /** Full-page wallet / profile view (tab, not an overlay). */
 export function WalletPage() {
@@ -69,7 +69,7 @@ export function WalletPage() {
             target="_blank"
             rel="noreferrer"
           >
-            Blockscout →
+            BscScan →
           </a>
         </div>
       </div>

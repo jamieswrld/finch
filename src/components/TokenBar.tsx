@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { robinhoodChain } from '../chain'
+import { bnbChain } from '../chain'
 import { TOKEN_ADDRESS, TOKEN_SYMBOL, isTokenLive, tokenBuyUrl } from './../token'
 
 /** The canonical place to find the contract address. Stays hidden until the
@@ -36,7 +36,7 @@ export function TokenBar() {
         </button>
         <a
           className="ca-btn"
-          href={`${robinhoodChain.blockExplorers.default.url}/token/${TOKEN_ADDRESS}`}
+          href={`${bnbChain.blockExplorers.default.url}/token/${TOKEN_ADDRESS}`}
           target="_blank"
           rel="noreferrer"
         >

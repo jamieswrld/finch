@@ -25,11 +25,11 @@ function loadKey() {
 }
 
 const chain = defineChain({
-  id: 4663,
-  name: 'Robinhood Chain',
-  nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
-  rpcUrls: { default: { http: ['https://rpc.mainnet.chain.robinhood.com'] } },
-  blockExplorers: { default: { name: 'Blockscout', url: 'https://robinhoodchain.blockscout.com' } },
+  id: 56,
+  name: 'BNB Chain',
+  nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
+  rpcUrls: { default: { http: ['https://bsc-rpc.publicnode.com'] } },
+  blockExplorers: { default: { name: 'BscScan', url: 'https://bscscan.com' } },
 })
 
 const pub = createPublicClient({ chain, transport: http() })

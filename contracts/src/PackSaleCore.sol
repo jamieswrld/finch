@@ -306,8 +306,11 @@ contract PackSaleCore {
         (, int256 answer,, uint256 updatedAt,) = IAggregatorV3(feed).latestRoundData();
         if (answer <= 0) return 0;
         if (block.timestamp > updatedAt && block.timestamp - updatedAt > maxPriceAge) return 0;
-        uint256 fair =
-            (spend * (10 ** IAggregatorV3(feed).decimals()) * 1e18) / ((10 ** usdgDecimals) * uint256(answer));
+        // Scale to the OUTPUT token's own decimals — not every asset is 18 (DOGE is 8).
+        // Hardcoding 1e18 here would understate minOut by 10 orders of magnitude on those
+        // tokens and wave through a swap that returns almost nothing.
+        uint256 fair = (spend * (10 ** IAggregatorV3(feed).decimals()) * (10 ** IERC20(stock).decimals()))
+            / ((10 ** usdgDecimals) * uint256(answer));
         return (fair * minSwapOutBps) / 10_000;
     }
 }

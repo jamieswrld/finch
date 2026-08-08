@@ -1,7 +1,7 @@
 import { parseAbiItem, parseEventLogs, type Address } from 'viem'
 import { getAccount, getPublicClient, readContract, waitForTransactionReceipt, writeContract } from 'wagmi/actions'
 import { wagmiConfig } from './chain'
-import { RARITY_TIERS, STOCKS, USDG_ADDRESS, type Pack } from './data'
+import { RARITY_TIERS, STOCKS, USDT_ADDRESS, type Pack } from './data'
 import type { Card } from './rng'
 
 /** Set these in .env(.local) after deploying contracts/ — until then the site runs in demo mode. */
@@ -14,7 +14,7 @@ export const PACK_SALE_ADDRESS = addr(import.meta.env.VITE_PACK_SALE_ADDRESS)
 export const VAULT_ADDRESS = addr(import.meta.env.VITE_VAULT_ADDRESS)
 /** Treasury / protocol-fee recipient. */
 export const TREASURY_ADDRESS = '0xd589cF06C304e91BEc4432278e9E852914631733'
-const USDG = addr(import.meta.env.VITE_USDG_ADDRESS, USDG_ADDRESS)
+const USDT = addr(import.meta.env.VITE_USDT_ADDRESS, USDT_ADDRESS)
 
 export const isOnchainEnabled = (): boolean => isAddr(PACK_SALE_ADDRESS) && isAddr(VAULT_ADDRESS)
 
@@ -31,6 +31,9 @@ const erc20Abi = [
   },
   {
     type: 'function', name: 'symbol', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }],
+  },
+  {
+    type: 'function', name: 'decimals', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint8' }],
   },
   {
     type: 'function', name: 'balanceOf', stateMutability: 'view',
@@ -104,7 +107,8 @@ const packSaleAbi = [
   },
 ] as const
 
-const USDG_DECIMALS = 6
+// USDT on BSC is 18 decimals, unlike the 6-decimal USDT on Ethereum.
+const PAY_DECIMALS = 18
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 /** Watch for the keeper settling this purchase; returns the card if it does. */
@@ -131,14 +135,14 @@ async function waitForKeeper(purchaseId: bigint, timeoutMs: number): Promise<Car
         ) {
           if (log.eventName === 'OpenedStock') {
             const card = await stockFromAddress(log.args.stock as Address)
-            card.valueUsd = Number(log.args.valueUsdg) / 10 ** USDG_DECIMALS
+            card.valueUsd = Number(log.args.valueUsdg) / 10 ** PAY_DECIMALS
             card.rarity = rarityFromBps(Number(log.args.rarityBps))
             return card
           }
           return {
             kind: 'jackpot',
             jackpotPct: Number(log.args.pctBps) / 100,
-            valueUsd: Number(log.args.amountUsdg) / 10 ** USDG_DECIMALS,
+            valueUsd: Number(log.args.amountUsdg) / 10 ** PAY_DECIMALS,
           }
         }
       }
@@ -160,12 +164,22 @@ function rarityFromBps(bps: number) {
 async function stockFromAddress(address: Address): Promise<Card & { kind: 'stock' }> {
   const known = STOCKS.find((s) => s.address.toLowerCase() === address.toLowerCase())
   if (known) return { kind: 'stock', stock: known, valueUsd: 0, rarity: RARITY_TIERS[0] }
-  const symbol = await readContract(wagmiConfig, { address, abi: erc20Abi, functionName: 'symbol' }).catch(
-    () => 'STOCK',
-  )
+  // Unknown token: read what we can, and default decimals to 18 rather than
+  // guessing — this card is display-only, the transfer already happened.
+  const [symbol, decimals] = await Promise.all([
+    readContract(wagmiConfig, { address, abi: erc20Abi, functionName: 'symbol' }).catch(() => 'ASSET'),
+    readContract(wagmiConfig, { address, abi: erc20Abi, functionName: 'decimals' }).catch(() => 18),
+  ])
   return {
     kind: 'stock',
-    stock: { ticker: symbol, name: symbol, address, color: '#111111' },
+    stock: {
+      ticker: symbol,
+      name: symbol,
+      address,
+      decimals: Number(decimals),
+      feed: '0x0000000000000000000000000000000000000000',
+      color: '#111111',
+    },
     valueUsd: 0,
     rarity: RARITY_TIERS[0],
   }
@@ -177,7 +191,7 @@ export interface BuyPreflight {
   ok: boolean
   /** Reason a purchase would fail right now, phrased for the user. */
   reason?: string
-  usdgBalance: number
+  usdtBalance: number
   ethBalance: number
   headroomUsd: number
   /** Best payment method given what the wallet actually holds. */
@@ -196,7 +210,7 @@ const feedAbi = [
   },
 ] as const
 
-/** ETH needed for a pack, with a buffer for pool fees. Surplus returns as USDG change. */
+/** ETH needed for a pack, with a buffer for pool fees. Surplus returns as USDT change. */
 export async function quoteEthForPack(priceUsd: number): Promise<bigint> {
   const client = getPublicClient(wagmiConfig)
   if (!client) return 0n
@@ -214,12 +228,12 @@ export async function quoteEthForPack(priceUsd: number): Promise<bigint> {
 /** Everything that can block a purchase, checked before the wallet is ever opened. */
 export async function preflightBuy(account: Address, priceUsd: number): Promise<BuyPreflight> {
   const client = getPublicClient(wagmiConfig)
-  const price = BigInt(Math.round(priceUsd * 10 ** USDG_DECIMALS))
+  const price = BigInt(Math.round(priceUsd * 10 ** PAY_DECIMALS))
   if (!client || !isOnchainEnabled()) {
     return {
       ok: false,
       reason: 'Contracts are not configured yet.',
-      usdgBalance: 0,
+      usdtBalance: 0,
       ethBalance: 0,
       headroomUsd: 0,
       suggested: 'usdg',
@@ -230,13 +244,13 @@ export async function preflightBuy(account: Address, priceUsd: number): Promise<
 
   const [balance, float, liability, ethWei] = await Promise.all([
     readContract(wagmiConfig, {
-      address: USDG,
+      address: USDT,
       abi: erc20Abi,
       functionName: 'balanceOf',
       args: [account],
     }) as Promise<bigint>,
     readContract(wagmiConfig, {
-      address: USDG,
+      address: USDT,
       abi: erc20Abi,
       functionName: 'balanceOf',
       args: [PACK_SALE_ADDRESS],
@@ -249,10 +263,10 @@ export async function preflightBuy(account: Address, priceUsd: number): Promise<
     client ? client.getBalance({ address: account }) : Promise.resolve(0n),
   ])
 
-  const usdgBalance = Number(balance) / 10 ** USDG_DECIMALS
+  const usdtBalance = Number(balance) / 10 ** PAY_DECIMALS
   const ethBalance = Number(ethWei) / 1e18
   const free = float > liability ? float - liability : 0n
-  const headroomUsd = Number(free) / 10 ** USDG_DECIMALS
+  const headroomUsd = Number(free) / 10 ** PAY_DECIMALS
 
   const ethNeeded = await quoteEthForPack(priceUsd).catch(() => 0n)
   // leave a little ETH for gas rather than letting the buy consume the whole balance
@@ -268,7 +282,7 @@ export async function preflightBuy(account: Address, priceUsd: number): Promise<
       reason: transient
         ? 'Packs are momentarily at capacity — one is settling. Try again in a few seconds.'
         : 'This pack size is temporarily unavailable while the vault scales up. A smaller pack will open right now.',
-      usdgBalance,
+      usdtBalance,
       ethBalance,
       headroomUsd,
       suggested,
@@ -276,7 +290,7 @@ export async function preflightBuy(account: Address, priceUsd: number): Promise<
       canPayEth,
     }
   }
-  return { ok: canPayUsdg || canPayEth, usdgBalance, ethBalance, headroomUsd, suggested, canPayUsdg, canPayEth }
+  return { ok: canPayUsdg || canPayEth, usdtBalance, ethBalance, headroomUsd, suggested, canPayUsdg, canPayEth }
 }
 
 export interface HiddenCardWin {
@@ -300,7 +314,7 @@ export async function fetchHiddenCards(buyer: Address): Promise<HiddenCardWin[]>
   })
   return logs.map((log) => ({
     jackpotPct: Number(log.args.pctBps ?? 0n) / 100,
-    valueUsd: Number(log.args.amountUsdg ?? 0n) / 10 ** USDG_DECIMALS,
+    valueUsd: Number(log.args.amountUsdg ?? 0n) / 10 ** PAY_DECIMALS,
     txHash: log.transactionHash ?? '',
   }))
 }
@@ -309,7 +323,7 @@ export async function fetchHiddenCards(buyer: Address): Promise<HiddenCardWin[]>
  *  txHash accompanies steps that landed a transaction, for explorer links. */
 export type OpenProgress = (step: number, txHash?: `0x${string}`) => void
 
-/** Real flow: approve USDG if needed → buyPack → open (retrying across the commit block). */
+/** Real flow: approve USDT if needed → buyPack → open (retrying across the commit block). */
 export async function buyAndOpenOnchain(
   pack: Pack,
   onProgress?: OpenProgress,
@@ -318,7 +332,7 @@ export async function buyAndOpenOnchain(
   onProgress?.(0)
   const account = getAccount(wagmiConfig).address
   if (!account) throw new Error('Wallet not connected')
-  const price = BigInt(Math.round(pack.priceUsd * 10 ** USDG_DECIMALS))
+  const price = BigInt(Math.round(pack.priceUsd * 10 ** PAY_DECIMALS))
 
   let buyHash: `0x${string}`
   if (payWith === 'eth') {
@@ -332,11 +346,11 @@ export async function buyAndOpenOnchain(
     })
   } else {
     const allowance = await readContract(wagmiConfig, {
-      address: USDG, abi: erc20Abi, functionName: 'allowance', args: [account, PACK_SALE_ADDRESS],
+      address: USDT, abi: erc20Abi, functionName: 'allowance', args: [account, PACK_SALE_ADDRESS],
     })
     if (allowance < price) {
       const approveHash = await writeContract(wagmiConfig, {
-        address: USDG, abi: erc20Abi, functionName: 'approve', args: [PACK_SALE_ADDRESS, price * 100n],
+        address: USDT, abi: erc20Abi, functionName: 'approve', args: [PACK_SALE_ADDRESS, price * 100n],
       })
       await waitForTransactionReceipt(wagmiConfig, { hash: approveHash })
     }
@@ -373,7 +387,7 @@ export async function buyAndOpenOnchain(
     for (const log of logs) {
       if (log.eventName === 'OpenedStock') {
         const card = await stockFromAddress(log.args.stock as Address)
-        card.valueUsd = Number(log.args.valueUsdg) / 10 ** USDG_DECIMALS
+        card.valueUsd = Number(log.args.valueUsdg) / 10 ** PAY_DECIMALS
         card.rarity =
           RARITY_TIERS.find((t) => Math.round(t.multiplier * 10_000) === log.args.rarityBps) ?? RARITY_TIERS[0]
         return card
@@ -382,11 +396,11 @@ export async function buyAndOpenOnchain(
         return {
           kind: 'jackpot',
           jackpotPct: Number(log.args.pctBps) / 100,
-          valueUsd: Number(log.args.amountUsdg) / 10 ** USDG_DECIMALS,
+          valueUsd: Number(log.args.amountUsdg) / 10 ** PAY_DECIMALS,
         }
       }
       if (log.eventName === 'Refunded') {
-        return { kind: 'refund', valueUsd: Number(log.args.amountUsdg) / 10 ** USDG_DECIMALS }
+        return { kind: 'refund', valueUsd: Number(log.args.amountUsdg) / 10 ** PAY_DECIMALS }
       }
     }
     // Rearmed — wait for a fresh block and try again

@@ -20,18 +20,18 @@ import { privateKeyToAccount } from 'viem/accounts'
 
 const SALE = process.env.PACK_SALE ?? '0x933C7F2F72e8FD5b57afB7a9Ee1ad36Fc5a6D45c'
 const VAULT = process.env.VAULT ?? '0xe7353a598229d1ce4c8ac15E731c380D92dfb137'
-const USDG = '0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168'
+const USDG = '0x55d398326f99059fF775485246999027B3197955'
 
 const chain = defineChain({
-  id: 4663,
-  name: 'Robinhood Chain',
-  nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
-  rpcUrls: { default: { http: ['https://rpc.mainnet.chain.robinhood.com'] } },
-  blockExplorers: { default: { name: 'Blockscout', url: 'https://robinhoodchain.blockscout.com' } },
+  id: 56,
+  name: 'BNB Chain',
+  nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
+  rpcUrls: { default: { http: ['https://bsc-rpc.publicnode.com'] } },
+  blockExplorers: { default: { name: 'BscScan', url: 'https://bscscan.com' } },
 })
 
 const pub = createPublicClient({ chain, transport: http() })
-const usd = (v) => `$${Number(formatUnits(v, 6)).toLocaleString('en-US', { minimumFractionDigits: 2 })}`
+const usd = (v) => `$${Number(formatUnits(v, 18)).toLocaleString('en-US', { minimumFractionDigits: 2 })}`
 
 const vaultAbi = parseAbi([
   'function available() view returns (uint256)',
@@ -106,7 +106,7 @@ if (cmd === 'status') {
   if (!pk) throw new Error('no PRIVATE_KEY in contracts/.env')
   const wallet = createWalletClient({ account: privateKeyToAccount(pk), chain, transport: http() })
 
-  const value = parseUnits(amount, 6)
+  const value = parseUnits(amount, 18)
   const hash = await wallet.writeContract({
     address: VAULT,
     abi: vaultAbi,

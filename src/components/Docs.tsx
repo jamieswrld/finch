@@ -1,10 +1,10 @@
-import { robinhoodChain } from '../chain'
-import { HIDDEN_CARD_CHANCE, JACKPOT_CUT, PACKS, STOCKS, USDG_ADDRESS, asset } from '../data'
+import { bnbChain } from '../chain'
+import { HIDDEN_CARD_CHANCE, JACKPOT_CUT, PACKS, STOCKS, USDT_ADDRESS, asset } from '../data'
 import { PACK_SALE_ADDRESS, TREASURY_ADDRESS, VAULT_ADDRESS, isOnchainEnabled } from '../onchain'
 import { fmtUsd } from '../rng'
 import { XButton } from './XLink'
 
-const explorer = robinhoodChain.blockExplorers.default.url
+const explorer = bnbChain.blockExplorers.default.url
 
 function AddrLink({ address }: { address: string }) {
   return (
@@ -71,16 +71,16 @@ export function Docs() {
       <h1>Docs</h1>
       <p className="muted docs-lead">
         What finch is, how to buy, and every contract we run — so you can verify all of it on
-        Blockscout before you spend a dollar.
+        BscScan before you spend a dollar.
       </p>
 
       <section className="doc-section" id="what">
         <h2>What finch is</h2>
         <p>
-          finch sells digital packs on {robinhoodChain.name}. You pay in USDG; the pack opens to a
-          card that is a real tokenized stock — an official Robinhood Stock Token, transferred to
+          finch sells digital packs on {bnbChain.name}. You pay in USDT; the pack opens to a
+          card that is a real crypto asset, transferred to
           your wallet and yours to hold, sell, or move anywhere. Occasionally a pack contains a
-          hidden card, which pays out a percentage of the jackpot in USDG instead.
+          hidden card, which pays out a percentage of the jackpot in USDT instead.
         </p>
         <p>
           Everything settles on-chain in your own wallet. finch never custodies your assets, and
@@ -92,13 +92,13 @@ export function Docs() {
         <h2>How to buy</h2>
         <ol className="doc-steps">
           <li>
-            <strong>Get on {robinhoodChain.name}.</strong> Any EVM wallet works. Network name{' '}
-            {robinhoodChain.name}, chain ID <span className="mono">{robinhoodChain.id}</span>, RPC{' '}
-            <span className="mono">{robinhoodChain.rpcUrls.default.http[0]}</span>. Gas is paid in
+            <strong>Get on {bnbChain.name}.</strong> Any EVM wallet works. Network name{' '}
+            {bnbChain.name}, chain ID <span className="mono">{bnbChain.id}</span>, RPC{' '}
+            <span className="mono">{bnbChain.rpcUrls.default.http[0]}</span>. Gas is paid in
             ETH.
           </li>
           <li>
-            <strong>Fund with USDG.</strong> USDG (Global Dollar, issued by Paxos) is the payment
+            <strong>Fund with USDT.</strong> USDT on BNB Chain is the payment
             token. Bridge in or swap for it on-chain.
           </li>
           <li>
@@ -108,7 +108,7 @@ export function Docs() {
             pull from.
           </li>
           <li>
-            <strong>Approve and buy.</strong> One approval for USDG, then the purchase itself. Your
+            <strong>Approve and buy.</strong> One approval for USDT, then the purchase itself. Your
             outcome is locked to a future block hash at this moment — before anyone, including us,
             can see it.
           </li>
@@ -151,7 +151,7 @@ export function Docs() {
             <tr>
               <td style={{ color: '#b3903f', fontWeight: 700 }}>Hidden card</td>
               <td>1%</td>
-              <td>0.5–25% of the jackpot, paid in USDG</td>
+              <td>0.5–25% of the jackpot, paid in USDT</td>
             </tr>
           </tbody>
         </table>
@@ -172,8 +172,8 @@ export function Docs() {
         <h2>The jackpot</h2>
         <p>
           {Math.round(JACKPOT_CUT * 100)}% of every pack purchase accrues in the JackpotVault
-          contract. The figure shown on the site is that contract's live USDG balance — it goes up
-          as packs sell, and you can verify it on Blockscout at any time.
+          contract. The figure shown on the site is that contract's live USDT balance — it goes up
+          as packs sell, and you can verify it on BscScan at any time.
         </p>
         <p>
           Creator fees from the finch token spill into the vault as well, so trading activity feeds
@@ -192,9 +192,9 @@ export function Docs() {
       <section className="doc-section" id="contracts">
         <h2>Contracts</h2>
         <p>
-          Everything we run on {robinhoodChain.name}, chain ID{' '}
-          <span className="mono">{robinhoodChain.id}</span>. Source is public in the repo and
-          verified on Blockscout.
+          Everything we run on {bnbChain.name}, chain ID{' '}
+          <span className="mono">{bnbChain.id}</span>. Source is public in the repo and
+          verified on BscScan.
         </p>
         <table className="doc-table">
           <tbody>
@@ -213,9 +213,9 @@ export function Docs() {
               </td>
             </tr>
             <tr>
-              <td>USDG (Paxos)</td>
+              <td>USDT (BNB Chain)</td>
               <td>
-                <AddrLink address={USDG_ADDRESS} />
+                <AddrLink address={USDT_ADDRESS} />
               </td>
             </tr>
           </tbody>
@@ -237,13 +237,12 @@ export function Docs() {
             </tr>
           </tbody>
         </table>
-        <h3>Stock tokens we deliver</h3>
+        <h3>Assets we deliver</h3>
         <p>
-          Only official Robinhood Stock Tokens, checked against the registry at{' '}
-          <a href="https://docs.robinhood.com/chain/contracts" target="_blank" rel="noreferrer">
-            docs.robinhood.com/chain/contracts
-          </a>
-          . A token with a matching ticker but a different address is not one of them.
+          Every address below was read back from BNB Chain and confirmed to have both a live
+          Chainlink USD feed and a PancakeSwap market deep enough to settle against. A token
+          with a matching ticker but a different address is not one of them — check the address,
+          never the symbol.
         </p>
         <table className="doc-table">
           <thead>
@@ -281,11 +280,11 @@ export function Docs() {
             equity.
           </li>
           <li>
-            Robinhood issues and controls the stock tokens. They are upgradeable and pausable, and
-            Robinhood does not offer them to U.S. or U.K. persons.
+            Assets are third-party ERC-20s on BNB Chain. finch does not issue or control any of them, and
+            their issuers may have their own upgrade or pause powers.
           </li>
           <li>
-            Prices come from Chainlink equity feeds, which update on market hours and pause during
+            Prices come from Chainlink feeds, which can go stale or pause during
             corporate actions. Openings revert rather than settle on a stale price.
           </li>
           <li>

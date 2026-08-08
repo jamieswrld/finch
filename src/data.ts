@@ -1,9 +1,14 @@
 export interface Stock {
   ticker: string
   name: string
-  /** Robinhood Stock Token (ERC-20, 18 decimals) on Robinhood Chain mainnet.
-   *  Canonical registry: https://docs.robinhood.com/chain/contracts */
+  /** ERC-20 on BNB Smart Chain. Every address here was read back from chain
+   *  (symbol/name/decimals) and confirmed to have a live PancakeSwap market. */
   address: string
+  /** Token decimals — NOT uniformly 18 on BSC (DOGE is 8), so never assume. */
+  decimals: number
+  /** Chainlink <asset>/USD aggregator on BSC. Settlement derives its minimum
+   *  output from this, so a thin or manipulated pool cannot shortchange a buyer. */
+  feed: string
   color: string
   /** Self-hosted logo in public/logos/. StockLogo falls back to a colored dot without it. */
   logo?: string
@@ -32,82 +37,55 @@ export const asset = (p: string): string => import.meta.env.BASE_URL + p.replace
 export const X_HANDLE = 'finchdotfun'
 export const X_URL = `https://x.com/${X_HANDLE}`
 
-/** USDG (Global Dollar, Paxos) — natively issued on Robinhood Chain */
-export const USDG_ADDRESS = '0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168'
+/** USDT on BNB Smart Chain — the payment leg. Note this is 18 decimals on BSC,
+ *  unlike the 6-decimal USDT on Ethereum. */
+export const USDT_ADDRESS = '0x55d398326f99059fF775485246999027B3197955'
+export const USDT_DECIMALS = 18
 
 export const JACKPOT_SEED_USD = 12_430.55
 /** Share of every pack purchase routed into the jackpot vault */
 export const JACKPOT_CUT = 0.2
 /** Protocol fee on every purchase */
 export const PROTOCOL_FEE = 0.01
-/** Chance a pull is a hidden jackpot card instead of a stock */
+/** Chance a pull is a hidden jackpot card instead of an asset */
 export const HIDDEN_CARD_CHANCE = 0.01
 
+/** The board, ordered by on-chain liquidity at the time of writing.
+ *  Regenerate with `node scripts/verify-assets.mjs`. */
 export const STOCKS: Stock[] = [
-  { ticker: 'NVDA', name: 'NVIDIA', address: '0xd0601CE157Db5bdC3162BbaC2a2C8aF5320D9EEC', color: '#76b900', logo: '/logos/NVDA.png' },
-  { ticker: 'AAPL', name: 'Apple', address: '0xaF3D76f1834A1d425780943C99Ea8A608f8a93f9', color: '#555555', logo: '/logos/AAPL.png' },
-  { ticker: 'TSLA', name: 'Tesla', address: '0x322F0929c4625eD5bAd873c95208D54E1c003b2d', color: '#cc0000', logo: '/logos/TSLA.png' },
-  { ticker: 'MSFT', name: 'Microsoft', address: '0xe93237C50D904957Cf27E7B1133b510C669c2e74', color: '#0078d4', logo: '/logos/MSFT.png' },
-  { ticker: 'AMZN', name: 'Amazon', address: '0x12f190a9F9d7D37a250758b26824B97CE941bF54', color: '#ff9900', logo: '/logos/AMZN.png' },
-  { ticker: 'GOOGL', name: 'Alphabet', address: '0x2e0847E8910a9732eB3fb1bb4b70a580ADAD4FE3', color: '#4285f4', logo: '/logos/GOOGL.png' },
-  { ticker: 'META', name: 'Meta', address: '0xc0D6457C16Cc70d6790Dd43521C899C87ce02f35', color: '#0064e0', logo: '/logos/META.png' },
-  { ticker: 'AMD', name: 'AMD', address: '0x86923f96303D656E4aa86D9d42D1e57ad2023fdC', color: '#111111', logo: '/logos/AMD.png' },
-  { ticker: 'PLTR', name: 'Palantir', address: '0x894E1EC2D74FFE5AEF8Dc8A9e84686acCB964F2A', color: '#101113', logo: '/logos/PLTR.png' },
-  { ticker: 'COIN', name: 'Coinbase', address: '0x6330D8C3178a418788dF01a47479c0ce7CCF450b', color: '#0052ff', logo: '/logos/COIN.png' },
-  { ticker: 'MSTR', name: 'Strategy', address: '0xec262a75e413fAfD0dF80480274532C79D42da09', color: '#cf4520', logo: '/logos/MSTR.png' },
-  { ticker: 'NFLX', name: 'Netflix', address: '0xE0444EF8BF4eD74f74FD73686e2ddF4C1c5591E8', color: '#e50914', logo: '/logos/NFLX.png' },
-  { ticker: 'GME', name: 'GameStop', address: '0x1b0E319c6A659F002271B69dB8A7df2F911c153E', color: '#d81f26', logo: '/logos/GME.png' },
-  { ticker: 'SPCX', name: 'SpaceX', address: '0x4a0E65A3EcceC6dBe60AE065F2e7bb85Fae35eEa', color: '#005288', logo: '/logos/SPCX.svg' },
-  { ticker: 'SPY', name: 'S&P 500 ETF', address: '0x117cc2133c37B721F49dE2A7a74833232B3B4C0C', color: '#8a0f1f', logo: '/logos/SPY.svg' },
-  { ticker: 'QQQ', name: 'Nasdaq-100 ETF', address: '0xD5f3879160bc7c32ebb4dC785F8a4F505888de68', color: '#2b6cb0', logo: '/logos/QQQ.svg' },
-  { ticker: 'AVGO', name: 'Broadcom', address: '0x156E175DD063a8cE274C50654eF40e0032b3fbcF', color: '#cc092f', logo: '/logos/AVGO.png' },
-  { ticker: 'TSM', name: 'TSMC', address: '0x58FfE4a942d3885bAa22D7520691F611EF09e7AA', color: '#c8102e', logo: '/logos/TSM.png' },
-  { ticker: 'INTC', name: 'Intel', address: '0xc72b96e0E48ecd4DC75E1e45396e26300BC39681', color: '#0068b5', logo: '/logos/INTC.png' },
-  { ticker: 'ASML', name: 'ASML', address: '0x47F93d52cBeC7C6D2CfC080e154002370a60dAEA', color: '#0f238c', logo: '/logos/ASML.png' },
-  { ticker: 'MU', name: 'Micron', address: '0xfF080c8ce2E5feadaCa0Da81314Ae59D232d4afD', color: '#005dab', logo: '/logos/MU.png' },
-  { ticker: 'QCOM', name: 'Qualcomm', address: '0x0f17206447090e464C277571124dD2688E48AEA9', color: '#3253dc', logo: '/logos/QCOM.png' },
-  { ticker: 'SMCI', name: 'Supermicro', address: '0xc01aA1fECeC0605b13bc84874ff7256C0f5F562a', color: '#151f6d', logo: '/logos/SMCI.png' },
-  { ticker: 'CRWV', name: 'CoreWeave', address: '0x5f10A1C971B69e47e059e1dC91901B59b3fB49C3', color: '#12b5a5', logo: '/logos/CRWV.png' },
-  { ticker: 'IONQ', name: 'IonQ', address: '0x558378E000D634A36593E338eBacdd6207640EfE', color: '#101113', logo: '/logos/IONQ.png' },
-  { ticker: 'SNDK', name: 'Sandisk', address: '0xB90A19fF0Af67f7779afF50A882A9CfF42446400', color: '#ed1c24', logo: '/logos/SNDK.png' },
-  { ticker: 'ORCL', name: 'Oracle', address: '0xb0992820E760d836549ba69BC7598b4af75dEE03', color: '#f80000', logo: '/logos/ORCL.png' },
-  { ticker: 'NOW', name: 'ServiceNow', address: '0x0C3260aF4B8f13a69c4c2dFb84fD667890CDFa14', color: '#62d84e', logo: '/logos/NOW.png' },
-  { ticker: 'CRWD', name: 'CrowdStrike', address: '0xea72Ecca2d0f6bFA1394DBBCff85b52CD4233931', color: '#e01e37', logo: '/logos/CRWD.png' },
-  { ticker: 'INTU', name: 'Intuit', address: '0x56d23beE5f41A7120170b0c603Dae30128e460e9', color: '#365ebf', logo: '/logos/INTU.png' },
-  { ticker: 'DELL', name: 'Dell', address: '0x941AE714EC6D8130c7B75d67160Ca08f1e7d11Dd', color: '#007db8', logo: '/logos/DELL.png' },
-  { ticker: 'SHOP', name: 'Shopify', address: '0xF53F66751B1Eff985311b693531E3290F600c410', color: '#96bf48', logo: '/logos/SHOP.png' },
-  { ticker: 'BABA', name: 'Alibaba', address: '0xad25Ac6C84D497db898fa1E8387bf6Af3532a1c4', color: '#ff6a00', logo: '/logos/BABA.png' },
-  { ticker: 'RDDT', name: 'Reddit', address: '0x05b37Fb53A299a1b874A619e1c4C404D52C36F4C', color: '#ff4500', logo: '/logos/RDDT.png' },
-  { ticker: 'RBLX', name: 'Roblox', address: '0xF0C4BF4C582cb3836e98394b1d4e7B7281101bE8', color: '#232527', logo: '/logos/RBLX.png' },
-  { ticker: 'SOFI', name: 'SoFi', address: '0x98E75885157C80992A8D41b696D8c9C6Fb30A926', color: '#00b3e3', logo: '/logos/SOFI.png' },
-  { ticker: 'CRCL', name: 'Circle', address: '0xdF0992E440dD0be65BD8439b609d6D4366bf1CB5', color: '#0acb8e', logo: '/logos/CRCL.svg' },
-  { ticker: 'RIVN', name: 'Rivian', address: '0xB1BF26c1D20ff267A4f93550d1E0d06ac40a114B', color: '#e6a324', logo: '/logos/RIVN.png' },
-  { ticker: 'COST', name: 'Costco', address: '0x4EA005168D7F09a7A0Ba9D1DEf21a479950E44C2', color: '#e31837', logo: '/logos/COST.png' },
-  { ticker: 'LLY', name: 'Eli Lilly', address: '0x8005d266423c7ea827372c9c864491e5786600ea', color: '#d52b1e', logo: '/logos/LLY.png' },
-  { ticker: 'XOM', name: 'ExxonMobil', address: '0xf9B46d3D1B22199D4D1025a9cEDB540A33F1a2d5', color: '#fe000c', logo: '/logos/XOM.png' },
-  { ticker: 'BA', name: 'Boeing', address: '0x4D21483a44Bf67a86b77E3dA301411880797D452', color: '#0033a1', logo: '/logos/BA.png' },
-  { ticker: 'SOXX', name: 'Semiconductor ETF', address: '0x75742c18BC1f1C5c5f448f4C9D9C6F66dafAAa38', color: '#5c2d91', logo: '/logos/SOXX.svg' },
-  { ticker: 'XLK', name: 'Tech Sector ETF', address: '0x15Cd20759CE7F3285c29A319dE2D1A2e098c6f43', color: '#006d9c', logo: '/logos/XLK.svg' },
-  { ticker: 'USO', name: 'Oil Fund ETF', address: '0xa30FA36Db767ad9eD3f7a60fC79526fB4d56D344', color: '#1f3b73', logo: '/logos/USO.png' },
-  { ticker: 'SLV', name: 'Silver Trust ETF', address: '0x411eFb0E7f985935DAec3D4C3ebaEa0d0AD7D89f', color: '#8c9196', logo: '/logos/SLV.svg' },
+  { ticker: 'BTCB', name: 'Bitcoin', address: '0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c', decimals: 18, feed: '0x264990fbd0A4796A3E3d8E37C4d5F87a3aCa5Ebf', color: '#f7931a' },
+  { ticker: 'WBNB', name: 'BNB', address: '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c', decimals: 18, feed: '0x0567F2323251f0Aab15c8dFb1967E4e8A7D42aeE', color: '#f0b90b' },
+  { ticker: 'ETH', name: 'Ethereum', address: '0x2170Ed0880ac9A755fd29B2688956BD959F933F8', decimals: 18, feed: '0x9ef1B8c0E4F7dc8bF5719Ea496883DC6401d5b2e', color: '#627eea' },
+  { ticker: 'CAKE', name: 'PancakeSwap', address: '0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82', decimals: 18, feed: '0xB6064eD41d4f67e353768aA239cA86f4F73665a1', color: '#33e0e5' },
+  { ticker: 'DOGE', name: 'Dogecoin', address: '0xbA2aE424d960c26247Dd6c32edC70B295c744C43', decimals: 8, feed: '0x3AB0A0d137D4F946fBB19eecc6e92E64660231C8', color: '#c2a633' },
+  { ticker: 'XRP', name: 'XRP', address: '0x1D2F0da169ceB9fC7B3144628dB156f3F6c60dBE', decimals: 18, feed: '0x93A67D414896A280bF8FFB3b389fE3686E014fda', color: '#23292f' },
+  { ticker: 'SOL', name: 'Solana', address: '0x570A5D26f7765Ecb712C0924E4De545B89fD43dF', decimals: 18, feed: '0x0E8a53DD9c13589df6382F13dA6B3Ec8F919B323', color: '#14f195' },
+  { ticker: 'UNI', name: 'Uniswap', address: '0xBf5140A22578168FD562DCcF235E5D43A02ce9B1', decimals: 18, feed: '0xb57f259E7C24e56a1dA00F66b55A5640d9f9E7e4', color: '#ff007a' },
+  { ticker: 'LINK', name: 'Chainlink', address: '0xF8A0BF9cF54Bb92F17374d9e9A321E6a111a51bD', decimals: 18, feed: '0xca236E327F629f9Fc2c30A4E95775EbF0B89fac8', color: '#2a5ada' },
+  { ticker: 'ADA', name: 'Cardano', address: '0x3EE2200Efb3400fAbB9AacF31297cBdD1d435D47', decimals: 18, feed: '0xa767f745331D267c7751297D982b050c93985627', color: '#0033ad' },
+  { ticker: 'XVS', name: 'Venus', address: '0xcF6BB5389c92Bdda8a3747Ddb454cB7a64626C63', decimals: 18, feed: '0xBF63F430A79D4036A5900C19818aFf1fa710f206', color: '#2c60f5' },
+  { ticker: 'LTC', name: 'Litecoin', address: '0x4338665CBB7B2485A8855A139b75D5e34AB0DB94', decimals: 18, feed: '0x74E72F37A8c415c8f1a98Ed42E78Ff997435791D', color: '#345d9d' },
+  { ticker: 'SHIB', name: 'Shiba Inu', address: '0x2859e4544C4bB03966803b044A93563Bd2D0DD4D', decimals: 18, feed: '0xA615Be6cb0f3F36A641858dB6F30B9242d0ABeD8', color: '#f00500' },
+  { ticker: 'DOT', name: 'Polkadot', address: '0x7083609fCE4d1d8Dc0C979AAb8c869Ea2C873402', decimals: 18, feed: '0xC333eb0086309a16aa7c8308DfD32c8BBA0a2592', color: '#e6007a' },
+  { ticker: 'INJ', name: 'Injective', address: '0xa2B726B1145A4773F68593CF171187d8EBe4d495', decimals: 18, feed: '0x63A9133cd7c611d6049761038C16f238FddA71d7', color: '#00a3ff' },
+  { ticker: 'AVAX', name: 'Avalanche', address: '0x1CE0c2827e2eF14D5C4f29a091d735A204794041', decimals: 18, feed: '0x5974855ce31EE8E1fff2e76591CbF83D7110F151', color: '#e84142' },
+  { ticker: 'FIL', name: 'Filecoin', address: '0x0D8Ce2A99Bb6e3B7Db580eD848240e4a0F9aE153', decimals: 18, feed: '0xE5dbFD9003bFf9dF5feB2f4F445Ca00fb121fb83', color: '#0090ff' },
+  { ticker: 'BCH', name: 'Bitcoin Cash', address: '0x8fF795a6F4D97E7887C79beA79aba5cc76444aDf', decimals: 18, feed: '0x43d80f616DAf0b0B42a928EeD32147dC59027D41', color: '#8dc351' },
 ]
 
 export const stockByTicker = (t: string): Stock => STOCKS.find((s) => s.ticker === t)!
 
-/** Only stocks with a live Chainlink feed can sit in pack pools — the contract
- *  prices every card through its feed, so feedless stocks would brick opens.
- *  Mirrors the sets wired in contracts/script/DeployMainnet.s.sol exactly. */
-export const FEED_BACKED = [
-  'NVDA', 'AAPL', 'TSLA', 'MSFT', 'AMZN', 'GOOGL', 'META', 'AMD', 'PLTR', 'COIN',
-  'MSTR', 'GME', 'SPCX', 'SPY', 'QQQ', 'TSM', 'INTC', 'ASML', 'MU', 'CRWV',
-  'IONQ', 'SNDK', 'ORCL', 'DELL', 'BABA', 'CRCL', 'USO', 'SLV',
-]
+/** Everything on the board has a Chainlink USD feed — that is the entry requirement. */
+export const FEED_BACKED = STOCKS.map((s) => s.ticker)
+
+const MAJORS = ['BTCB', 'ETH', 'WBNB', 'SOL', 'XRP', 'ADA', 'DOT', 'LTC', 'BCH']
+const DEFI = ['CAKE', 'UNI', 'LINK', 'XVS', 'INJ', 'AVAX']
 
 export const PACKS: Pack[] = [
   {
     id: 'starter',
     name: 'Starter Pack',
-    tagline: 'One random stock from the full board',
+    tagline: 'One random asset from the full board',
     priceUsd: 10,
     tint: '#dfeadb',
     pool: FEED_BACKED,
@@ -118,21 +96,21 @@ export const PACKS: Pack[] = [
   {
     id: 'bluechip',
     name: 'Blue Chip Pack',
-    tagline: 'Mag-7 heavyweights only',
+    tagline: 'Majors only',
     priceUsd: 25,
     tint: '#dbe6f6',
-    pool: ['AAPL', 'MSFT', 'AMZN', 'GOOGL', 'META', 'NVDA', 'TSLA', 'ORCL'],
+    pool: MAJORS,
     live: true,
     chainPackId: 1,
     image: '/packs/bluechip.webp',
   },
   {
-    id: 'ai',
-    name: 'AI Pack',
-    tagline: 'Chips and compute',
+    id: 'defi',
+    name: 'DeFi Pack',
+    tagline: 'Protocols and infrastructure',
     priceUsd: 50,
     tint: '#eae2f5',
-    pool: ['NVDA', 'AMD', 'TSM', 'MU', 'ASML', 'INTC', 'CRWV', 'IONQ', 'PLTR', 'MSFT'],
+    pool: DEFI,
     live: true,
     chainPackId: 2,
     image: '/packs/ai.webp',

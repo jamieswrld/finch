@@ -20,7 +20,7 @@ import {
   type Pack,
 } from './data'
 import { fmtUsd, shortAddr, type Card } from './rng'
-import { robinhoodChain } from './chain'
+import { bnbChain } from './chain'
 import { recordPull } from './history'
 import { isOnchainEnabled } from './onchain'
 import { TOKEN_ADDRESS, TOKEN_SYMBOL, isTokenLive, tokenBuyUrl } from './token'
@@ -35,7 +35,7 @@ export default function App() {
   const [openingPack, setOpeningPack] = useState<Pack | null>(null)
   const [demoJackpotUsd, setDemoJackpotUsd] = useState(JACKPOT_SEED_USD)
   const [route, setRoute] = useState(window.location.hash)
-  const wrongNetwork = isConnected && chainId !== robinhoodChain.id
+  const wrongNetwork = isConnected && chainId !== bnbChain.id
   const showWallet = route.startsWith('#/wallet')
 
   useEffect(() => {
@@ -77,7 +77,7 @@ export default function App() {
         <nav className="nav">
           <a href="#packs">Packs</a>
           <a href="#jackpot">Jackpot</a>
-          <a href="#stocks">Stocks</a>
+          <a href="#stocks">Assets</a>
           <a href="#/wallet">Wallet</a>
           <a href="#/docs">Docs</a>
         </nav>
@@ -91,8 +91,8 @@ export default function App() {
 
       {wrongNetwork && (
         <div className="net-banner">
-          <span>Wrong network — finch runs on {robinhoodChain.name}.</span>
-          <button className="btn btn-dark btn-sm" onClick={() => switchChain({ chainId: robinhoodChain.id })}>
+          <span>Wrong network — finch runs on {bnbChain.name}.</span>
+          <button className="btn btn-dark btn-sm" onClick={() => switchChain({ chainId: bnbChain.id })}>
             Switch network
           </button>
         </div>
@@ -109,10 +109,10 @@ export default function App() {
             <h1>
               Open a pack.
               <br />
-              Own real stocks.
+              Own real crypto.
             </h1>
             <p className="hero-sub">
-              Every pack holds a real tokenized stock, settled straight to your wallet. Every pack
+              Every pack holds a real crypto asset, settled straight to your wallet. Every pack
               feeds the jackpot — and hidden cards claim a slice of it.
             </p>
             <div className="hero-actions">
@@ -240,10 +240,10 @@ export default function App() {
                 <p className="eyebrow">${TOKEN_SYMBOL}</p>
                 <h2>The finch token</h2>
                 <p className="muted">
-                  Trades on {robinhoodChain.name}. Contract{' '}
+                  Trades on {bnbChain.name}. Contract{' '}
                   <a
                     className="mono"
-                    href={`${robinhoodChain.blockExplorers.default.url}/token/${TOKEN_ADDRESS}`}
+                    href={`${bnbChain.blockExplorers.default.url}/token/${TOKEN_ADDRESS}`}
                     target="_blank"
                     rel="noreferrer"
                   >
@@ -263,26 +263,26 @@ export default function App() {
           <div className="section-head">
             <div>
               <p className="eyebrow">The board</p>
-              <h2>Tokenized stocks</h2>
+              <h2>The assets</h2>
             </div>
             <a
               className="section-link"
-              href={`${robinhoodChain.blockExplorers.default.url}/tokens`}
+              href={`${bnbChain.blockExplorers.default.url}/tokens`}
               target="_blank"
               rel="noreferrer"
             >
-              Blockscout →
+              BscScan →
             </a>
           </div>
           <p className="muted section-sub">
-            Official Robinhood Stock Tokens — real equities as ERC-20s on {robinhoodChain.name}.
+            Every asset has a live Chainlink USD feed and a deep PancakeSwap market on {bnbChain.name}.
           </p>
           <div className="stock-grid">
             {STOCKS.map((s) => (
               <a
                 className="stock-cell"
                 key={s.ticker}
-                href={`${robinhoodChain.blockExplorers.default.url}/token/${s.address}`}
+                href={`${bnbChain.blockExplorers.default.url}/token/${s.address}`}
                 target="_blank"
                 rel="noreferrer"
               >
@@ -308,10 +308,10 @@ export default function App() {
           </div>
           <div className="steps">
             {[
-              ['Connect', 'Any EVM wallet on Robinhood Chain.'],
-              ['Buy a pack', 'Pay in USDG. A cut goes to the jackpot vault.'],
+              ['Connect', 'Any EVM wallet on BNB Chain.'],
+              ['Buy a pack', 'Pay in USDT. A cut goes to the jackpot vault.'],
               ['Provable RNG', 'On-chain randomness picks your card and rarity.'],
-              ['Own it', 'The tokenized stock settles to your wallet. Hidden cards claim vault %.'],
+              ['Own it', 'The asset settles to your wallet. Hidden cards claim vault %.'],
             ].map(([title, body], i) => (
               <div className="step" key={title}>
                 <span className="step-num">{i + 1}</span>
@@ -330,7 +330,7 @@ export default function App() {
           @{X_HANDLE}
         </a>
         <span className="muted small">
-          finch · <a href="#/docs">docs</a> · not investment advice · tokenized stocks carry risk
+          finch · <a href="#/docs">docs</a> · not investment advice · crypto assets carry risk
         </span>
       </footer>
 

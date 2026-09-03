@@ -60,6 +60,17 @@ export type OwnershipVerdict =
  *   anonymous → refused. Silently overwriting is never an option.
  */
 export function canWrite(identity: Identity, existingOwner: string | null | undefined): OwnershipVerdict {
+  // Publishing requires a key. Reading and RUNNING stay open to everyone —
+  // that is the product — but an anonymous create is an unauthenticated write
+  // into a shared database, which on a public deployment means anyone on the
+  // internet can fill the registry with rows nobody can remove.
+  if (!identity.owner) {
+    return {
+      ok: false,
+      status: 401,
+      reason: "publishing requires a publisher key — send it as x-finch-key. Reading and running finches need no key.",
+    };
+  }
   if (existingOwner === undefined || existingOwner === null) {
     // Nothing stored yet, or a legacy record with no owner recorded.
     return existingOwner === undefined

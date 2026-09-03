@@ -1,5 +1,5 @@
 import { nestDocSchema, getCollections, isDbConfigured } from "@finch/db";
-import { REGISTRY_NESTS } from "@/lib/registry";
+import { REGISTRY_NEST_DOCS, mergeWithBuiltins } from "@/lib/registry";
 import { errorJson, json, rateLimit, readJsonBody, safeErrorMessage } from "@/lib/server/http";
 import { canWrite, resolveIdentity } from "@/lib/server/identity";
 
@@ -12,20 +12,22 @@ export async function GET(): Promise<Response> {
     try {
       const { nests } = await getCollections();
       const rows = await nests.find({}, { projection: { _id: 0 } }).sort({ updatedAt: -1 }).limit(50).toArray();
-      // An empty collection means we are serving seed rows — say so, rather
-      // than stamping demo data with a "registry" badge.
-      if (rows.length > 0) return json({ source: "db", nests: rows });
-      return json({ source: "builtin", nests: REGISTRY_NESTS });
+      // Builtins are part of this deployment, not a fallback for an empty
+      // database — a stored row must never make them disappear.
+      return json({
+        source: rows.length > 0 ? "db" : "builtin",
+        nests: mergeWithBuiltins(REGISTRY_NEST_DOCS, rows),
+      });
     } catch (error) {
       return json({
         source: "builtin",
         degraded: true,
         note: `database unreachable (${safeErrorMessage(error, 120)})`,
-        nests: REGISTRY_NESTS,
+        nests: REGISTRY_NEST_DOCS,
       });
     }
   }
-  return json({ source: "builtin", nests: REGISTRY_NESTS });
+  return json({ source: "builtin", nests: REGISTRY_NEST_DOCS });
 }
 
 /** POST /api/nests — save a nest draft. Persists structure only; never claims execution. */

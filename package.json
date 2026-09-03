@@ -15,7 +15,8 @@
     "seed": "npm run seed -w @finch/db",
     "test": "npm run test --workspaces --if-present",
     "check": "npm run typecheck && npm run test",
-    "check:secrets": "node scripts/check-secrets.mjs"
+    "check:secrets": "node scripts/check-secrets.mjs",
+    "key:create": "node scripts/create-publisher-key.mjs"
   },
   "devDependencies": {
     "typescript": "^5.7.0"

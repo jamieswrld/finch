@@ -1,4 +1,4 @@
-import type { AviaryListing } from "@finch/db";
+import type { AviaryListing, FinchDoc, NestDoc } from "@finch/db";
 import { NEST_PRESETS } from "./nest-presets";
 import { SCHOOL_PRESETS } from "./school-presets";
 
@@ -106,4 +106,92 @@ export function withRunCounts(
     ...listing,
     stats: { ...listing.stats, calls30d: counts.get(listing.slug) ?? 0 },
   }));
+}
+
+/**
+ * Document-shaped builtins.
+ *
+ * /api/finches and /api/nests return DOCUMENTS (what the composer and builder
+ * edit), not Aviary listings (what the browser cards render). Serving the
+ * listing shape from a document endpoint produces objects whose fields the
+ * consumer silently reads as undefined, so the two shapes are built
+ * separately and deliberately.
+ */
+
+/** Builtin finches as FinchDoc rows — same shape a published finch has. */
+export const REGISTRY_FINCH_DOCS: FinchDoc[] = SCHOOL_PRESETS.map((preset) => ({
+  handle: preset.slug,
+  manifest: preset.manifest as unknown as Record<string, unknown>,
+  // These are hatched and runnable right now, not drafts.
+  status: "hatched",
+  createdAt: CREATED_AT,
+  updatedAt: CREATED_AT,
+}));
+
+/**
+ * Builtin nests as NestDoc rows.
+ *
+ * A NestManifest carries a task DAG; a NestDoc carries stages and edges. Depth
+ * in the dependency graph becomes the stage index, so tasks that can run
+ * together sit in the same stage — which is exactly how the runtime schedules
+ * them, rather than a layout invented for display.
+ */
+export const REGISTRY_NEST_DOCS: NestDoc[] = NEST_PRESETS.map((preset) => {
+  const byId = new Map(preset.tasks.map((task) => [task.id, task]));
+
+  const depthOf = (id: string, seen = new Set<string>()): number => {
+    if (seen.has(id)) return 0; // validated elsewhere; never loop here
+    seen.add(id);
+    const task = byId.get(id);
+    if (!task || task.dependsOn.length === 0) return 0;
+    return 1 + Math.max(...task.dependsOn.map((dep) => depthOf(dep, seen)));
+  };
+
+  const stageCount = Math.max(1, ...preset.tasks.map((task) => depthOf(task.id) + 1));
+  const stages = Array.from({ length: stageCount }, (_, index) => ({
+    id: `stage-${index + 1}`,
+    name: `Stage ${index + 1}`,
+    finches: preset.tasks
+      .filter((task) => depthOf(task.id) === index)
+      .map((task) => {
+        const member = preset.finches.find((entry) => entry.handle === task.finch);
+        return {
+          handle: task.finch,
+          name: member?.name ?? task.finch,
+          role: task.title,
+          inputs: task.dependsOn.map((dep) => byId.get(dep)?.outputChannel ?? dep),
+          outputs: [task.outputChannel],
+          permissions: member?.manifest.tools.flightpath ?? [],
+        };
+      }),
+  }));
+
+  const edges = preset.tasks.flatMap((task) =>
+    task.dependsOn.map((dep) => ({
+      from: byId.get(dep)?.finch ?? dep,
+      to: task.finch,
+      channel: byId.get(dep)?.outputChannel ?? dep,
+    })),
+  );
+
+  return {
+    slug: preset.identity.id,
+    name: preset.identity.name,
+    description: preset.identity.description,
+    stages,
+    edges,
+    status: "active" as const,
+    createdAt: CREATED_AT,
+    updatedAt: CREATED_AT,
+  };
+});
+
+/** Builtins first, then stored rows, with stored rows winning on a slug clash. */
+export function mergeWithBuiltins<T extends { slug?: string; handle?: string }>(
+  builtins: T[],
+  stored: T[],
+): T[] {
+  const keyOf = (row: T) => row.slug ?? row.handle ?? "";
+  const storedKeys = new Set(stored.map(keyOf));
+  return [...builtins.filter((row) => !storedKeys.has(keyOf(row))), ...stored];
 }

@@ -1,5 +1,5 @@
 import { getCollections, isDbConfigured, type FinchDoc } from "@finch/db";
-import { REGISTRY_FINCHES } from "@/lib/registry";
+import { REGISTRY_FINCH_DOCS, mergeWithBuiltins } from "@/lib/registry";
 import { safeValidateManifest } from "@finch/sdk";
 import { errorJson, json, rateLimit, readJsonBody, safeErrorMessage } from "@/lib/server/http";
 import { canWrite, resolveIdentity } from "@/lib/server/identity";
@@ -13,17 +13,20 @@ export async function GET(): Promise<Response> {
     try {
       const { finches } = await getCollections();
       const rows = await finches.find({}, { projection: { _id: 0 } }).sort({ updatedAt: -1 }).limit(100).toArray();
-      return json({ source: "db", finches: rows });
+      return json({
+        source: rows.length > 0 ? "db" : "builtin",
+        finches: mergeWithBuiltins(REGISTRY_FINCH_DOCS, rows),
+      });
     } catch (error) {
       return json({
         source: "builtin",
         degraded: true,
         note: `database unreachable (${safeErrorMessage(error, 120)})`,
-        finches: REGISTRY_FINCHES,
+        finches: REGISTRY_FINCH_DOCS,
       });
     }
   }
-  return json({ source: "builtin", finches: REGISTRY_FINCHES });
+  return json({ source: "builtin", finches: REGISTRY_FINCH_DOCS });
 }
 
 /**

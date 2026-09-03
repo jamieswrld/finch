@@ -1,0 +1,267 @@
+@import "tailwindcss";
+
+/* Explicit source registration: auto-detection skips directories named
+   "build" (treated as build output), but src/components/build is source. */
+@source "../components";
+@source "../app";
+
+/*
+  FINCH design system.
+  Bone ground, near-black ink, Robinhood green as a working accent (never a
+  wash), muted sage, small gold moments. Thin borders, 2px radii, tight
+  spacing, editorial + technical type. No gradients, no glass, no glow.
+*/
+
+@theme {
+  /* ground */
+  --color-bone: #f4f2ea;
+  --color-bone-raised: #faf9f4;
+  --color-bone-sunken: #ece9dd;
+
+  /* ink */
+  --color-ink: #191b14;
+  --color-ink-soft: #43463c;
+  --color-grey: #6f7268;
+  --color-grey-faint: #9b9e93;
+
+  /* lines */
+  --color-line: #dcd9ca;
+  --color-line-strong: #c2bfae;
+
+  /* accents */
+  --color-green: #00c805; /* Robinhood green — marks, lines, dots only */
+  --color-green-deep: #0a7227; /* text-safe green */
+  --color-green-wash: #e4f2e2;
+  --color-sage: #a3b098;
+  --color-sage-deep: #67765e;
+  --color-gold: #c9a227;
+  --color-gold-deep: #8a6d1d;
+  --color-red-deep: #a3352b;
+  --color-red-wash: #f4e4e0;
+
+  /* type */
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --font-serif: var(--font-newsreader), "Iowan Old Style", Georgia, serif;
+
+  --radius-xs: 2px;
+  --radius-sm: 3px;
+}
+
+::selection {
+  background: #00c80533;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-bone);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-green-deep);
+  outline-offset: 2px;
+}
+
+@layer components {
+  /* 11px tracked mono label — the system's connective tissue */
+  .label-mono {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-grey);
+  }
+
+  .container-page {
+    margin-inline: auto;
+    width: 100%;
+    max-width: 1200px;
+    padding-inline: 20px;
+  }
+  @media (min-width: 768px) {
+    .container-page {
+      padding-inline: 32px;
+    }
+  }
+
+  /* faint engineering-grid ground for diagram sections */
+  .grid-paper {
+    background-image:
+      linear-gradient(to right, rgba(25, 27, 20, 0.045) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(25, 27, 20, 0.045) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+
+  .rule-dotted {
+    background-image: linear-gradient(to right, var(--color-line-strong) 30%, transparent 0%);
+    background-size: 5px 1px;
+    background-repeat: repeat-x;
+    height: 1px;
+  }
+
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* editorial serif aside */
+  .serif-note {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 1.06em;
+    color: var(--color-ink-soft);
+  }
+
+  /* film-grain wash for hero surfaces — texture without gradients */
+  .grain {
+    position: relative;
+  }
+  .grain::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.05;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.6'/%3E%3C/svg%3E");
+  }
+
+  /* landing entrance — killed globally under prefers-reduced-motion */
+  .reveal {
+    animation: finch-rise 0.7s cubic-bezier(0.2, 0.6, 0.2, 1) both;
+  }
+  .reveal-2 {
+    animation-delay: 0.08s;
+  }
+  .reveal-3 {
+    animation-delay: 0.16s;
+  }
+  .reveal-4 {
+    animation-delay: 0.26s;
+  }
+}
+
+@keyframes finch-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* terminal cursor */
+@keyframes finch-blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+/* ambient finch crossing the corridor — slow, 26–34s cycles */
+@keyframes finch-cross-a {
+  0% {
+    transform: translate(-6vw, 62vh) rotate(-10deg) scale(0.8);
+    opacity: 0;
+  }
+  6% {
+    opacity: 0.55;
+  }
+  50% {
+    transform: translate(52vw, 30vh) rotate(-16deg) scale(1);
+    opacity: 0.55;
+  }
+  94% {
+    opacity: 0.55;
+  }
+  100% {
+    transform: translate(106vw, 16vh) rotate(-8deg) scale(0.85);
+    opacity: 0;
+  }
+}
+
+@keyframes finch-cross-b {
+  0% {
+    transform: translate(104vw, 24vh) rotate(168deg) scale(0.6);
+    opacity: 0;
+  }
+  8% {
+    opacity: 0.35;
+  }
+  55% {
+    transform: translate(40vw, 58vh) rotate(176deg) scale(0.75);
+    opacity: 0.35;
+  }
+  92% {
+    opacity: 0.35;
+  }
+  100% {
+    transform: translate(-8vw, 44vh) rotate(170deg) scale(0.6);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Additional crossing paths. The hero flock reads as depth: far birds are
+   small, pale and slow; near birds are larger, darker and quicker. Each has
+   its own arc so the group never looks like a repeated sprite. */
+@keyframes finch-cross-c {
+  0% { transform: translate(-8vw, 34vh) rotate(-6deg) scale(0.5); opacity: 0; }
+  10% { opacity: 0.3; }
+  52% { transform: translate(48vw, 18vh) rotate(-12deg) scale(0.62); opacity: 0.3; }
+  92% { opacity: 0.3; }
+  100% { transform: translate(108vw, 8vh) rotate(-18deg) scale(0.5); opacity: 0; }
+}
+@keyframes finch-cross-d {
+  0% { transform: translate(106vw, 72vh) rotate(184deg) scale(0.72); opacity: 0; }
+  9% { opacity: 0.42; }
+  48% { transform: translate(46vw, 44vh) rotate(192deg) scale(0.9); opacity: 0.42; }
+  90% { opacity: 0.42; }
+  100% { transform: translate(-10vw, 26vh) rotate(200deg) scale(0.7); opacity: 0; }
+}
+@keyframes finch-cross-e {
+  0% { transform: translate(-6vw, 14vh) rotate(4deg) scale(0.42); opacity: 0; }
+  12% { opacity: 0.22; }
+  55% { transform: translate(50vw, 34vh) rotate(-2deg) scale(0.5); opacity: 0.22; }
+  90% { opacity: 0.22; }
+  100% { transform: translate(107vw, 56vh) rotate(-8deg) scale(0.42); opacity: 0; }
+}
+@keyframes finch-cross-f {
+  0% { transform: translate(-9vw, 84vh) rotate(-20deg) scale(0.95); opacity: 0; }
+  7% { opacity: 0.5; }
+  46% { transform: translate(44vw, 62vh) rotate(-26deg) scale(1.15); opacity: 0.5; }
+  93% { opacity: 0.5; }
+  100% { transform: translate(109vw, 40vh) rotate(-32deg) scale(0.95); opacity: 0; }
+}
+@keyframes finch-cross-g {
+  0% { transform: translate(103vw, 8vh) rotate(172deg) scale(0.38); opacity: 0; }
+  14% { opacity: 0.2; }
+  58% { transform: translate(52vw, 24vh) rotate(178deg) scale(0.46); opacity: 0.2; }
+  90% { opacity: 0.2; }
+  100% { transform: translate(-8vw, 46vh) rotate(184deg) scale(0.38); opacity: 0; }
+}

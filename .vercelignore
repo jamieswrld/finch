@@ -1,0 +1,10 @@
+node_modules
+.next
+apps/web/.next
+.git
+contracts/cache
+contracts/out
+contracts/broadcast
+brand/*.png
+apps/web/public/brand/*.png
+*.log

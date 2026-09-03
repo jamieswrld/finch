@@ -1,0 +1,33 @@
+# dependencies
+node_modules/
+
+# next.js
+.next/
+out/
+next-env.d.ts
+
+# builds — note: no bare "build/" pattern here; Tailwind v4 respects
+# .gitignore and it would exclude src/components/build + app/build from
+# class detection
+dist/
+
+# env — never commit secrets
+.env
+.env.local
+.env.*.local
+
+# foundry
+contracts/cache/
+contracts/out/
+contracts/broadcast/
+
+# misc
+.DS_Store
+*.log
+*.tsbuildinfo
+
+.vercel
+.env*
+!.env.example
+
+audit-findings.txt

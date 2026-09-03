@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "paths": {
+      "@finch/providers": ["../providers/src/index.ts"],
+      "@finch/flightpath": ["../flightpath/src/index.ts"]
+    }
+  },
+  "include": ["src"]
+}

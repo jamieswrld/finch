@@ -1,0 +1,28 @@
+{
+  "name": "@finch/db",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Finch operational data layer \u2014 MongoDB schemas, collections, indexes, credits accounting.",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./seeds": "./src/seeds.ts"
+  },
+  "sideEffects": false,
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "seed": "node src/seed.ts",
+    "indexes": "node src/ensure-indexes.ts"
+  },
+  "dependencies": {
+    "mongodb": "^6.10.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.7.0"
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,34 @@
+{
+  "name": "finch",
+  "version": "0.1.0",
+  "private": true,
+  "description": "FINCH \u2014 infrastructure for intelligent systems on Robinhood Chain.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @finch/web",
+    "build": "npm run build -w @finch/web",
+    "start": "npm run start -w @finch/web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "seed": "npm run seed -w @finch/db",
+    "test": "npm run test --workspaces --if-present",
+    "check": "npm run typecheck && npm run test"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jamieswrld/finch.git"
+  },
+  "homepage": "https://github.com/jamieswrld/finch",
+  "bugs": {
+    "url": "https://github.com/jamieswrld/finch/issues"
+  }
+}

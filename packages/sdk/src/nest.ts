@@ -1,3 +1,4 @@
+import type { ExecutionRecord } from "@finch/flightpath";
 import { z } from "zod";
 import type { ModelProvider } from "@finch/providers";
 import { finchManifestSchema, type FinchManifest } from "./manifest.ts";
@@ -103,6 +104,8 @@ export type TaskStatus =
   | "cancelled";
 
 /** The full provenance record for one task. Everything an auditor needs. */
+export type TaskExecution = Pick<ExecutionRecord, "id" | "state" | "intent" | "prepared" | "simulation" | "policy" | "tx" | "receipt">;
+
 export interface TaskRecord {
   id: string;
   nestRunId: string;
@@ -118,6 +121,13 @@ export interface TaskRecord {
   error: string | null;
   startedAt: string | null;
   finishedAt: string | null;
+  /**
+   * Executions the finch prepared while working this task — the ones a
+   * signer still has to act on sit at "awaiting_signature". A nest allowed
+   * to write surfaces them here so the console can put a signing panel next
+   * to the task instead of losing the record inside the run.
+   */
+  executions?: TaskExecution[];
   durationMs: number | null;
   cost: { inputTokens: number; outputTokens: number };
   provenance: {
@@ -434,6 +444,9 @@ export async function runNest(manifest: NestManifest, options: RunNestOptions): 
       });
 
       record.cost = result.usage;
+      if (result.executions.length > 0) {
+        record.executions = result.executions.map(({ id, state, intent, prepared, simulation, policy, tx, receipt }) => ({ id, state, intent, prepared, simulation, policy, tx, receipt }));
+      }
       run.totalCost.inputTokens += result.usage.inputTokens;
       run.totalCost.outputTokens += result.usage.outputTokens;
       record.provenance = {

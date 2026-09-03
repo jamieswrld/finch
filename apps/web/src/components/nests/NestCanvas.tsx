@@ -130,7 +130,7 @@ export function NestCanvas({
                 />
               ))}
               {stage.finches.length === 0 && (
-                <p className="rounded-xs border border-dashed border-line-strong p-4 text-center font-mono text-[10.5px] uppercase tracking-[0.1em] text-grey-faint">
+                <p className="rounded-xs border border-dashed border-line-strong p-4 text-center font-mono text-[10.5px] text-grey-faint">
                   empty stage
                 </p>
               )}
@@ -173,11 +173,11 @@ function FinchNode({
       <p className="mt-1 text-[11.5px] leading-snug text-grey">{finch.role}</p>
       <dl className="mt-2.5 space-y-1 font-mono text-[10px]">
         <div className="flex gap-1.5">
-          <dt className="text-grey-faint uppercase tracking-[0.08em] shrink-0">in</dt>
+          <dt className="text-grey-faint shrink-0">in</dt>
           <dd className="text-ink-soft break-words min-w-0">{finch.inputs.length > 0 ? finch.inputs.join(", ") : "—"}</dd>
         </div>
         <div className="flex gap-1.5">
-          <dt className="text-grey-faint uppercase tracking-[0.08em] shrink-0">out</dt>
+          <dt className="text-grey-faint shrink-0">out</dt>
           <dd className="text-ink-soft break-words min-w-0">{finch.outputs.length > 0 ? finch.outputs.join(", ") : "—"}</dd>
         </div>
       </dl>

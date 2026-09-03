@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { CodeBlock } from "@/components/ui/CodeBlock";
 import { ConnectNest } from "./ConnectNest";
+import { useAccount } from "wagmi";
+import { SignPanel, type PreparedExecution } from "@/components/school/SignPanel";
 
 /**
  * The nest console. A run is a DAG of tasks streamed over SSE — each task card
@@ -51,11 +53,11 @@ function TaskCard({ task, onSelect, selected }: { task: TaskRecord; onSelect: ()
       type="button"
       onClick={onSelect}
       className={`w-full rounded-xs border p-3 text-left transition-colors ${
-        selected ? "border-ink bg-bone" : running ? "border-gold/60 bg-gold/5" : "border-line bg-bone-raised hover:border-line-strong"
+        selected ?"border-ink bg-bone" : running ? "border-gold/60 bg-gold/5" : "border-line bg-bone-raised hover:border-line-strong"
       }`}
     >
       <div className="flex items-start justify-between gap-2">
-        <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.1em] text-grey-faint">
+        <span className="flex items-center gap-1.5 font-mono text-[10px] text-grey-faint">
           {task.id}
         </span>
         <Badge tone={status.tone}>
@@ -75,7 +77,7 @@ function TaskCard({ task, onSelect, selected }: { task: TaskRecord; onSelect: ()
       <p className="mt-0.5 text-[11.5px] leading-snug text-grey">{task.title}</p>
       <p className="mt-2 font-mono text-[9.5px] text-sage-deep">→ {task.outputChannel}</p>
       {(task.durationMs !== null || task.cost.outputTokens > 0) && (
-        <p className="mt-1.5 font-mono text-[9px] uppercase tracking-[0.08em] text-grey-faint tnum">
+        <p className="mt-1.5 font-mono text-[9px] text-grey-faint tnum">
           {task.durationMs !== null ? `${(task.durationMs / 1000).toFixed(1)}s` : ""}
           {task.cost.outputTokens > 0 ? ` · ${task.cost.inputTokens}→${task.cost.outputTokens} tok` : ""}
         </p>
@@ -88,11 +90,11 @@ function Inspector({ task }: { task: TaskRecord }) {
   return (
     <div className="rounded-xs border border-line bg-bone-raised">
       <header className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-2.5">
-        <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink">
+        <span className="font-mono text-[11px] text-ink">
           {task.id} · {task.finchName}
         </span>
         <Badge tone={STATUS_TONE[task.status].tone}>{STATUS_TONE[task.status].label}</Badge>
-        <span className="ml-auto font-mono text-[10px] uppercase tracking-[0.08em] text-grey-faint tnum">
+        <span className="ml-auto font-mono text-[10px] text-grey-faint tnum">
           {task.durationMs !== null ? `${(task.durationMs / 1000).toFixed(2)}s` : "—"} ·{" "}
           {task.cost.inputTokens}→{task.cost.outputTokens} tok
         </span>
@@ -162,6 +164,7 @@ interface RunConfig {
 }
 
 export function NestRunner({ manifest }: { manifest: NestManifest }) {
+  const { address } = useAccount();
   // Whatever host the visitor is on — so a copied command targets the site
   // they are looking at, not a hardcoded domain that may not be theirs.
   const origin = typeof window === "undefined" ? "https://finch.fun" : window.location.origin;
@@ -220,7 +223,7 @@ export function NestRunner({ manifest }: { manifest: NestManifest }) {
       const response = await fetch("/api/nests/run", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ nest: manifest.identity.id, objective }),
+        body: JSON.stringify({ nest: manifest.identity.id, objective, ...(address ? { signer: address } : {}) }),
         signal: controller.signal,
       });
 
@@ -275,7 +278,7 @@ export function NestRunner({ manifest }: { manifest: NestManifest }) {
       setPhase("error");
       setMessage(error instanceof Error ? error.message : "network failure");
     }
-  }, [applyEvent, manifest.identity.id, objective]);
+  }, [applyEvent, manifest.identity.id, objective, address]);
 
   const stop = useCallback(() => {
     abortRef.current?.abort();
@@ -284,11 +287,12 @@ export function NestRunner({ manifest }: { manifest: NestManifest }) {
   const levels = useMemo(() => (run ? levelsOf(run.tasks) : []), [run]);
   const selected = run?.tasks.find((task) => task.id === selectedId) ?? null;
   const doneCount = run?.tasks.filter((task) => task.status === "completed").length ?? 0;
+  const awaitingSignature = run?.tasks.flatMap((task) => task.executions ?? []).filter((execution) => execution.state === "awaiting_signature") ?? [];
 
   return (
     <div className="rounded-xs border border-line bg-bone-raised">
       <header className="flex flex-wrap items-center gap-3 border-b border-line px-5 py-3">
-        <span className="font-mono text-[12.5px] font-medium uppercase tracking-[0.14em] text-ink">
+        <span className="font-mono text-[12.5px] font-medium text-ink">
           nest/{manifest.identity.id}
         </span>
         <Badge tone="sage">read-only</Badge>
@@ -302,14 +306,14 @@ export function NestRunner({ manifest }: { manifest: NestManifest }) {
           </span>
         )}
         {run && (
-          <span className="font-mono text-[10.5px] uppercase tracking-[0.08em] text-grey tnum">
+          <span className="font-mono text-[10.5px] text-grey tnum">
             {doneCount}/{run.tasks.length} done · {run.totalCost.inputTokens}→{run.totalCost.outputTokens} tok
           </span>
         )}
         <button
           type="button"
           onClick={() => setShowManifest((value) => !value)}
-          className="font-mono text-[10.5px] uppercase tracking-[0.08em] text-grey underline decoration-line-strong underline-offset-2 transition-colors hover:text-ink"
+          className="font-mono text-[10.5px] text-grey underline decoration-line-strong underline-offset-2 transition-colors hover:text-ink"
           title="The exact document this nest runs — export it and run it yourself"
         >
           {showManifest ? "hide definition" : "definition"}
@@ -349,7 +353,7 @@ export function NestRunner({ manifest }: { manifest: NestManifest }) {
       {message && (
         <p
           className={`border-b border-line px-5 py-2.5 font-mono text-[11.5px] ${
-            phase === "error" ? "text-red-deep" : phase === "not-configured" ? "text-gold-deep" : "text-grey"
+            phase ==="error" ? "text-red-deep" : phase === "not-configured" ? "text-gold-deep" : "text-grey"
           }`}
         >
           {message}
@@ -387,7 +391,7 @@ export function NestRunner({ manifest }: { manifest: NestManifest }) {
                   </div>
                 ))}
               </div>
-              <p className="mt-3 font-mono text-[9.5px] uppercase tracking-[0.1em] text-grey-faint">
+              <p className="mt-3 font-mono text-[9.5px] text-grey-faint">
                 stages resolve by dependency — tasks in a stage run in parallel
               </p>
             </div>
@@ -412,6 +416,13 @@ export function NestRunner({ manifest }: { manifest: NestManifest }) {
           </div>
         )}
 
+        {awaitingSignature.length > 0 && (
+          <div className="mt-4 space-y-3">
+            {awaitingSignature.map((execution) => (
+              <SignPanel key={execution.id} execution={execution as unknown as PreparedExecution} />
+            ))}
+          </div>
+        )}
         {run?.synthesis && (
           <div className="mt-5 rounded-xs border border-green-deep/40 bg-green-wash/30 p-5">
             <p className="label-mono text-green-deep">coordinator synthesis</p>
@@ -420,7 +431,7 @@ export function NestRunner({ manifest }: { manifest: NestManifest }) {
         )}
 
         {run && phase === "done" && (
-          <p className="mt-4 font-mono text-[10.5px] uppercase tracking-[0.1em] text-grey-faint tnum">
+          <p className="mt-4 font-mono text-[10.5px] text-grey-faint tnum">
             run {run.runId.slice(0, 12)}… · status {run.status} · {run.totalCost.inputTokens}→
             {run.totalCost.outputTokens} tokens
             {run.haltReason ? ` · ${run.haltReason}` : ""}

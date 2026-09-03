@@ -34,13 +34,13 @@ function Entry({ entry }: { entry: Entry }) {
   const glyph = entry.slug ? (
     <BrandMark slug={entry.slug} size={18} />
   ) : (
-    <span className="font-mono text-[12.5px] font-medium tracking-[0.06em]">{entry.wordmark}</span>
+    <span className="font-mono text-[12.5px] font-medium">{entry.wordmark}</span>
   );
 
   const label = (
     <>
       <span className="flex h-5 items-center justify-center">{glyph}</span>
-      <span className="mt-1.5 block font-mono text-[8.5px] uppercase tracking-[0.16em] text-grey-faint">
+      <span className="mt-1.5 block font-mono text-[8.5px] text-grey-faint">
         {entry.role}
       </span>
     </>
@@ -74,7 +74,7 @@ function Entry({ entry }: { entry: Entry }) {
 export function RunsOn() {
   return (
     <div className="relative z-10">
-      <p className="text-center font-mono text-[9px] uppercase tracking-[0.2em] text-grey-faint">infrastructure</p>
+      <p className="text-center font-mono text-[9px] text-grey-faint">infrastructure</p>
 
       <ul className="mt-3.5 flex flex-wrap items-start justify-center gap-x-10 gap-y-5">
         {INFRASTRUCTURE.map((entry) => (

@@ -91,7 +91,7 @@ export function WorldTelemetry() {
     <>
       <div className="absolute left-5 top-1/2 hidden -translate-y-1/2 flex-col gap-3 xl:flex">
         <TopologySketch nodes={data?.counts.nests ?? 0} />
-        <ul className="space-y-1.5 font-mono text-[9px] tracking-[0.08em] text-grey opacity-70">
+        <ul className="space-y-1.5 font-mono text-[9px] text-grey opacity-70">
           {left.map((line) => (
             <li key={line}>{line}</li>
           ))}
@@ -100,10 +100,10 @@ export function WorldTelemetry() {
 
       <div className="absolute right-5 top-1/2 hidden -translate-y-1/2 xl:block">
         <div className="w-[178px] border-l border-line-strong/60 pl-3">
-          <p className="font-mono text-[8.5px] uppercase tracking-[0.14em] text-grey-faint">
+          <p className="font-mono text-[8.5px] text-grey-faint">
             {data && data.recent.length > 0 ? "recent flights" : "engine"}
           </p>
-          <ul className="mt-2 space-y-1.5 font-mono text-[9px] tracking-[0.06em] text-grey opacity-80">
+          <ul className="mt-2 space-y-1.5 font-mono text-[9px] text-grey opacity-80">
             {right.map((line) => (
               <li key={line} className={line.includes("✓") ? "text-green-deep" : undefined}>
                 {line}

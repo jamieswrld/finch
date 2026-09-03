@@ -29,7 +29,7 @@ interface ListingResponse {
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-baseline justify-between gap-4 border-b border-line/60 py-2.5 last:border-b-0">
-      <dt className="font-mono text-[10.5px] uppercase tracking-[0.1em] text-grey-faint">{label}</dt>
+      <dt className="font-mono text-[10.5px] text-grey-faint">{label}</dt>
       <dd className="text-right font-mono text-[12px] text-ink">{children}</dd>
     </div>
   );
@@ -49,7 +49,7 @@ export function ListingDetail({ slug }: { slug: string }) {
     return (
       <div className="container-page py-10">
         <ErrorBlock message={state.message} onRetry={state.retry} />
-        <Link href="/app/aviary" className="mt-4 inline-block font-mono text-[11px] uppercase tracking-[0.1em] text-green-deep">
+        <Link href="/app/aviary" className="mt-4 inline-block font-mono text-[11px] text-green-deep">
           ← back to aviary
         </Link>
       </div>
@@ -76,7 +76,7 @@ const nest = await createFinch("my-finch")
 
   return (
     <div className="container-page py-10 md:py-14">
-      <Link href="/app/aviary" className="font-mono text-[11px] uppercase tracking-[0.1em] text-grey hover:text-ink">
+      <Link href="/app/aviary" className="font-mono text-[11px] text-grey hover:text-ink">
         ← aviary
       </Link>
 
@@ -143,9 +143,9 @@ const nest = await createFinch("my-finch")
           </section>
 
           <section
-            className={`rounded-xs border p-4 ${permissions.requiresWrites ? "border-gold/50 bg-gold/10" : "border-line bg-bone-raised"}`}
+            className={`rounded-xs border p-4 ${permissions.requiresWrites ?"border-gold/50 bg-gold/10" : "border-line bg-bone-raised"}`}
           >
-            <p className={`label-mono ${permissions.requiresWrites ? "text-gold-deep" : ""}`}>
+            <p className={`label-mono ${permissions.requiresWrites ?"text-gold-deep" : ""}`}>
               permissions required
             </p>
             <p className="mt-2 text-[13px] leading-relaxed text-ink-soft">{permissions.note}</p>

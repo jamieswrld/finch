@@ -194,9 +194,9 @@ export function FinchBuilder() {
               <li key={section.id} className="shrink-0">
                 <a
                   href={`#section-${section.id}`}
-                  className={`flex items-center gap-2 rounded-xs border px-2.5 py-1.5 font-mono text-[11px] uppercase tracking-[0.1em] transition-colors lg:border-transparent lg:border-l-line lg:border-l lg:rounded-none lg:py-2 ${
+                  className={`flex items-center gap-2 rounded-xs border px-2.5 py-1.5 font-mono text-[11px] transition-colors lg:border-transparent lg:border-l-line lg:border-l lg:rounded-none lg:py-2 ${
                     hasIssues
-                      ? "border-red-deep/50 text-red-deep lg:border-l-red-deep"
+                      ?"border-red-deep/50 text-red-deep lg:border-l-red-deep"
                       : complete
                         ? "border-line text-ink lg:border-l-green-deep"
                         : "border-line text-grey lg:border-l-line"
@@ -237,11 +237,11 @@ export function FinchBuilder() {
                 key={section.id}
                 id={`section-${section.id}`}
                 aria-label={section.label}
-                className={`scroll-mt-24 rounded-xs border bg-bone-raised ${issues ? "border-red-deep/50" : "border-line"}`}
+                className={`scroll-mt-24 rounded-xs border bg-bone-raised ${issues ?"border-red-deep/50" : "border-line"}`}
               >
                 <header className="flex items-baseline gap-3 border-b border-line px-5 py-3">
                   <span className="label-mono text-green-deep tnum">{String(index + 1).padStart(2, "0")}</span>
-                  <h2 className="font-mono text-[13px] font-medium uppercase tracking-[0.14em] text-ink">{section.label}</h2>
+                  <h2 className="font-mono text-[13px] font-medium text-ink">{section.label}</h2>
                   <span className="ml-auto hidden text-[11.5px] text-grey-faint sm:block">{SECTION_NOTES[section.id]}</span>
                 </header>
                 {issues && (
@@ -266,7 +266,7 @@ export function FinchBuilder() {
           {hatch.phase !== "hatched" ? (
             <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-sage">final step</p>
+                <p className="font-mono text-[11px] text-sage">final step</p>
                 <p className="mt-1 text-[17px] font-semibold tracking-[-0.01em]">
                   {draft.identity.name ? `Ready to hatch “${draft.identity.name}”?` : "Ready to hatch?"}
                 </p>
@@ -287,7 +287,7 @@ export function FinchBuilder() {
               <div className="flex items-center gap-3">
                 <FinchGlyph size={26} className="text-green" />
                 <div>
-                  <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-green">hatched — draft</p>
+                  <p className="font-mono text-[11px] text-green">hatched — draft</p>
                   <p className="mt-0.5 text-[17px] font-semibold tracking-[-0.01em]">{hatch.manifest.identity.name}</p>
                 </div>
                 <Badge tone="sage">{hatch.saved ? "saved to registry" : "not persisted"}</Badge>

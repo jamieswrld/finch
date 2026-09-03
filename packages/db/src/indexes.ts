@@ -38,6 +38,9 @@ export async function ensureIndexes(db: Db): Promise<string[]> {
 
   await add(COLLECTIONS.creditEntries, { idempotencyKey: 1 }, { unique: true });
   await add(COLLECTIONS.creditEntries, { debit: 1, at: -1 });
+
+  await add(COLLECTIONS.spendBuckets, { key: 1 }, { unique: true });
+  await add(COLLECTIONS.spendBuckets, { owner: 1, updatedAt: -1 });
   await add(COLLECTIONS.creditEntries, { credit: 1, at: -1 });
 
   await add(COLLECTIONS.serviceCalls, { idempotencyKey: 1 }, { unique: true });

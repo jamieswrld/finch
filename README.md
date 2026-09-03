@@ -4,6 +4,8 @@
 
 build one nest. coordinate millions.
 
+[finch.fun](https://finch.fun) · [x.com/finchnests](https://x.com/finchnests) · Robinhood Chain (4663)
+
 ```
 ONE FINCH → MORE FINCHES → NEST → NEST-TO-NEST → NETWORK
 ```

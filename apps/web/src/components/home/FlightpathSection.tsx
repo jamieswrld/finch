@@ -25,7 +25,7 @@ export function FlightpathSection() {
         <ol className="grid grid-cols-2 gap-px overflow-hidden rounded-xs border border-line bg-line sm:grid-cols-3 lg:grid-cols-6">
           {LIFECYCLE.map((item, index) => (
             <li key={item.step} className="bg-bone p-4">
-              <p className="flex items-center gap-2 font-mono text-[12px] uppercase tracking-[0.12em] text-ink">
+              <p className="flex items-center gap-2 font-mono text-[12px] text-ink">
                 <span className="text-green-deep tnum">{index + 1}</span>
                 {item.step}
               </p>
@@ -52,7 +52,7 @@ export function FlightpathSection() {
                   <td className="px-4 py-2.5">
                     <Badge tone={tool.mode === "write" ? "gold" : "sage"}>{tool.mode}</Badge>
                   </td>
-                  <td className="px-4 py-2.5 font-mono text-[11px] uppercase tracking-[0.08em] text-grey">
+                  <td className="px-4 py-2.5 font-mono text-[11px] text-grey">
                     {tool.category}
                   </td>
                   <td className="px-4 py-2.5 text-[13px] text-ink-soft">{tool.description}</td>
@@ -61,7 +61,7 @@ export function FlightpathSection() {
             </tbody>
           </table>
         </div>
-        <p className="mt-3 font-mono text-[10.5px] uppercase tracking-[0.1em] text-grey-faint">
+        <p className="mt-3 font-mono text-[10.5px] text-grey-faint">
           write-mode tools require an operator wallet and pass the policy engine on every call
         </p>
       </div>

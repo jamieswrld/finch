@@ -83,7 +83,7 @@ export function SignPanel({ execution }: { execution: PreparedExecution }) {
   return (
     <div className="rounded-xs border border-ink/40 bg-bone-raised p-4" aria-label="Transaction awaiting your signature">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-ink">awaiting your signature</span>
+        <span className="font-mono text-[11px] font-medium text-ink">awaiting your signature</span>
         <Badge tone={verdictTone}>policy · {execution.policy?.verdict ?? "checked"}</Badge>
         {execution.simulation?.ok && <Badge tone="sage">simulated · gas ≈ {execution.simulation.gasEstimate}</Badge>}
       </div>
@@ -114,13 +114,13 @@ export function SignPanel({ execution }: { execution: PreparedExecution }) {
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
         {!isConnected ? (
-          <span className="font-mono text-[10.5px] uppercase tracking-[0.08em] text-grey">connect the wallet this was prepared for</span>
+          <span className="font-mono text-[10.5px] text-grey">connect the wallet this was prepared for</span>
         ) : !onChain ? (
           <Button variant="secondary" onClick={() => switchChain({ chainId: appChain.id })} disabled={switching}>
             {switching ? "switching…" : `switch to ${appChain.name}`}
           </Button>
         ) : wrongSigner ? (
-          <span className="font-mono text-[10.5px] uppercase tracking-[0.08em] text-gold-deep">
+          <span className="font-mono text-[10.5px] text-gold-deep">
             prepared for {prepared.from?.slice(0, 8)}… — connect that wallet
           </span>
         ) : (
@@ -128,31 +128,31 @@ export function SignPanel({ execution }: { execution: PreparedExecution }) {
             {outcome.phase === "signing" ? "check your wallet…" : outcome.phase === "submitting" ? "confirming on chain…" : "Sign in wallet"}
           </Button>
         )}
-        {outcome.phase === "error" && <span className="font-mono text-[10.5px] uppercase tracking-[0.08em] text-gold-deep">{outcome.message}</span>}
+        {outcome.phase === "error" && <span className="font-mono text-[10.5px] text-gold-deep">{outcome.message}</span>}
       </div>
 
       {outcome.phase === "submitting" && (
-        <p className="mt-3 font-mono text-[10.5px] uppercase tracking-[0.08em] text-grey">
+        <p className="mt-3 font-mono text-[10.5px] text-grey">
           submitted {outcome.hash.slice(0, 14)}… · waiting for the receipt
         </p>
       )}
 
       {outcome.phase === "settled" && (
-        <div className={`mt-3 rounded-xs border p-3 ${outcome.state === "confirmed" ? "border-green-deep/40 bg-green-wash/30" : "border-gold-deep/40"}`}>
-          <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink">
+        <div className={`mt-3 rounded-xs border p-3 ${outcome.state ==="confirmed" ? "border-green-deep/40 bg-green-wash/30" : "border-gold-deep/40"}`}>
+          <p className="font-mono text-[11px] text-ink">
             {outcome.state}
             {outcome.receipt ? ` · block ${outcome.receipt.blockNumber} · gas ${outcome.receipt.gasUsed}` : ""}
           </p>
           {outcome.note && <p className="mt-1 text-[12px] text-grey">{outcome.note}</p>}
           {outcome.explorerUrl && (
-            <a href={outcome.explorerUrl} target="_blank" rel="noopener noreferrer" className="mt-1 inline-block font-mono text-[10.5px] uppercase tracking-[0.08em] text-ink-soft underline decoration-line-strong underline-offset-2 hover:text-green-deep">
+            <a href={outcome.explorerUrl} target="_blank" rel="noopener noreferrer" className="mt-1 inline-block font-mono text-[10.5px] text-ink-soft underline decoration-line-strong underline-offset-2 hover:text-green-deep">
               view on blockscout ↗
             </a>
           )}
           {outcome.proof ? (
-            <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.1em] text-green-deep">proof of flight issued</p>
+            <p className="mt-1 font-mono text-[10px] text-green-deep">proof of flight issued</p>
           ) : outcome.state === "confirmed" ? (
-            <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.1em] text-grey">confirmed · proof unavailable</p>
+            <p className="mt-1 font-mono text-[10px] text-grey">confirmed · proof unavailable</p>
           ) : null}
         </div>
       )}

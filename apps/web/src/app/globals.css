@@ -42,7 +42,6 @@
   /* type */
   --font-sans: var(--font-geist), ui-sans-serif, system-ui, "Segoe UI", sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, "Cascadia Mono", Consolas, monospace;
-  --font-serif: var(--font-newsreader), "Iowan Old Style", Georgia, serif;
 
   --radius-xs: 2px;
   --radius-sm: 3px;
@@ -72,12 +71,11 @@ body {
 }
 
 @layer components {
-  /* 11px tracked mono label — the system's connective tissue */
+  /* 11px mono label — the system's connective tissue. Sentence case, barely tracked. */
   .label-mono {
     font-family: var(--font-mono);
     font-size: 11px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
+    letter-spacing: 0.02em;
     color: var(--color-grey);
   }
 
@@ -112,11 +110,11 @@ body {
     font-variant-numeric: tabular-nums;
   }
 
-  /* editorial serif aside */
+  /* the quieter second voice: same sans, a touch heavier, tight */
   .serif-note {
-    font-family: var(--font-serif);
-    font-style: italic;
-    font-size: 1.06em;
+    font-family: var(--font-sans);
+    font-weight: 500;
+    letter-spacing: -0.015em;
     color: var(--color-ink-soft);
   }
 

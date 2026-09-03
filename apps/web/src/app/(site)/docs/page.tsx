@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/Badge";
 
 export const metadata: Metadata = {
   title: "Docs",
-  description: "Finch documentation — quickstart, SDK, Flightpath, providers, data layer, security model.",
+  description: "Finch documentation — quickstart, SDK, Flightpath, publishing, the hive, user-signed execution, explorer tools, security model.",
 };
 
 const TOC = [
@@ -19,6 +19,10 @@ const TOC = [
   { id: "permissions", label: "Permission model" },
   { id: "deploy", label: "Running a finch" },
   { id: "proof-of-flight", label: "Proof of Flight" },
+  { id: "publishing", label: "Publishing" },
+  { id: "hive", label: "The hive" },
+  { id: "signed-execution", label: "User-signed execution" },
+  { id: "explorer", label: "Explorer tools" },
   { id: "security", label: "Security model" },
   { id: "env", label: "Environment" },
   { id: "contributing", label: "Contributing" },
@@ -28,7 +32,8 @@ const QUICKSTART = `# in the monorepo root
 npm install
 
 # server-side environment (never client-side)
-# HYPERBOLIC_API_KEY=…       model compute
+# GROQ_API_KEY=…             model compute (free tier); OPENROUTER_API_KEY=… also free
+# HYPERBOLIC_API_KEY=…       paid alternative, used only when no free provider is set
 # MONGODB_URI=…              optional: registry + memory + ledgers
 
 npm run dev        # web app on http://localhost:3000
@@ -132,6 +137,37 @@ const PROOF_SHAPE = `{
   "executionHash": "9f2c…"                // sha256 over every field above
 }`;
 
+const KEY_FLOW = `# 1. the wallet signs a plain message (not a transaction)
+Finch publisher key
+Address: 0xYourAddress
+Nonce: <random, 8-64 url-safe chars>
+
+Signing this issues a key for publishing to the Finch registry. It is not a transaction.
+
+# 2. exchange the signature for a key — shown once, only its hash is stored
+POST /api/keys   { "address": "0x…", "nonce": "…", "signature": "0x…" }
+→ 201 { "key": "finch_…", "owner": "0x…", "scopes": ["aviary:publish", "nests:write"] }
+
+# 3. publish with it
+POST /api/aviary   headers: x-finch-key: finch_…
+POST /api/nests    headers: x-finch-key: finch_…     # a nest.manifest/0.1
+POST /api/finches  headers: x-finch-key: finch_…     # a finch.manifest/0.1`;
+
+const SIGNED_FLOW = `# run a finch that is allowed to write, naming the wallet that will sign
+POST /api/school/run   { "preset": "courier-finch", "prompt": "send 0.001 ETH to 0x…", "signer": "0xYourAddress" }
+→ executions: [{ id: "exec_…", state: "awaiting_signature",
+                 prepared: { from, to, value, data, gas } }]
+
+# the wallet signs exactly \`prepared\`; hand back the hash
+POST /api/executions/exec_…/submitted   { "hash": "0x…", "from": "0xYourAddress" }
+→ the chain's transaction at that hash is compared to \`prepared\` field by field:
+   to · value · data · from.  Any difference → 422, nothing advances.
+→ match: state submitted → confirmed | reverted, with the receipt
+→ confirmed: a Proof of Flight is issued
+
+# later, exactly as stored (and self-healing if the receipt arrived late)
+GET /api/executions/exec_…`;
+
 const PROOF_USAGE = `import { buildProofOfFlight, verifyProofOfFlight } from "@finch/flightpath";
 
 // record is the ExecutionRecord returned by any Flightpath write
@@ -186,7 +222,7 @@ export default function DocsPage() {
             <a
               key={entry.id}
               href={`#${entry.id}`}
-              className="shrink-0 rounded-xs border border-line px-2.5 py-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-ink-soft hover:text-green-deep lg:rounded-none lg:border-x-0 lg:border-t-0 lg:border-b-line/60 lg:py-2"
+              className="shrink-0 rounded-xs border border-line px-2.5 py-1.5 font-mono text-[11px] text-ink-soft hover:text-green-deep lg:rounded-none lg:border-x-0 lg:border-t-0 lg:border-b-line/60 lg:py-2"
             >
               {entry.label}
             </a>
@@ -406,6 +442,93 @@ export default function DocsPage() {
             Model traces and tool logs stay in the execution record offchain; only the 32-byte hash needs anchoring.
             The network page counts proofs by counting confirmed executions, which is exactly the set for which a proof
             can be issued.
+          </P>
+        </DocSection>
+
+        <DocSection id="publishing" title="Publishing — open and free">
+          <P>
+            Anyone can put a finch or a nest in the registry. There is no charge and no token to hold; the only
+            requirement is a <strong className="font-semibold text-ink">publisher key</strong>, and a key is issued to
+            any wallet that signs a plain message for one. The signature proves control of the address; the address
+            becomes the key&apos;s owner; every listing published with it belongs to that wallet and can only be
+            changed by it. One active key per wallet — signing again replaces the old one.
+          </P>
+          <CodeBlock title="getting a key and publishing" code={KEY_FLOW} />
+          <P>
+            The gate is a switch, not an inference.{" "}
+            <code className="font-mono text-[12.5px]">PUBLISH_GATE</code> unset or{" "}
+            <code className="font-mono text-[12.5px]">open</code> is the default and the truth right now.{" "}
+            <code className="font-mono text-[12.5px]">hold</code> turns on a $FINCH gate — a publisher must then hold at
+            least <code className="font-mono text-[12.5px]">PUBLISH_COST_FINCH</code> of the token, read live at
+            publish time — and the publish panel and{" "}
+            <code className="font-mono text-[12.5px]">GET /api/publish/status</code> say so the moment it is on.
+            Setting a token address alone changes nothing.
+          </P>
+          <P>
+            Published entries carry <code className="font-mono text-[12.5px]">source: &quot;published&quot;</code>; the
+            network&apos;s own analysts carry <code className="font-mono text-[12.5px]">source: &quot;builtin&quot;</code>.
+            Either can be composed into a nest by reference —{" "}
+            <code className="font-mono text-[12.5px]">{"{ handle, ref: \"registry\" }"}</code> — and is hydrated from
+            the registry before the strict manifest schema runs.
+          </P>
+        </DocSection>
+
+        <DocSection id="hive" title="The hive">
+          <P>
+            Every nest that runs teaches a shared memory, and every finch reads from it. The hive is not a chat log:
+            it accepts only <strong className="font-semibold text-ink">observations with provenance</strong> — which
+            run, which nest, which finch, which channel, and the address the finding is about. A finch recalling a
+            prior finding sees it labelled exactly that way,{" "}
+            <code className="font-mono text-[12.5px]">[prior finding · pons-intelligence · 3h ago · unverified]</code>,
+            so it can build on it without mistaking it for something it verified itself.
+          </P>
+          <P>
+            Only the network&apos;s builtin nests write to the hive today; published nests read from it. The subject
+            of a finding is the first address in the objective, so a token due-diligence run and a wallet analysis of
+            the same contract meet in the same place.{" "}
+            <code className="font-mono text-[12.5px]">GET /api/hive</code> shows what the hive holds, with the
+            provenance of every line.
+          </P>
+        </DocSection>
+
+        <DocSection id="signed-execution" title="User-signed execution">
+          <P>
+            No key on the server ever signs for a visitor. A finch that is allowed to write —{" "}
+            <code className="font-mono text-[12.5px]">wallet.mode: &quot;operator&quot;</code> with allowances — plans
+            and simulates the transaction, then parks it at{" "}
+            <code className="font-mono text-[12.5px]">awaiting_signature</code> with the exact{" "}
+            <code className="font-mono text-[12.5px]">prepared</code> fields. The visitor&apos;s own wallet signs it.
+            Nothing on this path turns &quot;the API returned 200&quot; into &quot;the transaction succeeded&quot;.
+          </P>
+          <CodeBlock title="the signed path" code={SIGNED_FLOW} />
+          <P>
+            States: created → simulated → awaiting_signature → submitted → confirmed | reverted, and every transition
+            is a compare-and-set, so a double submit cannot double count. The per-transaction cap is enforced when
+            the intent is prepared; the daily allowance is kept{" "}
+            <strong className="font-semibold text-ink">durably per signer</strong>, so the next intent any instance
+            prepares for that wallet sees what it already spent today. A nest whose policy is not read-only takes the
+            same <code className="font-mono text-[12.5px]">signer</code> on{" "}
+            <code className="font-mono text-[12.5px]">POST /api/nests/run</code> and surfaces its parked writes next
+            to the task that prepared them.
+          </P>
+        </DocSection>
+
+        <DocSection id="explorer" title="Explorer tools">
+          <P>
+            Alongside RPC reads, finches have the block explorer. Ten tools read Blockscout&apos;s v2 API for Robinhood
+            Chain — chain stats, wallet profiles, transactions and holdings, token profiles, holders, transfers and the
+            token list, single transactions, and contract verification — plus{" "}
+            <code className="font-mono text-[12.5px]">token_pools</code> and{" "}
+            <code className="font-mono text-[12.5px]">pool_state</code>, which find a token&apos;s liquidity pools and
+            read a V3 pool&apos;s liquidity, price and balances straight from the contract. A tool that finds nothing
+            returns nothing; the finch is told an empty result is the answer, not a prompt to invent one.
+          </P>
+          <P>
+            Finch&apos;s own contracts are verified on the explorer, so anyone can read the source that is actually
+            deployed: FinchRegistry <code className="font-mono text-[12.5px]">0x4211…Fb6C</code>, OperatorBudget{" "}
+            <code className="font-mono text-[12.5px]">0xF61A…01F3</code>, FeeVault{" "}
+            <code className="font-mono text-[12.5px]">0x20f5…D165</code>, FeeSplitter{" "}
+            <code className="font-mono text-[12.5px]">0x5819…dB34</code>.
           </P>
         </DocSection>
 

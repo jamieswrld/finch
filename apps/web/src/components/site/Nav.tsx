@@ -37,7 +37,7 @@ export function Nav() {
       <div className="container-page flex h-14 items-center gap-6">
         <Link href="/" className="flex items-center gap-2.5 text-ink" aria-label="Finch — overview">
           <FinchGlyph size={24} className="text-ink" />
-          <span className="font-sans text-[15px] font-semibold tracking-[0.22em]">FINCH</span>
+          <span className="font-sans text-[15px] font-semibold">FINCH</span>
         </Link>
 
         <nav className="ml-auto hidden items-center gap-1 lg:flex" aria-label="Primary">
@@ -46,8 +46,8 @@ export function Nav() {
               key={link.href}
               href={link.href}
               aria-current={isActive(link.href) ? "page" : undefined}
-              className={`rounded-xs border border-transparent px-2.5 py-1.5 font-mono text-[11.5px] uppercase tracking-[0.1em] transition-colors ${
-                isActive(link.href) ? "text-green-deep" : "text-ink-soft hover:text-ink"
+              className={`rounded-xs border border-transparent px-2.5 py-1.5 font-mono text-[11.5px] transition-colors ${
+                isActive(link.href) ?"text-green-deep" : "text-ink-soft hover:text-ink"
               }`}
             >
               {link.label}
@@ -57,7 +57,7 @@ export function Nav() {
 
         <Link
           href="/app"
-          className="ml-auto inline-flex h-9 items-center gap-2 rounded-xs border border-ink bg-ink px-3.5 font-mono text-[11px] uppercase tracking-[0.12em] text-bone transition-colors hover:border-green-deep hover:bg-green-deep lg:ml-3"
+          className="ml-auto inline-flex h-9 items-center gap-2 rounded-xs border border-ink bg-ink px-3.5 font-mono text-[11px] text-bone transition-colors hover:border-green-deep hover:bg-green-deep lg:ml-3"
         >
           Launch App
           <span aria-hidden>→</span>
@@ -72,10 +72,10 @@ export function Nav() {
         >
           <span className="relative block h-[10px] w-4">
             <span
-              className={`absolute left-0 top-0 h-px w-full bg-ink transition-transform ${open ? "top-[5px] rotate-45" : ""}`}
+              className={`absolute left-0 top-0 h-px w-full bg-ink transition-transform ${open ?"top-[5px] rotate-45" : ""}`}
             />
             <span
-              className={`absolute left-0 bottom-0 h-px w-full bg-ink transition-transform ${open ? "bottom-[4px] -rotate-45" : ""}`}
+              className={`absolute left-0 bottom-0 h-px w-full bg-ink transition-transform ${open ?"bottom-[4px] -rotate-45" : ""}`}
             />
           </span>
         </button>
@@ -89,7 +89,7 @@ export function Nav() {
                 key={link.href}
                 href={link.href}
                 onClick={() => setOpen(false)}
-                className="flex items-baseline justify-between border-b border-line/60 py-3.5 font-mono text-[13px] uppercase tracking-[0.12em] text-ink"
+                className="flex items-baseline justify-between border-b border-line/60 py-3.5 font-mono text-[13px] text-ink"
               >
                 {link.label}
                 <span className="font-mono text-[10px] text-grey-faint">{String(index + 1).padStart(2, "0")}</span>
@@ -97,7 +97,7 @@ export function Nav() {
             ))}
             <Link
               href="/app"
-              className="mt-3 inline-flex h-11 items-center justify-center gap-2 rounded-xs border border-ink bg-ink font-mono text-[12px] uppercase tracking-[0.12em] text-bone"
+              className="mt-3 inline-flex h-11 items-center justify-center gap-2 rounded-xs border border-ink bg-ink font-mono text-[12px] text-bone"
             >
               Launch App <span aria-hidden>→</span>
             </Link>

@@ -68,7 +68,7 @@ function Facts({ rows }: { rows: Array<[string, string]> }) {
     <dl className="grid grid-cols-1 gap-px overflow-hidden rounded-xs border border-line bg-line sm:grid-cols-2">
       {rows.map(([term, definition]) => (
         <div key={term} className="bg-bone-raised p-4">
-          <dt className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink">{term}</dt>
+          <dt className="font-mono text-[11px] text-ink">{term}</dt>
           <dd className="mt-1.5 text-[12.5px] leading-relaxed text-grey">{definition}</dd>
         </div>
       ))}
@@ -116,7 +116,7 @@ export default function HowItWorksPage() {
             <a
               key={entry.id}
               href={`#${entry.id}`}
-              className="shrink-0 rounded-xs border border-line px-2.5 py-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-ink-soft transition-colors hover:text-green-deep lg:rounded-none lg:border-x-0 lg:border-t-0 lg:border-b-line/60 lg:py-2"
+              className="shrink-0 rounded-xs border border-line px-2.5 py-1.5 font-mono text-[11px] text-ink-soft transition-colors hover:text-green-deep lg:rounded-none lg:border-x-0 lg:border-t-0 lg:border-b-line/60 lg:py-2"
             >
               {entry.label}
             </a>

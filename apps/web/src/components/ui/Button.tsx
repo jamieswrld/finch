@@ -4,7 +4,7 @@ import type { ComponentProps, ReactNode } from "react";
 type Variant = "primary" | "secondary" | "ghost";
 
 const base =
-  "inline-flex items-center justify-center gap-2 rounded-xs border font-mono text-[12px] uppercase tracking-[0.12em] transition-colors duration-150 px-4 h-10 select-none disabled:opacity-40 disabled:pointer-events-none";
+  "inline-flex items-center justify-center gap-2 rounded-xs border font-mono text-[12px] transition-colors duration-150 px-4 h-10 select-none disabled:opacity-40 disabled:pointer-events-none";
 
 const variants: Record<Variant, string> = {
   primary: "border-ink bg-ink text-bone hover:bg-green-deep hover:border-green-deep",

@@ -24,7 +24,7 @@ export default function NetworkPage() {
               <span className="inline-block size-[7px] rounded-full bg-green" />
               network /
             </p>
-            <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.1em] text-grey-faint">
+            <p className="mt-1 font-mono text-[10px] text-grey-faint">
               murmuration field study · tracked individuals in green · robinhood chain 4663
             </p>
           </div>
@@ -62,7 +62,7 @@ export default function NetworkPage() {
               indexing — it never defines what is true. If finch.fun disappeared, the network could be rebuilt from
               chain state.
             </p>
-            <div className="mt-4 flex gap-4 font-mono text-[11px] uppercase tracking-[0.1em]">
+            <div className="mt-4 flex gap-4 font-mono text-[11px]">
               <Link href="/app/aviary" className="text-green-deep hover:underline">
                 browse the registry →
               </Link>

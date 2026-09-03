@@ -80,7 +80,7 @@ export function IdentitySection({ draft, update }: { draft: FinchDraft; update: 
               aria-checked={draft.identity.glyph === glyph}
               onClick={() => update((d) => ({ ...d, identity: { ...d.identity, glyph } }))}
               className={`flex size-11 items-center justify-center rounded-xs border transition-colors ${
-                draft.identity.glyph === glyph ? "border-green-deep bg-green-wash/40 text-green-deep" : "border-line text-ink-soft hover:border-line-strong"
+                draft.identity.glyph === glyph ?"border-green-deep bg-green-wash/40 text-green-deep" : "border-line text-ink-soft hover:border-line-strong"
               }`}
             >
               {index === 0 ? <FinchGlyph size={20} /> : <DartGlyph size={16} angle={index === 1 ? -18 : 8} />}
@@ -229,7 +229,7 @@ export function ToolsSection({ draft, update }: { draft: FinchDraft; update: Upd
   const toolRow = (tool: (typeof FLIGHTPATH_TOOLS)[number], disabled: boolean) => (
     <label
       key={tool.name}
-      className={`flex cursor-pointer items-start gap-2.5 border-b border-line/50 py-2 last:border-b-0 ${disabled ? "cursor-not-allowed opacity-45" : ""}`}
+      className={`flex cursor-pointer items-start gap-2.5 border-b border-line/50 py-2 last:border-b-0 ${disabled ?"cursor-not-allowed opacity-45" : ""}`}
     >
       <input
         type="checkbox"
@@ -311,7 +311,7 @@ export function PermissionsSection({ draft, update }: { draft: FinchDraft; updat
     <div className="grid grid-cols-1 gap-5">
       <div className="flex items-start justify-between gap-4 rounded-xs border border-line bg-bone p-3">
         <div>
-          <p className="font-mono text-[12px] uppercase tracking-[0.1em] text-ink">onchain writes</p>
+          <p className="font-mono text-[12px] text-ink">onchain writes</p>
           <p className="mt-0.5 text-[12px] text-grey">
             Derived from wallet mode — {operator ? "enabled by operator wallet" : "disabled until an operator wallet is granted"}. Deny by default.
           </p>
@@ -350,7 +350,7 @@ export function PermissionsSection({ draft, update }: { draft: FinchDraft; updat
 
       <div className="flex items-start justify-between gap-4 rounded-xs border border-line bg-bone p-3">
         <div>
-          <p className="font-mono text-[12px] uppercase tracking-[0.1em] text-ink">rwa — approved registry only</p>
+          <p className="font-mono text-[12px] text-ink">rwa — approved registry only</p>
           <p className="mt-0.5 text-[12px] text-grey">
             RWA interactions are hard-limited to the approved asset registry. This gate cannot be switched off from a
             manifest.
@@ -361,7 +361,7 @@ export function PermissionsSection({ draft, update }: { draft: FinchDraft; updat
 
       <div className="flex items-start justify-between gap-4 rounded-xs border border-line bg-bone p-3">
         <div>
-          <p className="font-mono text-[12px] uppercase tracking-[0.1em] text-ink">simulation before submission</p>
+          <p className="font-mono text-[12px] text-ink">simulation before submission</p>
           <p className="mt-0.5 text-[12px] text-grey">Every write is simulated (estimateGas + eth_call) before signing. Not optional.</p>
         </div>
         <Badge tone="green">always on</Badge>
@@ -457,7 +457,7 @@ export function TriggersSection({ draft, update }: { draft: FinchDraft; update: 
     <div className="grid grid-cols-1 gap-4">
       <div className="flex items-center justify-between rounded-xs border border-line bg-bone p-3">
         <div>
-          <p className="font-mono text-[12px] uppercase tracking-[0.1em] text-ink">manual</p>
+          <p className="font-mono text-[12px] text-ink">manual</p>
           <p className="mt-0.5 text-[12px] text-grey">Run on demand from the SDK or dashboard.</p>
         </div>
         <Badge tone="green">always on</Badge>

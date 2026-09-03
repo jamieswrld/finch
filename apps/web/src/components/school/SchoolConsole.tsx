@@ -37,22 +37,22 @@ function PresetGrid({ onSelect }: { onSelect: (preset: SchoolPreset) => void }) 
           className="group bg-bone-raised p-5 text-left transition-colors hover:bg-bone"
         >
           <div className="flex items-center justify-between">
-            <span className="font-mono text-[12.5px] font-medium uppercase tracking-[0.14em] text-ink">{preset.title}</span>
+            <span className="font-mono text-[12.5px] font-medium text-ink">{preset.title}</span>
             <Badge tone="sage">read-only</Badge>
           </div>
           <p className="mt-2 text-[13px] leading-snug text-ink-soft">{preset.blurb}</p>
-          <p className="mt-4 font-mono text-[10.5px] uppercase tracking-[0.1em] text-green-deep opacity-0 transition-opacity group-hover:opacity-100">
+          <p className="mt-4 font-mono text-[10.5px] text-green-deep opacity-0 transition-opacity group-hover:opacity-100">
             open →
           </p>
         </button>
       ))}
       <Link href="/app/nests" className="group bg-ink p-5 text-left text-bone transition-colors hover:bg-green-deep">
         <div className="flex items-center justify-between">
-          <span className="font-mono text-[12.5px] font-medium uppercase tracking-[0.14em]">Build a Nest</span>
+          <span className="font-mono text-[12.5px] font-medium">Build a Nest</span>
           <DartGlyph size={12} angle={-14} className="text-green group-hover:text-bone" />
         </div>
         <p className="mt-2 text-[13px] leading-snug text-bone/70">Combine multiple finches around one objective.</p>
-        <p className="mt-4 font-mono text-[10.5px] uppercase tracking-[0.1em]">open →</p>
+        <p className="mt-4 font-mono text-[10.5px]">open →</p>
       </Link>
     </div>
   );
@@ -102,18 +102,18 @@ function Console({ preset, onBack }: { preset: SchoolPreset; onBack: () => void 
   return (
     <div className="rounded-xs border border-line bg-bone-raised">
       <header className="flex flex-wrap items-center gap-3 border-b border-line px-5 py-3">
-        <button type="button" onClick={onBack} className="font-mono text-[11px] uppercase tracking-[0.1em] text-grey hover:text-ink">
+        <button type="button" onClick={onBack} className="font-mono text-[11px] text-grey hover:text-ink">
           ← school
         </button>
         <span className="h-4 w-px bg-line-strong" aria-hidden />
-        <span className="font-mono text-[12.5px] font-medium uppercase tracking-[0.14em] text-ink">
+        <span className="font-mono text-[12.5px] font-medium text-ink">
           {preset.title}
         </span>
         <Badge tone="sage">read only</Badge>
         <button
           type="button"
           onClick={() => setShowManifest((value) => !value)}
-          className="font-mono text-[10.5px] uppercase tracking-[0.08em] text-grey underline decoration-line-strong underline-offset-2 transition-colors hover:text-ink"
+          className="font-mono text-[10.5px] text-grey underline decoration-line-strong underline-offset-2 transition-colors hover:text-ink"
           title="The exact document this finch runs — fork it and run it yourself"
         >
           {showManifest ? "hide definition" : "definition"}
@@ -121,13 +121,13 @@ function Console({ preset, onBack }: { preset: SchoolPreset; onBack: () => void 
         <span className="ml-auto flex flex-wrap items-center gap-2">
           <Link
             href={`/app/build?school=${preset.slug}`}
-            className="rounded-xs border border-line-strong px-2 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-ink-soft hover:border-green-deep hover:text-green-deep"
+            className="rounded-xs border border-line-strong px-2 py-1 font-mono text-[10px] text-ink-soft hover:border-green-deep hover:text-green-deep"
           >
             fork this finch
           </Link>
           <Link
             href={`/app/nests?tab=compose&finch=${preset.slug}`}
-            className="rounded-xs border border-line-strong px-2 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-ink-soft hover:border-green-deep hover:text-green-deep"
+            className="rounded-xs border border-line-strong px-2 py-1 font-mono text-[10px] text-ink-soft hover:border-green-deep hover:text-green-deep"
           >
             add to nest
           </Link>
@@ -215,7 +215,7 @@ function Console({ preset, onBack }: { preset: SchoolPreset; onBack: () => void 
                 </div>
               )}
               <details className="rounded-xs border border-line bg-bone">
-                <summary className="cursor-pointer px-3 py-2 font-mono text-[10px] uppercase tracking-[0.08em] text-grey">
+                <summary className="cursor-pointer px-3 py-2 font-mono text-[10px] text-grey">
                   audit trail — {state.steps.filter((step) => step.type === "tool").length} tool call
                   {state.steps.filter((step) => step.type === "tool").length === 1 ? "" : "s"} ·{" "}
                   <span className="tnum">
@@ -267,7 +267,7 @@ export function SchoolConsole() {
       ) : (
         <PresetGrid onSelect={setSelected} />
       )}
-      <p className="mt-4 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.1em] text-grey-faint">
+      <p className="mt-4 flex items-center gap-2 font-mono text-[10px] text-grey-faint">
         <FinchGlyph size={13} className="text-grey-faint" />
         no wallet required — previews are read-only and run on the same runtime developers use
       </p>

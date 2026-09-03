@@ -39,7 +39,7 @@ export function RunHistory({ limit = 8 }: { limit?: number }) {
       <header className="flex items-baseline justify-between border-b border-line px-4 py-2.5">
         <span className="label-mono text-ink">run history</span>
         {state.status === "ready" && (
-          <span className="font-mono text-[9.5px] uppercase tracking-[0.1em] text-grey-faint">
+          <span className="font-mono text-[9.5px] text-grey-faint">
             {state.data.source === "db" ? "durable" : state.data.degraded ? "database unreachable" : "in-process buffer"}
           </span>
         )}
@@ -65,7 +65,7 @@ export function RunHistory({ limit = 8 }: { limit?: number }) {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[13px] font-semibold tracking-[-0.01em] text-ink">
                       {run.subjectName || run.subject}
-                      <span className="ml-1.5 font-mono text-[10px] font-normal uppercase tracking-[0.1em] text-grey-faint">
+                      <span className="ml-1.5 font-mono text-[10px] font-normal text-grey-faint">
                         {run.kind}
                       </span>
                     </p>
@@ -73,7 +73,7 @@ export function RunHistory({ limit = 8 }: { limit?: number }) {
                       {run.objective || run.subject}
                     </p>
                   </div>
-                  <span className="shrink-0 text-right font-mono text-[10px] uppercase tracking-[0.08em] text-grey-faint tnum">
+                  <span className="shrink-0 text-right font-mono text-[10px] text-grey-faint tnum">
                     <span className="block">{(run.durationMs / 1000).toFixed(1)}s</span>
                     <span className="block">{run.cost.outputTokens} tok</span>
                   </span>

@@ -36,7 +36,7 @@ function Snippet({ label, code }: { label: string; code: string }) {
         <button
           type="button"
           onClick={copy}
-          className="font-mono text-[9.5px] uppercase tracking-[0.12em] text-grey transition-colors hover:text-ink"
+          className="font-mono text-[9.5px] text-grey transition-colors hover:text-ink"
         >
           {copied ? "copied" : "copy"}
         </button>
@@ -90,9 +90,9 @@ export function ConnectNest({ manifest, origin }: { manifest: NestManifest; orig
         type="button"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
-        className="flex w-full items-center gap-2 px-5 py-3 text-left font-mono text-[10.5px] uppercase tracking-[0.1em] text-grey transition-colors hover:text-ink"
+        className="flex w-full items-center gap-2 px-5 py-3 text-left font-mono text-[10.5px] text-grey transition-colors hover:text-ink"
       >
-        <span className={`transition-transform ${open ? "rotate-90" : ""}`} aria-hidden>
+        <span className={`transition-transform ${open ?"rotate-90" : ""}`} aria-hidden>
           ›
         </span>
         run this nest from your own terminal

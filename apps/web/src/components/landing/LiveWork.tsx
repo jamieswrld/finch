@@ -39,7 +39,7 @@ function Metric({ value, label, hint }: { value: number; label: string; hint: st
   return (
     <div className="flex flex-col items-center gap-0.5" title={hint}>
       <span className="tnum text-[19px] leading-none font-semibold text-ink sm:text-[22px]">{value}</span>
-      <span className="font-mono text-[8.5px] uppercase tracking-[0.16em] text-grey-faint">{label}</span>
+      <span className="font-mono text-[8.5px] text-grey-faint">{label}</span>
     </div>
   );
 }
@@ -74,7 +74,7 @@ function WorkLine({ recent }: { recent: ActivityResponse["recent"] }) {
   return (
     <p
       key={run.runId}
-      className="reveal max-w-[520px] truncate font-mono text-[9.5px] uppercase tracking-[0.12em] text-grey"
+      className="reveal max-w-[520px] truncate font-mono text-[9.5px] text-grey"
       title={`${run.subject} — ${run.objective}`}
     >
       <span className="text-ink-soft">{run.subject}</span>
@@ -111,14 +111,14 @@ export function LiveWork() {
       {hasWork ? (
         <WorkLine recent={recent} />
       ) : (
-        <p className="font-mono text-[9.5px] uppercase tracking-[0.12em] text-grey">
+        <p className="font-mono text-[9.5px] text-grey">
           <span className="text-ink-soft">{guarantees.policyRules} policy rules</span> enforced per execution
           <span className="text-grey-faint"> · deny by default · every write simulated before it signs</span>
         </p>
       )}
 
       {provenance === "seed" && (
-        <p className="font-mono text-[8px] uppercase tracking-[0.16em] text-grey-faint">
+        <p className="font-mono text-[8px] text-grey-faint">
           reference agents — not live registrations
         </p>
       )}

@@ -1,4 +1,4 @@
-import { createMongoExecutionSink, isDbConfigured } from "@finch/db";
+import { createMongoExecutionSink, createMongoSpendTracker, isDbConfigured } from "@finch/db";
 import { buildProofOfFlight, buildRobinhoodChain, getFlightpathTarget } from "@finch/flightpath";
 import { createPublicClient, http, isAddress, isHex } from "viem";
 import { errorJson, json, rateLimit, readJsonBody, safeErrorMessage } from "@/lib/server/http";
@@ -90,8 +90,16 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   record.state = "submitted";
   record.tx = { hash: hash as `0x${string}`, submittedAt: at };
 
-  // Settle. Daily-allowance accounting for user-signed spends is a follow-up;
-  // the per-transaction cap was enforced when the intent was prepared.
+  // The spend counts against the signer's daily allowance from this moment,
+  // durably, so the next intent this wallet prepares — on any instance — sees
+  // it. The per-transaction cap was enforced when the intent was prepared.
+  const intent = record.intent as { spendAsset?: string; spendAmount?: string } | undefined;
+  const spendAsset = intent?.spendAsset === "native" || intent?.spendAsset?.startsWith("0x") ? (intent.spendAsset as "native" | `0x${string}`) : null;
+  if (spendAsset && intent?.spendAmount && BigInt(intent.spendAmount) > 0n) {
+    await createMongoSpendTracker({ owner: tx.from }).recordSpend(spendAsset, BigInt(intent.spendAmount)).catch(() => {});
+  }
+
+  // Settle.
   try {
     const receipt = await client.waitForTransactionReceipt({ hash: hash as `0x${string}`, confirmations: 1, timeout: 90_000 });
     const confirmedAt = new Date().toISOString();

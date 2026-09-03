@@ -261,4 +261,5 @@ export const COLLECTIONS = {
   serviceCalls: "service_calls",
   apiKeys: "api_keys",
   runs: "runs",
+  spendBuckets: "spend_buckets",
 } as const;

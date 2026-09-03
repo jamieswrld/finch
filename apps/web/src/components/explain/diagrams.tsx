@@ -97,7 +97,7 @@ function Frame({ children, viewBox, caption }: { children: React.ReactNode; view
       <svg viewBox={viewBox} className="h-auto w-full min-w-[560px]" role="img" aria-label={caption}>
         {children}
       </svg>
-      <figcaption className="mt-3 font-mono text-[9.5px] uppercase tracking-[0.1em] text-grey-faint">{caption}</figcaption>
+      <figcaption className="mt-3 font-mono text-[9.5px] text-grey-faint">{caption}</figcaption>
     </figure>
   );
 }

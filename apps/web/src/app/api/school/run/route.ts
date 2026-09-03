@@ -2,7 +2,7 @@ import { hatchFromManifest } from "@finch/sdk";
 import { createFlightpath, type ExecutionSink, type WalletPolicy } from "@finch/flightpath";
 import { isAddress, parseUnits } from "viem";
 import { resolveLiveChain, withFailover } from "@finch/providers";
-import { createMongoExecutionSink, isDbConfigured, recordRun } from "@finch/db";
+import { createMongoExecutionSink, createMongoSpendTracker, isDbConfigured, recordRun } from "@finch/db";
 import { errorJson, json, rateLimit, readJsonBody, safeErrorMessage } from "@/lib/server/http";
 import { getSchoolPreset } from "@/lib/school-presets";
 
@@ -78,7 +78,7 @@ export async function POST(request: Request): Promise<Response> {
     // for `intent` is wider than the SDK's, which is all the cast covers.
     const sink = externalSigner ? (createMongoExecutionSink() as unknown as ExecutionSink) : undefined;
     const flightpath = externalSigner && sink
-      ? createFlightpath({ externalSigner, policy: basePolicy, agentId: `school:${preset.slug}`, sink })
+      ? createFlightpath({ externalSigner, policy: basePolicy, agentId: `school:${preset.slug}`, sink, spendTracker: createMongoSpendTracker({ owner: externalSigner }) })
       : undefined;
     const nest = await hatchFromManifest(preset.manifest, {
       provider: withFailover(chain),

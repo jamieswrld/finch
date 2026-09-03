@@ -21,7 +21,7 @@ export function ConnectButton({ compact = false }: { compact?: boolean }) {
   const wrongNetwork = status === "connected" && chainId !== appChain.id;
 
   const baseClass =
-    "inline-flex h-9 items-center gap-2 rounded-xs border px-3 font-mono text-[11px] uppercase tracking-[0.12em] transition-colors";
+    "inline-flex h-9 items-center gap-2 rounded-xs border px-3 font-mono text-[11px] transition-colors";
 
   if (status === "connected" && address) {
     return (
@@ -29,7 +29,7 @@ export function ConnectButton({ compact = false }: { compact?: boolean }) {
         <button
           type="button"
           onClick={() => setOpen((value) => !value)}
-          className={`${baseClass} ${wrongNetwork ? "border-gold-deep/50 text-gold-deep" : "border-line-strong text-ink hover:border-ink"}`}
+          className={`${baseClass} ${wrongNetwork ?"border-gold-deep/50 text-gold-deep" : "border-line-strong text-ink hover:border-ink"}`}
           aria-expanded={open}
         >
           <StatusDot tone={wrongNetwork ? "gold" : "green"} />
@@ -82,7 +82,7 @@ export function ConnectButton({ compact = false }: { compact?: boolean }) {
       <button
         type="button"
         onClick={() => injectedConnector && connect({ connector: injectedConnector })}
-        className={`${baseClass} border-ink bg-ink text-bone hover:bg-green-deep hover:border-green-deep ${compact ? "" : ""}`}
+        className={`${baseClass} border-ink bg-ink text-bone hover:bg-green-deep hover:border-green-deep ${compact ?"" : ""}`}
       >
         connect
       </button>

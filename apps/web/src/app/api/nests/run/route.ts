@@ -1,7 +1,8 @@
+import { isAddress as isSignerAddress, parseUnits as signerUnits, type Address as SignerAddress } from "viem";
 import { effectiveParallelism, resolveLiveChain, withFailover } from "@finch/providers";
 import { runNest, subjectOf, validateTaskGraph, type NestEvent } from "@finch/sdk";
-import { createFlightpath } from "@finch/flightpath";
-import { appendHiveFindings, createHiveMemory, isDbConfigured, recordRun } from "@finch/db";
+import { createFlightpath, type ExecutionSink, type WalletPolicy } from "@finch/flightpath";
+import { appendHiveFindings, createHiveMemory, createMongoExecutionSink, createMongoSpendTracker, isDbConfigured, recordRun } from "@finch/db";
 import { errorJson, rateLimit, readJsonBody, safeErrorMessage } from "@/lib/server/http";
 import { resolveIdentity } from "@/lib/server/identity";
 import { getNestPreset } from "@/lib/nest-presets";
@@ -26,7 +27,8 @@ export async function POST(request: Request): Promise<Response> {
   const body = await readJsonBody(request);
   if (!body.ok) return body.response;
 
-  const { nest: nestId, objective, manifest: submitted } = body.body as {
+  const { nest: nestId, objective, manifest: submitted, signer } = body.body as {
+    signer?: string;
     nest?: string;
     objective?: string;
     manifest?: unknown;
@@ -128,7 +130,23 @@ export async function POST(request: Request): Promise<Response> {
 
   // Observer-mode Flightpath shared by every member finch: real chain reads,
   // no signer, every write denied by policy.
-  const flightpath = createFlightpath({ agentId: `nest:${manifest.identity.id}` });
+  // With a signer, a nest whose policy is not read-only gets a Flightpath
+  // that prepares writes for that wallet — same path as the school: the
+  // record parks at awaiting_signature in the durable sink, the wallet signs,
+  // /submitted verifies the hash field by field. The spend allowance is the
+  // signer's own, kept durably. Without a signer nothing changes: preview.
+  if (signer !== undefined && !isSignerAddress(signer)) return errorJson(400, "signer must be an EVM address when supplied");
+  const signing = Boolean(signer) && isDbConfigured() && manifest.executionPolicy.mode !== "preview";
+  const sink = signing ? (createMongoExecutionSink() as unknown as ExecutionSink) : undefined;
+  const signerPolicy: WalletPolicy = {
+    mode: "operator",
+    allowances: [{ asset: "native", perDay: signerUnits("0.05", 18), perTx: signerUnits("0.01", 18) }],
+    allowedContracts: [],
+    rwaApprovedOnly: true,
+  };
+  const flightpath = signing && sink && signer
+    ? createFlightpath({ agentId: `nest:${manifest.identity.id}`, externalSigner: signer as SignerAddress, policy: signerPolicy, sink, spendTracker: createMongoSpendTracker({ owner: signer }) })
+    : createFlightpath({ agentId: `nest:${manifest.identity.id}` });
 
   // Hoisted so cancel() can reach it: without this, a client that closes the
   // tab stops receiving SSE while runNest keeps hatching finches and billing.
@@ -157,6 +175,7 @@ export async function POST(request: Request): Promise<Response> {
           type: "run.config",
           providers: chain.map((entry) => entry.spec.id),
           excluded: live.excluded,
+          signing: signing && signer ? { mode: "external", signer } : { mode: "none" },
           parallelism: { requested: manifest.executionPolicy.maxParallel, effective: parallelism.value, reason: parallelism.reason },
         } as unknown as NestEvent);
         const finished = await runNest(executable, {
@@ -164,7 +183,7 @@ export async function POST(request: Request): Promise<Response> {
           // Every member finch runs on the configured provider; the manifest
           // names a model, the environment decides who serves it.
           resolveProvider: () => withFailover(chain),
-          hatchOptions: () => ({ flightpath, ...(hive ? { memory: hive } : {}) }),
+          hatchOptions: () => ({ flightpath, ...(sink ? { sink } : {}), ...(hive ? { memory: hive } : {}) }),
           onEvent: send,
           signal: abort.signal,
         });

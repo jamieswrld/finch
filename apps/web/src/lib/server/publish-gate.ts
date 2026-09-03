@@ -5,38 +5,40 @@ import { buildRobinhoodChain, getFlightpathTarget } from "@finch/flightpath";
 /**
  * The publishing gate.
  *
- * Publishing to the registry is the one thing on Finch that is token-gated:
- * it costs PUBLISH_COST_FINCH ($FINCH). Everything else — reading, running,
- * composing, exporting — is open, because a network nobody can use without
- * paying first is not a network.
+ * Publishing is OPEN AND FREE. Anyone with a wallet signs for a publisher key
+ * and lists finches and nests; reading, running and composing were always
+ * free. This is deliberate: a network nobody can add to is not a network, and
+ * the hive learns from every nest that runs. It stays open until the network
+ * says otherwise — even once $FINCH exists.
  *
- * $FINCH does not exist onchain yet. Until FINCH_TOKEN_ADDRESS is set, the
- * gate is LOCKED and says so; nothing pretends otherwise and nothing can be
- * published. When the token exists, the gate checks that the publisher's
- * address HOLDS at least the cost — a hold gate. A pay gate (the tokens
- * actually move) needs the publisher to sign a transfer, which is the
- * user-signed execution path, and that is stated here rather than faked.
+ * The switch is PUBLISH_GATE. Unset or "open" is the default and the truth
+ * right now. "hold" turns on the $FINCH gate: a publisher must then HOLD at
+ * least PUBLISH_COST_FINCH, read live from FINCH_TOKEN_ADDRESS at publish
+ * time. A pay gate (the tokens actually move) needs the publisher to sign a
+ * transfer through the user-signed execution path, and is stated here rather
+ * than faked. No state implies publishing works when it does not, or costs
+ * something when it does not.
  *
- * Three states, all reported honestly to the UI and the API:
- *   locked   — no token yet; publishing opens at launch
- *   open     — token exists; a publisher must hold >= cost
- *   error    — token set but the balance could not be read; refuse, do not guess
+ *   open    — free (default), or hold-gated with a token configured
+ *   locked  — hold-gated but no token address to check against
+ *   error   — token set but the balance could not be read; refuse, do not guess
  */
 
 export const PUBLISH_COST_FINCH = BigInt(process.env.PUBLISH_COST_FINCH ?? "250000");
 const TOKEN_DECIMALS_FALLBACK = 18;
 
 export type GateState = "locked" | "open" | "error";
+export type GateMechanism = "free" | "hold" | "pay";
 
 export interface PublishGate {
   state: GateState;
-  /** Whole-token cost, e.g. 250000. */
+  /** How publishing is enforced right now. */
+  mechanism: GateMechanism;
+  /** Whole-token cost once a token gate is on, e.g. 250000. Informational while free. */
   cost: string;
   token: Address | null;
   /** What a visitor should read. Always true, never aspirational. */
   reason: string;
-  /** How the gate is enforced once open. */
-  mechanism: "hold" | "pay";
 }
 
 function tokenAddress(): Address | null {
@@ -44,25 +46,39 @@ function tokenAddress(): Address | null {
   return raw && isAddress(raw) ? getAddress(raw) : null;
 }
 
+function gateSwitch(): "open" | "hold" {
+  return process.env.PUBLISH_GATE === "hold" ? "hold" : "open";
+}
+
 /** The gate as it stands right now, with no caller in mind. */
 export function describeGate(): PublishGate {
   const token = tokenAddress();
   const cost = PUBLISH_COST_FINCH.toString();
+  if (gateSwitch() === "open") {
+    return {
+      state: "open",
+      mechanism: "free",
+      cost,
+      token,
+      reason:
+        "Publishing is open and free. Sign for a publisher key with any wallet and list what you build; the $FINCH gate is off until the network turns it on.",
+    };
+  }
   if (!token) {
     return {
       state: "locked",
+      mechanism: "hold",
       cost,
       token: null,
-      reason: `Publishing opens when $FINCH launches. It will cost ${Number(cost).toLocaleString()} $FINCH per listing.`,
-      mechanism: "hold",
+      reason: "The $FINCH hold gate is switched on but no token address is configured, so publishing is closed until it is.",
     };
   }
   return {
     state: "open",
+    mechanism: "hold",
     cost,
     token,
     reason: `Publishing requires holding at least ${Number(cost).toLocaleString()} $FINCH.`,
-    mechanism: "hold",
   };
 }
 
@@ -77,12 +93,18 @@ export interface GateVerdict {
 /**
  * May this address publish right now?
  *
- * Reads the live balance every time — never cached, because a hold gate that
+ * While the gate is free the answer is yes for anyone — the publisher key
+ * (issued to a wallet that signed for it) is the only requirement, and that
+ * is checked by the identity layer, not here. Once a hold gate is on, the
+ * live balance is read every time — never cached, because a hold gate that
  * remembers yesterday's balance is not a hold gate.
  */
 export async function checkPublisher(publisher: string | null | undefined): Promise<GateVerdict> {
   const gate = describeGate();
 
+  if (gate.mechanism === "free") {
+    return { ok: true, status: 200, reason: "publishing is open and free", gate };
+  }
   if (gate.state === "locked" || !gate.token) {
     return { ok: false, status: 423, reason: gate.reason, gate };
   }

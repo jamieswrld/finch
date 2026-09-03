@@ -57,7 +57,7 @@ export function SwarmBand() {
               A murmuration has no leader. Each bird reads the few around it, and the shape emerges. Finch works the
               same way — which is why the whole system is four ideas, not forty.
             </p>
-            <p className="mt-4 font-mono text-[10px] uppercase tracking-[0.12em] text-grey-faint">
+            <p className="mt-4 font-mono text-[10px] text-grey-faint">
               move your cursor — the swarm follows
             </p>
             <div className="mt-6">
@@ -70,8 +70,8 @@ export function SwarmBand() {
               {STEPS.map((step) => (
                 <li key={step.term} className="bg-bone-raised/95 p-5 backdrop-blur-[1px]">
                   <p className="flex items-baseline gap-2">
-                    <span className="font-mono text-[10px] tracking-[0.12em] text-green-deep">{step.n}</span>
-                    <span className="font-mono text-[12.5px] font-medium uppercase tracking-[0.14em] text-ink">
+                    <span className="font-mono text-[10px] text-green-deep">{step.n}</span>
+                    <span className="font-mono text-[12.5px] font-medium text-ink">
                       {step.term}
                     </span>
                   </p>
@@ -82,7 +82,7 @@ export function SwarmBand() {
             <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2">
               <Link
                 href="/app/nests"
-                className="group inline-flex items-center gap-2 font-mono text-[11.5px] uppercase tracking-[0.12em] text-green-deep"
+                className="group inline-flex items-center gap-2 font-mono text-[11.5px] text-green-deep"
               >
                 watch a nest coordinate
                 <span className="transition-transform group-hover:translate-x-0.5" aria-hidden>
@@ -91,7 +91,7 @@ export function SwarmBand() {
               </Link>
               <Link
                 href="/how-it-works"
-                className="font-mono text-[11.5px] uppercase tracking-[0.12em] text-ink-soft transition-colors hover:text-ink"
+                className="font-mono text-[11.5px] text-ink-soft transition-colors hover:text-ink"
               >
                 the full mechanism →
               </Link>

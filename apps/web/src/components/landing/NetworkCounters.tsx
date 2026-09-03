@@ -25,12 +25,12 @@ export function NetworkCounters() {
       <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xs border border-line bg-line sm:grid-cols-4">
         {rows.map((row) => (
           <div key={row.label} className="bg-bone-raised px-4 py-3">
-            <p className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-grey-faint">{row.label}</p>
+            <p className="font-mono text-[9.5px] text-grey-faint">{row.label}</p>
             <p className="mt-1 font-mono text-[24px] leading-none tracking-[-0.02em] text-ink tnum">{row.value}</p>
           </div>
         ))}
       </div>
-      <p className="mt-2 flex items-center gap-2 font-mono text-[9.5px] uppercase tracking-[0.1em] text-grey-faint">
+      <p className="mt-2 flex items-center gap-2 font-mono text-[9.5px] text-grey-faint">
         {state.status === "ready" && <DataBadge source={state.data.source === "db" ? "db" : "builtin"} />}
         {state.status === "error" ? (
           <span className="text-red-deep">

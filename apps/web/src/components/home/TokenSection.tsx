@@ -28,7 +28,7 @@ const EARN_LATER = [
 ];
 
 function FeeFlow() {
-  const box = "rounded-xs border border-line bg-bone px-3 py-2 font-mono text-[11px] uppercase tracking-[0.1em]";
+  const box = "rounded-xs border border-line bg-bone px-3 py-2 font-mono text-[11px] ";
   const arrow = <span className="mx-auto font-mono text-[12px] leading-none text-grey">↓</span>;
   return (
     <div className="flex flex-col gap-1.5 rounded-xs border border-line bg-bone-raised p-5">

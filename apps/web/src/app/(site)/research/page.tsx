@@ -41,7 +41,7 @@ export default function ResearchPage() {
               <div className="flex items-center gap-3">
                 <span className="font-mono text-[11px] text-green-deep">{experiment.id}</span>
                 <Badge tone={STATUS_TONE[experiment.status]}>{experiment.status}</Badge>
-                <span className="ml-auto font-mono text-[10px] uppercase tracking-[0.1em] text-grey-faint">{experiment.area}</span>
+                <span className="ml-auto font-mono text-[10px] text-grey-faint">{experiment.area}</span>
               </div>
               <h3 className="mt-2.5 text-[16px] font-semibold tracking-[-0.01em] text-ink">{experiment.title}</h3>
               <p className="mt-2 text-[13px] leading-relaxed text-ink-soft">{experiment.summary}</p>
@@ -77,7 +77,7 @@ export default function ResearchPage() {
                   <td className="px-4 py-3 text-[12.5px] text-ink-soft">{benchmark.metric}</td>
                   <td className="px-4 py-3 text-[12.5px] leading-snug text-ink-soft">{benchmark.description}</td>
                   <td className="px-4 py-3">
-                    <span className="font-mono text-[10.5px] uppercase tracking-[0.06em] text-gold-deep">{benchmark.status}</span>
+                    <span className="font-mono text-[10.5px] text-gold-deep">{benchmark.status}</span>
                   </td>
                 </tr>
               ))}
@@ -113,13 +113,13 @@ export default function ResearchPage() {
         <div className="grid grid-cols-1 gap-px overflow-hidden rounded-xs border border-line bg-line sm:grid-cols-2 lg:grid-cols-4">
           {GRANT_TRACKS.map((grant) => (
             <div key={grant.track} className="bg-bone-raised p-5">
-              <p className="font-mono text-[12px] font-medium uppercase tracking-[0.1em] text-ink">{grant.track}</p>
+              <p className="font-mono text-[12px] font-medium text-ink">{grant.track}</p>
               <p className="mt-2 text-[12.5px] leading-relaxed text-ink-soft">{grant.note}</p>
               <p className="mt-3 font-mono text-[11px] text-gold-deep">{grant.size}</p>
             </div>
           ))}
         </div>
-        <p className="mt-3 font-mono text-[10.5px] uppercase tracking-[0.1em] text-grey-faint">
+        <p className="mt-3 font-mono text-[10.5px] text-grey-faint">
           applications open at launch · draft proposals welcome in the meantime — see the fip process below
         </p>
       </section>

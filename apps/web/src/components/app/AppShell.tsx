@@ -45,7 +45,7 @@ function WorkStrip() {
   ];
 
   return (
-    <span className="hidden items-center gap-4 font-mono text-[10px] uppercase tracking-[0.08em] text-grey lg:flex">
+    <span className="hidden items-center gap-4 font-mono text-[10px] text-grey lg:flex">
       {items.map((item) => (
         <span key={item.label} className="flex items-baseline gap-1.5" title={item.hint}>
           <span className="tnum text-[11.5px] font-semibold text-ink">{item.value}</span>
@@ -74,10 +74,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="container-page flex h-14 items-center gap-4">
           <Link href="/" className="flex items-center gap-2 text-ink" aria-label="Finch — back to overview">
             <FinchGlyph size={22} />
-            <span className="hidden font-sans text-[13px] font-semibold tracking-[0.22em] sm:block">FINCH</span>
+            <span className="hidden font-sans text-[13px] font-semibold sm:block">FINCH</span>
           </Link>
           <span className="hidden h-5 w-px bg-line-strong sm:block" aria-hidden />
-          <span className="hidden font-mono text-[10px] uppercase tracking-[0.14em] text-grey sm:block">app</span>
+          <span className="hidden font-mono text-[10px] text-grey sm:block">app</span>
 
           <nav className="ml-2 hidden items-center gap-0.5 md:flex" aria-label="App">
             {TABS.map((tab) => (
@@ -85,9 +85,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 key={tab.href}
                 href={tab.href}
                 aria-current={isActive(tab) ? "page" : undefined}
-                className={`rounded-xs px-2.5 py-1.5 font-mono text-[11.5px] uppercase tracking-[0.1em] transition-colors ${
+                className={`rounded-xs px-2.5 py-1.5 font-mono text-[11.5px] transition-colors ${
                   isActive(tab)
-                    ? "bg-ink text-bone"
+                    ?"bg-ink text-bone"
                     : "text-ink-soft hover:bg-bone-sunken/60 hover:text-ink"
                 }`}
               >
@@ -107,8 +107,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               aria-label={open ? "Close menu" : "Open menu"}
             >
               <span className="relative block h-[10px] w-4">
-                <span className={`absolute left-0 top-0 h-px w-full bg-ink transition-transform ${open ? "top-[5px] rotate-45" : ""}`} />
-                <span className={`absolute left-0 bottom-0 h-px w-full bg-ink transition-transform ${open ? "bottom-[4px] -rotate-45" : ""}`} />
+                <span className={`absolute left-0 top-0 h-px w-full bg-ink transition-transform ${open ?"top-[5px] rotate-45" : ""}`} />
+                <span className={`absolute left-0 bottom-0 h-px w-full bg-ink transition-transform ${open ?"bottom-[4px] -rotate-45" : ""}`} />
               </span>
             </button>
           </div>
@@ -121,8 +121,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Link
                   key={tab.href}
                   href={tab.href}
-                  className={`border-b border-line/60 py-3.5 font-mono text-[13px] uppercase tracking-[0.12em] ${
-                    isActive(tab) ? "text-green-deep" : "text-ink"
+                  className={`border-b border-line/60 py-3.5 font-mono text-[13px] ${
+                    isActive(tab) ?"text-green-deep" : "text-ink"
                   }`}
                 >
                   {tab.label}
@@ -137,10 +137,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <footer className="border-t border-line bg-bone-raised">
         <div className="container-page flex flex-col gap-2 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-grey-faint">
+          <p className="font-mono text-[10px] text-grey-faint">
             finch app · build → hatch → connect → execute → earn
           </p>
-          <div className="flex items-center gap-4 font-mono text-[10.5px] uppercase tracking-[0.08em]">
+          <div className="flex items-center gap-4 font-mono text-[10.5px]">
             <Link href="/docs" className="text-ink-soft hover:text-green-deep">docs</Link>
             <Link href="/research" className="text-ink-soft hover:text-green-deep">research</Link>
             <Link href="/" className="text-ink-soft hover:text-green-deep">← site</Link>

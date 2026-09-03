@@ -213,9 +213,9 @@ export function NestComposer() {
             key={candidate.slug}
             type="button"
             onClick={() => selectNest(candidate.slug)}
-            className={`rounded-xs border px-2.5 py-1.5 font-mono text-[11px] uppercase tracking-[0.1em] transition-colors ${
+            className={`rounded-xs border px-2.5 py-1.5 font-mono text-[11px] transition-colors ${
               selectedSlug === candidate.slug
-                ? "border-ink bg-ink text-bone"
+                ?"border-ink bg-ink text-bone"
                 : "border-line text-ink-soft hover:border-line-strong"
             }`}
           >
@@ -230,7 +230,7 @@ export function NestComposer() {
             setSelectedSlug(null);
             setSaveState({ phase: "idle" });
           }}
-          className="rounded-xs border border-dashed border-line-strong px-2.5 py-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-grey hover:border-green-deep hover:text-green-deep"
+          className="rounded-xs border border-dashed border-line-strong px-2.5 py-1.5 font-mono text-[11px] text-grey hover:border-green-deep hover:text-green-deep"
         >
           + custom nest
         </button>
@@ -449,7 +449,7 @@ function AddFinchForm({ nest, mutate }: { nest: NestDoc; mutate: (patch: (draft:
                       )
                     }
                     className={`rounded-xs border px-2 py-1 font-mono text-[10.5px] transition-colors ${
-                      active ? "border-green-deep bg-green-wash/50 text-green-deep" : "border-line text-grey hover:border-line-strong"
+                      active ?"border-green-deep bg-green-wash/50 text-green-deep" : "border-line text-grey hover:border-line-strong"
                     }`}
                   >
                     {preset}

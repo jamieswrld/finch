@@ -6,7 +6,7 @@ export function FinalCta() {
     <section className="border-t border-line bg-ink text-bone">
       <div className="container-page flex flex-col items-start gap-8 py-16 md:flex-row md:items-center md:justify-between">
         <div>
-          <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-sage">first flight in under a minute</p>
+          <p className="font-mono text-[11px] text-sage">first flight in under a minute</p>
           <h2 className="mt-3 text-[30px] leading-[1.1] font-semibold tracking-[-0.02em] md:text-[38px]">
             Hatch something small.
             <br />

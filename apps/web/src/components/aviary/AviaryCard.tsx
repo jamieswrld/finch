@@ -40,7 +40,7 @@ export function AviaryCard({ listing }: { listing: AviaryListing }) {
               {listing.name}
             </Link>
           </h3>
-          <p className="mt-0.5 font-mono text-[10.5px] uppercase tracking-[0.1em] text-grey">
+          <p className="mt-0.5 font-mono text-[10.5px] text-grey">
             {CATEGORY_LABEL[listing.category]} · by {listing.creator.name}
           </p>
         </div>
@@ -54,17 +54,17 @@ export function AviaryCard({ listing }: { listing: AviaryListing }) {
 
       <dl className="grid grid-cols-3 gap-px border-t border-line/70 bg-line/50 font-mono text-[11px]">
         <div className="bg-bone-raised p-3">
-          <dt className="text-[9.5px] uppercase tracking-[0.1em] text-grey-faint">calls / 30d</dt>
+          <dt className="text-[9.5px] text-grey-faint">calls / 30d</dt>
           <dd className="mt-0.5 text-ink tnum">{formatCompact(listing.stats.calls30d)}</dd>
         </div>
         <div className="bg-bone-raised p-3">
-          <dt className="text-[9.5px] uppercase tracking-[0.1em] text-grey-faint">uptime / 90d</dt>
+          <dt className="text-[9.5px] text-grey-faint">uptime / 90d</dt>
           <dd className="mt-0.5 text-ink tnum">
             {listing.stats.uptime90d === null ? "—" : `${listing.stats.uptime90d.toFixed(2)}%`}
           </dd>
         </div>
         <div className="bg-bone-raised p-3">
-          <dt className="text-[9.5px] uppercase tracking-[0.1em] text-grey-faint">price</dt>
+          <dt className="text-[9.5px] text-grey-faint">price</dt>
           <dd className="mt-0.5 text-ink tnum">{priceLabel(listing.pricing)}</dd>
         </div>
       </dl>
@@ -87,7 +87,7 @@ export function AviaryCard({ listing }: { listing: AviaryListing }) {
         </div>
         <Link
           href={`/app/aviary/${listing.slug}`}
-          className="shrink-0 rounded-xs border border-line-strong px-2.5 py-1.5 font-mono text-[10.5px] uppercase tracking-[0.1em] text-ink transition-colors hover:border-green-deep hover:text-green-deep"
+          className="shrink-0 rounded-xs border border-line-strong px-2.5 py-1.5 font-mono text-[10.5px] text-ink transition-colors hover:border-green-deep hover:text-green-deep"
         >
           Open →
         </Link>

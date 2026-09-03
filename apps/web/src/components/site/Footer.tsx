@@ -41,7 +41,7 @@ export function Footer() {
           <div>
             <div className="flex items-center gap-2.5">
               <FinchGlyph size={22} className="text-ink" />
-              <span className="text-[15px] font-semibold tracking-[0.22em]">FINCH</span>
+              <span className="text-[15px] font-semibold">FINCH</span>
             </div>
             <p className="mt-4 max-w-xs text-[13px] leading-relaxed text-grey">
               A decentralized operating layer for intelligent software on Robinhood Chain. Build one finch. Coordinate
@@ -67,7 +67,7 @@ export function Footer() {
 
         <div className="mt-12 border-t border-line pt-6">
           <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-            <p className="font-mono text-[10.5px] uppercase tracking-[0.1em] text-grey-faint">
+            <p className="font-mono text-[10.5px] text-grey-faint">
               one finch → many finches → nest → nest-to-nest → network
             </p>
             <p className="max-w-2xl text-[11px] leading-relaxed text-grey-faint md:text-right">

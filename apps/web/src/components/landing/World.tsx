@@ -68,14 +68,14 @@ function SystemIcons() {
           <svg viewBox="0 0 19 19" className="size-[17px]">
             {entry.icon}
           </svg>
-          <span className="pointer-events-none absolute top-9 left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-xs border border-line bg-bone px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.12em] text-ink opacity-0 transition-opacity group-hover:opacity-100">
+          <span className="pointer-events-none absolute top-9 left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-xs border border-line bg-bone px-1.5 py-0.5 font-mono text-[9px] text-ink opacity-0 transition-opacity group-hover:opacity-100">
             {entry.label}
           </span>
         </Link>
       ))}
       <Link
         href="/app"
-        className="ml-1 inline-flex h-8 items-center rounded-full border border-ink bg-ink px-3.5 font-mono text-[10px] uppercase tracking-[0.14em] text-bone transition-colors hover:border-green-deep hover:bg-green-deep"
+        className="ml-1 inline-flex h-8 items-center rounded-full border border-ink bg-ink px-3.5 font-mono text-[10px] text-bone transition-colors hover:border-green-deep hover:bg-green-deep"
       >
         connect
       </Link>
@@ -97,9 +97,9 @@ function ActionMatrix() {
         <Link
           key={action.label}
           href={action.href}
-          className={`group flex h-11 items-center justify-between rounded-xs border px-3.5 font-mono text-[11px] uppercase tracking-[0.14em] transition-all hover:-translate-y-[1px] ${
+          className={`group flex h-11 items-center justify-between rounded-xs border px-3.5 font-mono text-[11px] transition-all hover:-translate-y-[1px] ${
             action.primary
-              ? "border-green-deep bg-green-deep text-bone hover:bg-ink hover:border-ink"
+              ?"border-green-deep bg-green-deep text-bone hover:bg-ink hover:border-ink"
               : "border-ink/50 bg-bone-raised/60 text-ink hover:border-ink"
           }`}
         >
@@ -119,12 +119,12 @@ function BottomBar() {
       <div className="mx-auto flex h-11 max-w-[1500px] items-center justify-between px-4">
         <a
           href="#one"
-          className="flex items-center gap-2 font-mono text-[9.5px] uppercase tracking-[0.16em] text-grey transition-colors hover:text-ink"
+          className="flex items-center gap-2 font-mono text-[9.5px] text-grey transition-colors hover:text-ink"
         >
           <FinchGlyph size={14} className="rotate-[-90deg]" />
           descend
         </a>
-        <div className="flex items-center gap-4 font-mono text-[9.5px] uppercase tracking-[0.14em]">
+        <div className="flex items-center gap-4 font-mono text-[9.5px]">
           <a
             href="https://x.com/finchnests"
             target="_blank"
@@ -159,19 +159,19 @@ export function World() {
       <header className="relative z-10 mx-auto flex h-14 w-full max-w-[1500px] items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2.5 text-ink" aria-label="Finch">
           <FinchGlyph size={22} />
-          <span className="text-[13px] font-semibold tracking-[0.24em]">FINCH</span>
+          <span className="text-[13px] font-semibold">FINCH</span>
         </Link>
         <SystemIcons />
       </header>
 
       <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 py-8 text-center">
-        <h1 className="reveal text-[56px] leading-none font-semibold tracking-[0.16em] text-ink sm:text-[76px] md:text-[88px]">
+        <h1 className="reveal text-[56px] leading-none font-semibold text-ink sm:text-[76px] md:text-[88px]">
           FINCH
         </h1>
         <p className="reveal reveal-2 serif-note mt-4 text-[20px] leading-snug sm:text-[24px]">
           build one nest. coordinate millions.
         </p>
-        <p className="reveal reveal-3 mt-3 text-balance font-mono text-[9.5px] uppercase tracking-[0.12em] text-grey sm:text-[10.5px] sm:tracking-[0.16em]">
+        <p className="reveal reveal-3 mt-3 text-balance font-mono text-[9.5px] text-grey sm:text-[10.5px]">
           permissionless agents · interoperable nests · robinhood native
         </p>
 

@@ -19,7 +19,7 @@ function Metric({
 }) {
   const body = (
     <>
-      <p className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-grey-faint">{label}</p>
+      <p className="font-mono text-[9.5px] text-grey-faint">{label}</p>
       <p className="mt-1 font-mono text-[20px] leading-none tracking-[-0.02em] text-ink tnum md:text-[24px]">
         {value}
         {unit && <span className="ml-1 text-[11px] text-grey">{unit}</span>}
@@ -60,7 +60,7 @@ export function ChainTelemetry() {
         <button
           type="button"
           onClick={state.retry}
-          className="mt-4 rounded-xs border border-red-deep/40 px-2.5 py-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-red-deep hover:bg-red-wash"
+          className="mt-4 rounded-xs border border-red-deep/40 px-2.5 py-1.5 font-mono text-[11px] text-red-deep hover:bg-red-wash"
         >
           retry
         </button>
@@ -75,18 +75,18 @@ export function ChainTelemetry() {
   return (
     <div>
       <div className="flex flex-wrap items-center gap-3 border-b border-line pb-3">
-        <span className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-green-deep">
+        <span className="flex items-center gap-1.5 font-mono text-[11px] text-green-deep">
           <StatusDot tone="green" pulse />
           live
         </span>
-        <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink">
+        <span className="font-mono text-[11px] text-ink">
           {data.chainName} · {data.chainId}
         </span>
         <Badge tone="sage">{data.stack}</Badge>
         {data.clientVersion && (
           <span className="hidden font-mono text-[10.5px] text-grey lg:inline">{data.clientVersion}</span>
         )}
-        <span className="ml-auto font-mono text-[10px] uppercase tracking-[0.1em] text-grey-faint tnum">
+        <span className="ml-auto font-mono text-[10px] text-grey-faint tnum">
           rtt {data.latencyMs}ms · sampled {new Date(data.sampledAt).toLocaleTimeString()}
         </span>
       </div>
@@ -132,7 +132,7 @@ export function ChainTelemetry() {
                 <td className="px-3 py-2 font-mono text-[11px] break-all text-ink-soft">{endpoint.url}</td>
                 <td className="px-3 py-2">
                   <span
-                    className={`flex items-center gap-1.5 font-mono text-[10.5px] uppercase tracking-[0.08em] ${endpoint.reachable ? "text-green-deep" : "text-red-deep"}`}
+                    className={`flex items-center gap-1.5 font-mono text-[10.5px] ${endpoint.reachable ?"text-green-deep" : "text-red-deep"}`}
                   >
                     <StatusDot tone={endpoint.reachable ? "green" : "red"} />
                     {endpoint.reachable ? "ok" : "down"}
@@ -148,7 +148,7 @@ export function ChainTelemetry() {
         </table>
       </div>
       {data.endpoints.length < 2 && (
-        <p className="mt-2 font-mono text-[9.5px] uppercase tracking-[0.1em] text-grey-faint">
+        <p className="mt-2 font-mono text-[9.5px] text-grey-faint">
           single endpoint — add ROBINHOOD_RPC_URLS (comma separated) to run with failover
         </p>
       )}

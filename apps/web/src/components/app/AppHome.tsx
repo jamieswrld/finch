@@ -14,7 +14,7 @@ function PanelHeader({ title, href, hrefLabel }: { title: string; href: string; 
   return (
     <header className="flex items-baseline justify-between border-b border-line px-4 py-2.5">
       <span className="label-mono text-ink">{title}</span>
-      <Link href={href} className="font-mono text-[10.5px] uppercase tracking-[0.1em] text-green-deep hover:underline">
+      <Link href={href} className="font-mono text-[10.5px] text-green-deep hover:underline">
         {hrefLabel} →
       </Link>
     </header>
@@ -82,12 +82,12 @@ function AviaryPanel() {
                       {listing.name}
                       {listing.verified && <span className="text-green-deep" aria-label="verified">✓</span>}
                     </p>
-                    <p className="truncate font-mono text-[10.5px] uppercase tracking-[0.06em] text-grey">{listing.category}</p>
+                    <p className="truncate font-mono text-[10.5px] text-grey">{listing.category}</p>
                   </div>
                   <span className="font-mono text-[11px] text-ink-soft tnum">{formatCompact(listing.stats.calls30d)} calls</span>
                   <Link
                     href={`/app/build?service=${listing.slug}`}
-                    className="rounded-xs border border-line-strong px-2 py-1 font-mono text-[10px] uppercase tracking-[0.08em] text-ink hover:border-green-deep hover:text-green-deep"
+                    className="rounded-xs border border-line-strong px-2 py-1 font-mono text-[10px] text-ink hover:border-green-deep hover:text-green-deep"
                   >
                     add
                   </Link>
@@ -113,8 +113,8 @@ function SchoolPanel() {
   return (
     <section className="flex flex-col rounded-xs border border-line bg-ink text-bone" aria-label="Flight School">
       <header className="flex items-baseline justify-between border-b border-bone/15 px-4 py-2.5">
-        <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-sage">flight school</span>
-        <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-green">no wallet needed</span>
+        <span className="font-mono text-[11px] text-sage">flight school</span>
+        <span className="font-mono text-[10px] text-green">no wallet needed</span>
       </header>
       <div className="flex flex-1 flex-col p-4">
         <p className="serif-note text-[19px] leading-snug !text-bone/90">what should your first finch learn?</p>
@@ -125,7 +125,7 @@ function SchoolPanel() {
         <div className="mt-auto pt-4">
           <Link
             href="/app/school"
-            className="inline-flex h-9 items-center gap-2 rounded-xs border border-green bg-green px-3.5 font-mono text-[11px] uppercase tracking-[0.12em] text-ink transition-colors hover:bg-bone hover:border-bone"
+            className="inline-flex h-9 items-center gap-2 rounded-xs border border-green bg-green px-3.5 font-mono text-[11px] text-ink transition-colors hover:bg-bone hover:border-bone"
           >
             enter flight school <span aria-hidden>→</span>
           </Link>

@@ -48,7 +48,7 @@ export function TrackedContracts() {
 
   const { tokens } = state.data;
   if (tokens.length === 0) {
-    return <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-grey">no contracts tracked yet</p>;
+    return <p className="font-mono text-[11px] text-grey">no contracts tracked yet</p>;
   }
 
   return (
@@ -59,7 +59,7 @@ export function TrackedContracts() {
             {["token", "symbol", "total supply", "decimals", "contract"].map((head) => (
               <th
                 key={head}
-                className="pb-2 font-mono text-[9px] font-normal uppercase tracking-[0.14em] text-grey-faint"
+                className="pb-2 font-mono text-[9px] font-normal text-grey-faint"
               >
                 {head}
               </th>
@@ -77,7 +77,7 @@ export function TrackedContracts() {
                     unreadable
                   </span>
                 )}
-                <span className="ml-2 font-mono text-[8.5px] uppercase tracking-[0.14em] text-grey-faint">
+                <span className="ml-2 font-mono text-[8.5px] text-grey-faint">
                   {token.relation}
                 </span>
               </td>
@@ -106,7 +106,7 @@ export function TrackedContracts() {
         </tbody>
       </table>
 
-      <p className="mt-3 font-mono text-[8.5px] uppercase tracking-[0.14em] text-grey-faint">
+      <p className="mt-3 font-mono text-[8.5px] text-grey-faint">
         read live from chain 4663 · tracked means Finch reads the contract — not an endorsement or affiliation
       </p>
     </div>

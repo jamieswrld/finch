@@ -43,8 +43,8 @@ export function NestsWorkbench({ presets }: { presets: NestManifest[] }) {
               role="tab"
               aria-selected={tab === entry.key}
               onClick={() => setTab(entry.key)}
-              className={`rounded-xs border px-2.5 py-1.5 font-mono text-[11px] uppercase tracking-[0.1em] transition-colors ${
-                tab === entry.key ? "border-ink bg-ink text-bone" : "border-line text-ink-soft hover:border-line-strong"
+              className={`rounded-xs border px-2.5 py-1.5 font-mono text-[11px] transition-colors ${
+                tab === entry.key ?"border-ink bg-ink text-bone" : "border-line text-ink-soft hover:border-line-strong"
               }`}
             >
               {entry.label}
@@ -61,9 +61,9 @@ export function NestsWorkbench({ presets }: { presets: NestManifest[] }) {
                   key={preset.identity.id}
                   type="button"
                   onClick={() => setSelectedId(preset.identity.id)}
-                  className={`rounded-xs border px-2.5 py-1.5 font-mono text-[11px] uppercase tracking-[0.1em] transition-colors ${
+                  className={`rounded-xs border px-2.5 py-1.5 font-mono text-[11px] transition-colors ${
                     selectedId === preset.identity.id
-                      ? "border-green-deep bg-green-wash/50 text-green-deep"
+                      ?"border-green-deep bg-green-wash/50 text-green-deep"
                       : "border-line text-ink-soft hover:border-line-strong"
                   }`}
                 >

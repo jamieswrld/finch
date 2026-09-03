@@ -29,11 +29,11 @@ export function OneFinchSection() {
         {SPECIALISTS.map((specialist, index) => (
           <div key={specialist.key} className="group bg-bone-raised p-4 transition-colors hover:bg-bone">
             <div className="flex items-center justify-between">
-              <span className="font-mono text-[12px] font-medium tracking-[0.14em] text-ink">{specialist.key}</span>
+              <span className="font-mono text-[12px] font-medium text-ink">{specialist.key}</span>
               <DartGlyph size={11} angle={-14} className="text-grey-faint transition-colors group-hover:text-green-deep" />
             </div>
             <p className="mt-2 text-[12px] leading-snug text-grey">{specialist.note}</p>
-            <p className="mt-3 font-mono text-[9px] uppercase tracking-[0.1em] text-grey-faint">
+            <p className="mt-3 font-mono text-[9px] text-grey-faint">
               finch/{String(index + 1).padStart(3, "0")}
             </p>
           </div>
@@ -73,7 +73,7 @@ export function NestSection() {
               {PONS_NEST.map((finch, index) => (
                 <div key={finch.name} className="flex items-center">
                   <div className="rounded-xs border border-line bg-bone-raised px-3 py-2.5">
-                    <p className="flex items-center gap-1.5 whitespace-nowrap font-mono text-[11px] font-medium tracking-[0.06em] text-ink">
+                    <p className="flex items-center gap-1.5 whitespace-nowrap font-mono text-[11px] font-medium text-ink">
                       <DartGlyph size={10} angle={-14} className="text-ink-soft" />
                       {finch.name}
                     </p>
@@ -83,7 +83,7 @@ export function NestSection() {
                 </div>
               ))}
             </div>
-            <figcaption className="mt-4 font-mono text-[9.5px] uppercase tracking-[0.1em] text-grey-faint">
+            <figcaption className="mt-4 font-mono text-[9.5px] text-grey-faint">
               fig. — task pipeline · every hop is a typed channel
             </figcaption>
           </figure>
@@ -125,7 +125,7 @@ export function NestMeshSection() {
       <div className="grid-paper overflow-x-auto rounded-xs border border-line bg-bone-raised p-6">
         <div className="flex min-w-[640px] items-center justify-center gap-3">
           <div className={box}>
-            <p className="font-mono text-[11px] font-medium tracking-[0.1em] text-ink">RESEARCH NEST</p>
+            <p className="font-mono text-[11px] font-medium text-ink">RESEARCH NEST</p>
             <p className="mt-1 font-mono text-[9px] text-grey">5 finches · read-only</p>
           </div>
           <div className="flex flex-col items-center gap-1">
@@ -133,7 +133,7 @@ export function NestMeshSection() {
             <span className="font-mono text-[11px] text-sage-deep">→</span>
           </div>
           <div className={box}>
-            <p className="font-mono text-[11px] font-medium tracking-[0.1em] text-ink">MARKET NEST</p>
+            <p className="font-mono text-[11px] font-medium text-ink">MARKET NEST</p>
             <p className="mt-1 font-mono text-[9px] text-grey">4 finches · read-only</p>
           </div>
           <div className="flex flex-col items-center gap-1">
@@ -141,13 +141,13 @@ export function NestMeshSection() {
             <span className="font-mono text-[11px] text-sage-deep">→</span>
           </div>
           <div className={box}>
-            <p className="font-mono text-[11px] font-medium tracking-[0.1em] text-ink">EXECUTION NEST</p>
+            <p className="font-mono text-[11px] font-medium text-ink">EXECUTION NEST</p>
             <p className="mt-1 flex items-center gap-1.5 font-mono text-[9px] text-grey">
               policied writes <Badge tone="gold">simulate → live</Badge>
             </p>
           </div>
         </div>
-        <p className="mt-5 text-center font-mono text-[9.5px] uppercase tracking-[0.12em] text-grey-faint">
+        <p className="mt-5 text-center font-mono text-[9.5px] text-grey-faint">
           http · webhooks · onchain · finch→finch · nest→nest
         </p>
       </div>

@@ -57,9 +57,9 @@ export function AviaryBrowser() {
               role="tab"
               aria-selected={category === entry.key}
               onClick={() => setCategory(entry.key)}
-              className={`rounded-xs border px-2.5 py-1.5 font-mono text-[11px] uppercase tracking-[0.1em] transition-colors ${
+              className={`rounded-xs border px-2.5 py-1.5 font-mono text-[11px] transition-colors ${
                 category === entry.key
-                  ? "border-ink bg-ink text-bone"
+                  ?"border-ink bg-ink text-bone"
                   : "border-transparent text-ink-soft hover:border-line-strong hover:text-ink"
               }`}
             >

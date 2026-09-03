@@ -72,19 +72,19 @@ export function OptionRow({
       disabled={disabled}
       onClick={onSelect}
       className={`flex w-full items-start gap-3 rounded-xs border p-3 text-left transition-colors ${
-        checked ? "border-green-deep bg-green-wash/40" : "border-line bg-bone hover:border-line-strong"
+        checked ?"border-green-deep bg-green-wash/40" : "border-line bg-bone hover:border-line-strong"
       } ${disabled ? "opacity-45" : ""}`}
     >
       <span
         aria-hidden
         className={`mt-1 inline-flex size-[12px] shrink-0 items-center justify-center rounded-full border ${
-          checked ? "border-green-deep" : "border-line-strong"
+          checked ?"border-green-deep" : "border-line-strong"
         }`}
       >
         {checked && <span className="size-[6px] rounded-full bg-green-deep" />}
       </span>
       <span className="min-w-0">
-        <span className="flex items-center gap-2 font-mono text-[12px] uppercase tracking-[0.1em] text-ink">
+        <span className="flex items-center gap-2 font-mono text-[12px] text-ink">
           {title}
           {tag && <span className="rounded-xs border border-gold/50 px-1 text-[9.5px] text-gold-deep">{tag}</span>}
         </span>
@@ -112,18 +112,18 @@ export function Toggle({
       aria-checked={checked}
       disabled={disabled}
       onClick={() => onChange(!checked)}
-      className={`flex items-center gap-2.5 ${disabled ? "opacity-45" : ""}`}
+      className={`flex items-center gap-2.5 ${disabled ?"opacity-45" : ""}`}
     >
       <span
         className={`relative inline-flex h-[16px] w-[28px] items-center rounded-full border transition-colors ${
-          checked ? "border-green-deep bg-green-deep" : "border-line-strong bg-bone-sunken"
+          checked ?"border-green-deep bg-green-deep" : "border-line-strong bg-bone-sunken"
         }`}
       >
         <span
-          className={`absolute size-[10px] rounded-full bg-bone transition-transform ${checked ? "translate-x-[14px]" : "translate-x-[2px]"}`}
+          className={`absolute size-[10px] rounded-full bg-bone transition-transform ${checked ?"translate-x-[14px]" : "translate-x-[2px]"}`}
         />
       </span>
-      <span className="font-mono text-[11.5px] uppercase tracking-[0.1em] text-ink">{label}</span>
+      <span className="font-mono text-[11.5px] text-ink">{label}</span>
     </button>
   );
 }

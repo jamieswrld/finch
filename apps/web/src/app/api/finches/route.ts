@@ -2,6 +2,7 @@ import { getCollections, isDbConfigured, type FinchDoc } from "@finch/db";
 import { REGISTRY_FINCH_DOCS, mergeWithBuiltins } from "@/lib/registry";
 import { safeValidateManifest } from "@finch/sdk";
 import { errorJson, json, rateLimit, readJsonBody, safeErrorMessage } from "@/lib/server/http";
+import { describeGate, checkPublisher } from "@/lib/server/publish-gate";
 import { canWrite, resolveIdentity } from "@/lib/server/identity";
 
 export const runtime = "nodejs";
@@ -44,6 +45,13 @@ export async function POST(request: Request): Promise<Response> {
 
   const body = await readJsonBody(request);
   if (!body.ok) return body.response;
+  // The one token-gated action on Finch. Locked until $FINCH exists; a hold
+  // check on the publisher's wallet once it does. Never silently open.
+  const gate = describeGate();
+  if (gate.state !== "open") return errorJson(423, gate.reason, { gate });
+  const verdict = await checkPublisher((body.body as { publisher?: string })?.publisher);
+  if (!verdict.ok) return errorJson(verdict.status, verdict.reason, { gate: verdict.gate, balance: verdict.balance ?? null });
+
 
   const candidate = (body.body as { manifest?: unknown })?.manifest ?? body.body;
   const validated = safeValidateManifest(candidate);

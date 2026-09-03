@@ -1,4 +1,6 @@
-import type { AviaryListing, FinchDoc, NestDoc } from "@finch/db";
+import { getCollections, isDbConfigured, type AviaryListing, type FinchDoc, type NestDoc } from "@finch/db";
+import { nestManifestSchema, type NestManifest } from "@finch/sdk";
+import { z } from "zod";
 import { NEST_PRESETS } from "./nest-presets";
 import { SCHOOL_PRESETS } from "./school-presets";
 
@@ -194,4 +196,77 @@ export function mergeWithBuiltins<T extends { slug?: string; handle?: string }>(
   const keyOf = (row: T) => row.slug ?? row.handle ?? "";
   const storedKeys = new Set(stored.map(keyOf));
   return [...builtins.filter((row) => !storedKeys.has(keyOf(row))), ...stored];
+}
+
+
+// ── Composition: nests built from other people's finches ───────────────────
+
+/**
+ * A nest member may be a REFERENCE to a registry finch instead of an
+ * embedded manifest. This is what lets a nest be composed from finches other
+ * people published: name the handle, and the registry supplies the document.
+ *
+ * The SDK's schema requires every member to carry a manifest, and runNest is
+ * never handed a reference. Hydration happens here, before the strict parse,
+ * so the runtime keeps one invariant and the network gets composition.
+ */
+export const nestMemberRefSchema = z.object({
+  handle: z.string().min(1).max(64),
+  ref: z.literal("registry"),
+  name: z.string().min(1).max(80).optional(),
+  role: z.string().max(200).optional(),
+});
+
+/** nest.manifest/0.1 with members that may be registry references. */
+export const nestInputSchema = nestManifestSchema.extend({
+  finches: z.array(z.union([nestManifestSchema.shape.finches.element, nestMemberRefSchema])).min(1).max(24),
+});
+export type NestInput = z.infer<typeof nestInputSchema>;
+
+export class UnresolvedFinchError extends Error {
+  constructor(public readonly handles: string[]) {
+    super(`unknown finch handle${handles.length === 1 ? "" : "s"}: ${handles.join(", ")}`);
+    this.name = "UnresolvedFinchError";
+  }
+}
+
+/** Find a finch document by handle: builtins first, then the database. */
+async function lookupFinch(handle: string): Promise<FinchDoc | null> {
+  const builtin = REGISTRY_FINCH_DOCS.find((doc) => doc.handle === handle);
+  if (builtin) return builtin;
+  if (!isDbConfigured()) return null;
+  try {
+    const { finches } = await getCollections();
+    return await finches.findOne({ handle }, { projection: { _id: 0 } });
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Replace every registry reference with the finch it names, then return a
+ * manifest the SDK's strict schema accepts. An unknown handle is an error
+ * naming the handle — never a silently dropped member.
+ */
+export async function hydrateNestMembers(input: NestInput): Promise<NestManifest> {
+  const missing: string[] = [];
+  const finches = await Promise.all(
+    input.finches.map(async (member) => {
+      if (!("ref" in member)) return member;
+      const doc = await lookupFinch(member.handle);
+      if (!doc) {
+        missing.push(member.handle);
+        return null;
+      }
+      const manifest = doc.manifest as { identity?: { name?: string; description?: string } };
+      return {
+        handle: member.handle,
+        name: member.name ?? manifest.identity?.name ?? member.handle,
+        role: member.role ?? manifest.identity?.description ?? "",
+        manifest: doc.manifest,
+      };
+    }),
+  );
+  if (missing.length > 0) throw new UnresolvedFinchError(missing);
+  return nestManifestSchema.parse({ ...input, finches: finches.filter(Boolean) });
 }

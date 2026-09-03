@@ -56,7 +56,7 @@ function FinchesPanel() {
         {state.status === "ready" && state.data.source === "builtin" && state.data.finches.length > 0 && (
           <p className="mt-3 flex items-center gap-2">
             <DataBadge source="builtin" />
-            <span className="text-[11px] text-grey">sample finches, not yours</span>
+            <span className="text-[11px] text-grey">builtin finches — runnable now; yours appear here once published</span>
           </p>
         )}
       </div>
@@ -98,7 +98,7 @@ function AviaryPanel() {
               <p className="mt-3 flex items-center gap-2">
                 <DataBadge source="builtin" />
                 <span className="text-[11px] text-grey">
-                  includes seed rows, whose call counts are sample figures rather than measured traffic
+                  builtin listings — call counts are measured from real runs
                 </span>
               </p>
             )}
@@ -166,7 +166,7 @@ function NestsPanel() {
         {state.status === "ready" && state.data.source === "builtin" && state.data.nests.length > 0 && (
           <p className="mt-3 flex items-center gap-2">
             <DataBadge source="builtin" />
-            <span className="text-[11px] text-grey">preset nests, sample data</span>
+            <span className="text-[11px] text-grey">builtin nests — every one runs</span>
           </p>
         )}
       </div>

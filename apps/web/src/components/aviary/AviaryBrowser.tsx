@@ -103,7 +103,7 @@ export function AviaryBrowser() {
               </span>
               {state.data.source === "builtin" && !state.data.degraded && (
                 <span className="text-[11.5px] text-grey">
-                  Pre-launch sample registry — published listings replace these at launch.
+                  Builtin registry — every listing opens and runs. Published listings appear alongside them.
                 </span>
               )}
               {state.data.note && <span className="text-[11.5px] text-gold-deep">{state.data.note}</span>}
@@ -111,7 +111,7 @@ export function AviaryBrowser() {
 
             {state.data.listings.length === 0 ? (
               <EmptyBlock title="no listings match">
-                Try a different category or clear the search — or be the first to publish something here.
+                Try a different category or clear the search — or <a href="#publish" className="underline decoration-line-strong underline-offset-2 hover:text-ink">publish something here</a>.
               </EmptyBlock>
             ) : (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">

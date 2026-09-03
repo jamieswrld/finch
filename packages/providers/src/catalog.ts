@@ -58,7 +58,10 @@ export const PROVIDER_CATALOG: ProviderSpec[] = [
     envKey: "OPENROUTER_API_KEY",
     envModel: "OPENROUTER_MODEL",
     // OpenRouter marks zero-cost models with a :free suffix.
-    defaultModel: "google/gemma-4-31b-it:free",
+    // Verified live: gemma-4-31b-it:free returned 429 on every call while
+    // minimax-m2.7:free answered from the same key. A saturated free model is
+    // a dead fallback, which is worse than none because it looks configured.
+    defaultModel: "minimax/minimax-m2.7:free",
     cost: "free-tier",
     notes: "Routes to many models; :free variants cost nothing but are rate limited and can be busy.",
   },
@@ -169,6 +172,28 @@ export interface ResolvedProvider {
  * Returns null when nothing is configured, so callers can say so rather than
  * failing obscurely.
  */
+/**
+ * Every configured provider, in cost order, each bound to the model it should
+ * use. This is what failover walks. An explicit FINCH_PROVIDER pin returns a
+ * one-element chain: pinning means "this one", not "this one unless busy".
+ */
+export function resolveProviderChain(preferred?: ModelPreference): ResolvedProvider[] {
+  const explicit = readEnv("FINCH_PROVIDER");
+  if (explicit) {
+    const spec = getProviderSpec(explicit);
+    if (!spec || !isProviderConfigured(spec)) return [];
+    const model = modelFor(spec, preferred);
+    return [{ provider: providerFrom(spec, model), spec, model }];
+  }
+  const rank: Record<ProviderCost, number> = { "free-tier": 0, local: 1, paid: 2 };
+  return PROVIDER_CATALOG.filter(isProviderConfigured)
+    .sort((a, b) => rank[a.cost] - rank[b.cost])
+    .map((spec) => {
+      const model = modelFor(spec, preferred);
+      return { provider: providerFrom(spec, model), spec, model };
+    });
+}
+
 export function resolveProviderFromEnv(preferred?: ModelPreference): ResolvedProvider | null {
   const explicit = readEnv("FINCH_PROVIDER");
   if (explicit) {

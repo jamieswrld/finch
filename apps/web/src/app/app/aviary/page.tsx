@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AviaryBrowser } from "@/components/aviary/AviaryBrowser";
+import { PublishPanel } from "@/components/aviary/PublishPanel";
 
 export const metadata: Metadata = {
   title: "Aviary",
@@ -24,6 +25,9 @@ export default function AviaryPage() {
       </header>
       <div className="mt-8">
         <AviaryBrowser />
+        <div className="mt-8">
+          <PublishPanel />
+        </div>
       </div>
     </div>
   );

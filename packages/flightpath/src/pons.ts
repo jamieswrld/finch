@@ -34,7 +34,20 @@ export interface PonsConfig {
   factory?: Address;
   /** Address receiving Finch's creator tax — the Finch Treasury FeeVault. */
   feeRecipient?: Address;
+  /** A launcher contract observed onchain. Not confirmed by Pons; never used for the 300 bps gate. */
+  factoryCandidate?: Address;
+  candidateNote?: string;
 }
+
+/**
+ * The contract that deployed the PONS token, found by reading the chain:
+ * the creation tx was a 0.1005 ETH call INTO this address, it has 1,800+
+ * transactions of which nearly all are the same paid launch method, and it
+ * exposes setLaunchEnabled. That is a launcher. It is UNVERIFIED — no ABI
+ * is published — so it cannot back the 300 bps check, and it is reported
+ * as a candidate rather than set as PONS_FACTORY_ADDRESS.
+ */
+export const PONS_LAUNCHER_CANDIDATE = "0x0c37a24F5D23A486FA692d1500881d698B1F77a4" as Address;
 
 export function getPonsConfig(): PonsConfig {
   const factory = (typeof process !== "undefined" ? process.env.PONS_FACTORY_ADDRESS : undefined) as Address | undefined;
@@ -45,6 +58,9 @@ export function getPonsConfig(): PonsConfig {
     configured: Boolean(factory && feeRecipient),
     factory,
     feeRecipient,
+    factoryCandidate: PONS_LAUNCHER_CANDIDATE,
+    candidateNote:
+      "Launcher contract observed onchain (deployer of PONS; 1,800+ paid launch calls). Unverified source, so the 3% creator-tax guarantee cannot be checked against it yet.",
   };
 }
 

@@ -1,10 +1,11 @@
-import { resolveProviderFromEnv } from "@finch/providers";
-import { nestManifestSchema, runNest, validateTaskGraph, type NestEvent } from "@finch/sdk";
+import { effectiveParallelism, resolveLiveChain, withFailover } from "@finch/providers";
+import { runNest, validateTaskGraph, type NestEvent } from "@finch/sdk";
 import { createFlightpath } from "@finch/flightpath";
 import { recordRun } from "@finch/db";
 import { errorJson, rateLimit, readJsonBody, safeErrorMessage } from "@/lib/server/http";
 import { resolveIdentity } from "@/lib/server/identity";
 import { getNestPreset } from "@/lib/nest-presets";
+import { UnresolvedFinchError, hydrateNestMembers, nestInputSchema } from "@/lib/registry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -46,12 +47,25 @@ export async function POST(request: Request): Promise<Response> {
         hint: "The builtin nests run without a key: POST { nest: \"chain-intelligence\" }.",
       });
     }
-    const parsed = nestManifestSchema.safeParse(submitted);
-    if (!parsed.success) {
+    // Members may be registry references ({ handle, ref: "registry" }) — the
+    // composition feature. They are resolved to real manifests here, before the
+    // strict schema and the graph validator ever see the nest.
+    const loose = nestInputSchema.safeParse(submitted);
+    if (!loose.success) {
       return errorJson(422, "nest manifest failed validation", {
-        issues: parsed.error.issues.slice(0, 12).map((issue) => `${issue.path.join(".")}: ${issue.message}`),
+        issues: loose.error.issues.slice(0, 12).map((issue) => `${issue.path.join(".")}: ${issue.message}`),
       });
     }
+    let hydrated;
+    try {
+      hydrated = await hydrateNestMembers(loose.data);
+    } catch (error) {
+      if (error instanceof UnresolvedFinchError) {
+        return errorJson(422, error.message, { unresolved: error.handles });
+      }
+      throw error;
+    }
+    const parsed = { success: true as const, data: hydrated };
     // Bounds a key does not lift: one request must not be able to schedule an
     // unbounded amount of paid inference.
     if (parsed.data.finches.length > 8 || parsed.data.tasks.length > 12) {
@@ -73,7 +87,12 @@ export async function POST(request: Request): Promise<Response> {
     return errorJson(submitted === undefined ? 500 : 422, "nest graph is invalid", { issues: graphIssues });
   }
 
-  const resolved = resolveProviderFromEnv();
+  // Every configured provider whose key the probe has NOT seen rejected,
+  // cheapest first. A rate limit on one hands the task to the next; a dead
+  // key is never in the chain, so a parallel burst cannot all walk into it.
+  const live = await resolveLiveChain();
+  const chain = live.chain;
+  const resolved = chain[0] ?? null;
   if (!resolved) {
     return errorJson(503, "model compute is not configured in this environment", {
       configured: false,
@@ -85,6 +104,15 @@ export async function POST(request: Request): Promise<Response> {
   const manifest = objective && objective.trim().length > 3
     ? { ...preset, identity: { ...preset.identity, objective: objective.trim().slice(0, 500) } }
     : preset;
+
+  // A free tier is a per-minute token budget; fanning three tool-heavy finches
+  // out at once exhausts it on the first turn and the nest halts having done
+  // nothing. Run one at a time on free tiers, and say so in the stream.
+  const parallelism = effectiveParallelism(live, manifest.executionPolicy.maxParallel);
+  const executable = {
+    ...manifest,
+    executionPolicy: { ...manifest.executionPolicy, maxParallel: parallelism.value },
+  };
 
   const runId = `run_${crypto.randomUUID()}`;
   const encoder = new TextEncoder();
@@ -116,11 +144,17 @@ export async function POST(request: Request): Promise<Response> {
 
       const startedMs = Date.now();
       try {
-        const finished = await runNest(manifest, {
+        send({
+          type: "run.config",
+          providers: chain.map((entry) => entry.spec.id),
+          excluded: live.excluded,
+          parallelism: { requested: manifest.executionPolicy.maxParallel, effective: parallelism.value, reason: parallelism.reason },
+        } as unknown as NestEvent);
+        const finished = await runNest(executable, {
           runId,
           // Every member finch runs on the configured provider; the manifest
           // names a model, the environment decides who serves it.
-          resolveProvider: () => resolved.provider,
+          resolveProvider: () => withFailover(chain),
           hatchOptions: () => ({ flightpath }),
           onEvent: send,
           signal: abort.signal,

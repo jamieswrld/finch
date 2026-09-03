@@ -1,5 +1,5 @@
 import { hatchFromManifest } from "@finch/sdk";
-import { resolveProviderFromEnv } from "@finch/providers";
+import { resolveLiveChain, withFailover } from "@finch/providers";
 import { recordRun } from "@finch/db";
 import { errorJson, json, rateLimit, readJsonBody, safeErrorMessage } from "@/lib/server/http";
 import { getSchoolPreset } from "@/lib/school-presets";
@@ -36,10 +36,12 @@ export async function POST(request: Request): Promise<Response> {
   // Any configured provider works; free tiers are preferred automatically.
   // Pass the manifest's provider/model as a PAIR. Forwarding the model id
   // alone sent a Hyperbolic model name to Groq, which 404s.
-  const resolved = resolveProviderFromEnv({
+  const live = await resolveLiveChain({
     provider: preset.manifest.model.provider,
     model: preset.manifest.model.model,
   });
+  const chain = live.chain;
+  const resolved = chain[0] ?? null;
   if (!resolved) {
     return errorJson(503, "model compute is not configured in this environment", {
       configured: false,
@@ -48,7 +50,7 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   try {
-    const nest = await hatchFromManifest(preset.manifest, { provider: resolved.provider });
+    const nest = await hatchFromManifest(preset.manifest, { provider: withFailover(chain) });
     const startedMs = Date.now();
     const startedAt = new Date().toISOString();
     const result = await nest.run(trimmed);

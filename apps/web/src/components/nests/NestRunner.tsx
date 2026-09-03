@@ -153,6 +153,14 @@ function Inspector({ task }: { task: TaskRecord }) {
   );
 }
 
+/** Sent by /api/nests/run before the first task, so the run explains its own shape. */
+interface RunConfig {
+  type: "run.config";
+  providers: string[];
+  excluded: string[];
+  parallelism: { requested: number; effective: number; reason: string };
+}
+
 export function NestRunner({ manifest }: { manifest: NestManifest }) {
   // Whatever host the visitor is on — so a copied command targets the site
   // they are looking at, not a hardcoded domain that may not be theirs.
@@ -160,6 +168,11 @@ export function NestRunner({ manifest }: { manifest: NestManifest }) {
 
   const [objective, setObjective] = useState(manifest.identity.objective);
   const [run, setRun] = useState<NestRunState | null>(null);
+  // Emitted by the route before the nest starts: which providers are live,
+  // which were excluded for a rejected key, and whether the run fans out or
+  // goes one task at a time — and why. A run that silently went sequential
+  // would look slow for no reason; this says the reason.
+  const [config, setConfig] = useState<RunConfig | null>(null);
   const [phase, setPhase] = useState<"idle" | "running" | "done" | "error" | "not-configured">("idle");
   const [message, setMessage] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -168,7 +181,10 @@ export function NestRunner({ manifest }: { manifest: NestManifest }) {
   const finishedRef = useRef(false);
 
   const applyEvent = useCallback((event: NestEvent) => {
-    if (event.type === "nest.started") {
+    if ((event as { type: string }).type === "run.config") {
+      // Route-level event, not part of the SDK's union: the run's shape.
+      setConfig(event as unknown as RunConfig);
+    } else if (event.type === "nest.started") {
       setRun(event.run);
       setSelectedId((current) => current ?? event.run.tasks[0]?.id ?? null);
     } else if (event.type === "task.status") {
@@ -195,6 +211,7 @@ export function NestRunner({ manifest }: { manifest: NestManifest }) {
     setPhase("running");
     setMessage(null);
     setRun(null);
+    setConfig(null);
     finishedRef.current = false;
     const controller = new AbortController();
     abortRef.current = controller;
@@ -277,6 +294,13 @@ export function NestRunner({ manifest }: { manifest: NestManifest }) {
         <Badge tone="sage">read-only</Badge>
         <Badge tone="grey">{manifest.finches.length} finches</Badge>
         <Badge tone="grey">{manifest.tasks.length} tasks</Badge>
+        {config && (
+          <span title={config.parallelism.reason}>
+            <Badge tone={config.parallelism.effective > 1 ? "green" : "grey"}>
+              {config.parallelism.effective > 1 ? "parallel" : "sequential"} · {config.providers.join(" → ")}
+            </Badge>
+          </span>
+        )}
         {run && (
           <span className="font-mono text-[10.5px] uppercase tracking-[0.08em] text-grey tnum">
             {doneCount}/{run.tasks.length} done · {run.totalCost.inputTokens}→{run.totalCost.outputTokens} tok

@@ -126,7 +126,7 @@ function BottomBar() {
         </a>
         <div className="flex items-center gap-4 font-mono text-[9.5px] uppercase tracking-[0.14em]">
           <a
-            href="https://x.com/finchdotfun"
+            href="https://x.com/finchnests"
             target="_blank"
             rel="noopener noreferrer"
             className="text-grey transition-colors hover:text-ink"

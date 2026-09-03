@@ -187,8 +187,7 @@ const nest = await createFinch("my-finch")
             </dl>
             {listing.source === "builtin" && (
               <p className="mt-3 text-[11.5px] leading-relaxed text-gold-deep">
-                Seed listing — these usage figures are sample data, not measured traffic. Published listings report
-                metered calls.
+                Builtin listing — call counts are measured from real runs. Uptime is not measured yet, so it is not shown.
               </p>
             )}
           </section>

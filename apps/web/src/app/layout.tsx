@@ -35,8 +35,8 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: TITLE,
     description: DESCRIPTION,
-    site: "@finchdotfun",
-    creator: "@finchdotfun",
+    site: "@finchnests",
+    creator: "@finchnests",
   },
   robots: { index: true, follow: true },
 };

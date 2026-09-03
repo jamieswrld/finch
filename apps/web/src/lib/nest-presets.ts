@@ -1,4 +1,5 @@
 import { nestManifestSchema, type NestFinch, type NestManifest } from "@finch/sdk";
+import { SCHOOL_PRESETS } from "./school-presets";
 
 /**
  * Preset nests — real, runnable coordinated swarms.
@@ -51,6 +52,23 @@ function member(input: {
   } as NestFinch;
 }
 
+/**
+ * A member drawn from the registry by handle — the same finch a visitor can
+ * open and run in Flight School, composed into a nest unchanged. This is
+ * what "a nest of everyone's finches" means in practice: the manifests are
+ * shared, and the nest is just the coordination around them.
+ */
+function refMember(handle: string, role?: string): NestFinch {
+  const preset = SCHOOL_PRESETS.find((entry) => entry.slug === handle);
+  if (!preset) throw new Error(`refMember: no builtin finch "${handle}"`);
+  return {
+    handle,
+    name: preset.title,
+    role: role ?? preset.blurb,
+    manifest: { ...preset.manifest, identity: { ...preset.manifest.identity, instructions: preset.manifest.identity.instructions + HONESTY } },
+  } as NestFinch;
+}
+
 function nest(input: {
   id: string;
   name: string;
@@ -59,6 +77,8 @@ function nest(input: {
   coordinatorInstructions: string;
   finches: NestFinch[];
   tasks: NestManifest["tasks"];
+  /** Tool-heavy members on a free tier need longer than the default. */
+  taskTimeoutMs?: number;
 }): NestManifest {
   return nestManifestSchema.parse({
     schema: "nest.manifest/0.1",
@@ -66,7 +86,7 @@ function nest(input: {
     coordinator: { model: { ...MODEL, temperature: 0.2 }, instructions: input.coordinatorInstructions, synthesize: true },
     finches: input.finches,
     tasks: input.tasks,
-    executionPolicy: { mode: "preview", maxParallel: 3, maxTotalTokens: 120_000, maxTaskFailures: 2, taskTimeoutMs: 120_000 },
+    executionPolicy: { mode: "preview", maxParallel: 3, maxTotalTokens: 120_000, maxTaskFailures: 2, taskTimeoutMs: input.taskTimeoutMs ?? 120_000 },
   });
 }
 
@@ -155,6 +175,7 @@ const chainIntelligence = nest({
 
 const ponsIntelligence = nest({
   id: "pons-intelligence",
+  taskTimeoutMs: 240_000,
   name: "Pons Intelligence Nest",
   objective: "Monitor new Pons launches, analyze their structure, liquidity and activity, and alert when they match criteria.",
   description: "Pons status → launch structure → holder/liquidity reading → risk → alert.",
@@ -166,7 +187,7 @@ const ponsIntelligence = nest({
       name: "Pons Scout",
       role: "Checks Pons integration status and launch surface.",
       instructions:
-        "You are Pons Scout. Call pons_status and report whether the Pons integration is configured. State Finch's creator tax (3% / 300 bps) and that Pons protocol fees are separate and not Finch revenue. If unconfigured, say plainly that no live launch data is available yet and list exactly which parameters are missing.",
+        "You are Pons Scout. Call pons_status. Report whether the integration is configured and, if a factoryCandidate is present, say exactly this: a launcher contract exists onchain at that address, it is unverified, and the 3% (300 bps) creator-tax guarantee cannot be checked against it yet. State that Finch's creator tax is 3% and that Pons protocol fees are separate. Do not describe launch mechanics you did not read.",
       tools: ["pons_status", "pons_creator_tax"],
     }),
     member({
@@ -174,16 +195,16 @@ const ponsIntelligence = nest({
       name: "Structure Analyst",
       role: "Reads token structure for a launch candidate.",
       instructions:
-        "You are Structure Analyst. If a token address is provided in the objective, call token_data on it and report name, symbol, decimals and total supply. If none is provided or Pons is unconfigured, describe precisely which structural signals you would read (supply concentration, mint authority, transfer restrictions) and which tool call each requires.",
-      tools: ["token_data", "contract_read"],
+        "You are Structure Analyst. Extract the token address from the objective. Call token_profile and token_data, then token_holders with limit 10. Report name, symbol, decimals, total supply, holder count, price/market cap/24h volume where present, and the top holders with share of supply, marking which are contracts. If no address is in the objective, say exactly that and stop.",
+      tools: ["token_profile", "token_data", "token_holders"],
     }),
     member({
       handle: "liquidity-analyst",
       name: "Liquidity Analyst",
       role: "Assesses liquidity depth and lock structure.",
       instructions:
-        "You are Liquidity Analyst. Describe the liquidity profile you can establish from available reads, and state clearly which liquidity facts require the Pons contracts that are not yet published. Never estimate depth you cannot read.",
-      tools: ["token_data", "contract_read"],
+        "You are Liquidity Analyst. Extract the token address from the objective and call token_pools ONCE — it finds the pools and reads them. For each pool: name, the two tokens, each balance (that is the depth), fee tier, spot price, and the pool's share of the token's supply. Then call token_profile and, if it has a USD price, state the pool's USD depth as balance times price, citing both. Report unidentified contract holders as exactly that. If no pool was found, say so; never estimate depth.",
+      tools: ["token_pools", "token_profile"],
     }),
     member({
       handle: "risk-finch",
@@ -348,7 +369,50 @@ const tokenDueDiligence = nest({
   ],
 });
 
-export const NEST_PRESETS: NestManifest[] = [chainIntelligence, ponsIntelligence, rwaResearch, addressWatch, tokenDueDiligence];
+// ── 6. Network Due Diligence — everyone's finches, one objective, in parallel ─
+//
+// The giga-brain: the registry's own analysts composed into one nest by
+// reference, fanned out on a single token at once, then synthesized. Every
+// member is a finch a visitor can open and run alone; here they work together.
+
+const networkDd = nest({
+  id: "network-dd",
+  taskTimeoutMs: 240_000,
+  name: "Network Due Diligence Nest",
+  objective: "Full due diligence on a token on Robinhood Chain: chain context, token structure, deployer profile, liquidity, and a cited verdict.",
+  description: "Chain Pulse ∥ Token Inspector ∥ Wallet Analyst → synthesis. Composed by reference from registry finches. Set the objective to a token address.",
+  coordinatorInstructions:
+    "Write a due-diligence memo on the token named in the objective, built only from the channels. Sections: chain conditions, token structure and concentration, deployer profile, liquidity, verdict. Each figure cites its channel. The verdict is one of: PROCEED / CAUTION / INSUFFICIENT DATA, with the exact facts that decided it. If the objective contains no token address, say so and stop.",
+  finches: [
+    refMember("chain-pulse", "Reads live and cumulative chain conditions."),
+    refMember("token-inspector", "Profiles the token: supply, holders, concentration, activity."),
+    refMember("wallet-analyst", "Profiles the token's contract and its deployer."),
+    member({
+      handle: "dd-synthesis",
+      name: "DD Synthesis Finch",
+      role: "Reads every channel and writes the verdict section.",
+      instructions:
+        "You are DD Synthesis Finch. You receive chain conditions, the token profile, and the deployer profile. Write the verdict section: list the decisive facts with their channel, then one of PROCEED / CAUTION / INSUFFICIENT DATA. A missing input is a fact that lowers confidence, not a gap to fill. No tools.",
+      tools: [],
+      temperature: 0.1,
+    }),
+  ],
+  tasks: [
+    { id: "t1", finch: "chain-pulse", title: "Read chain conditions", instruction: "Report current and cumulative Robinhood Chain conditions relevant to trading and execution.", dependsOn: [], outputChannel: "dd.chain" },
+    { id: "t2", finch: "token-inspector", title: "Inspect the token", instruction: "Inspect the token named in the objective: profile, top holders with concentration, recent transfers.", dependsOn: [], outputChannel: "dd.token" },
+    { id: "t3", finch: "wallet-analyst", title: "Profile the contract and deployer", instruction: "Profile the token contract address named in the objective with wallet_profile, then profile its creator address if one is reported.", dependsOn: [], outputChannel: "dd.deployer" },
+    {
+      id: "t4",
+      finch: "dd-synthesis",
+      title: "Write the verdict",
+      instruction: "Chain:\n{{dd.chain}}\n\nToken:\n{{dd.token}}\n\nDeployer:\n{{dd.deployer}}\n\nWrite the verdict section.",
+      dependsOn: ["t1", "t2", "t3"],
+      outputChannel: "dd.verdict",
+    },
+  ],
+});
+
+export const NEST_PRESETS: NestManifest[] = [chainIntelligence, ponsIntelligence, rwaResearch, addressWatch, tokenDueDiligence, networkDd];
 
 export function getNestPreset(id: string): NestManifest | undefined {
   return NEST_PRESETS.find((preset) => preset.identity.id === id);

@@ -7,6 +7,7 @@ import {
   readContractVerification,
   readTokenHolders,
   readTokenList,
+  readTokenPools,
   readTokenProfile,
   readTokenTransfers,
   readTransaction,
@@ -14,6 +15,7 @@ import {
   readWalletProfile,
   readWalletTransactions,
 } from "./explorer.ts";
+import { readPoolState } from "./pool.ts";
 import { creatorTaxOn, getPonsConfig, FINCH_CREATOR_TAX_BPS } from "./pons.ts";
 import { loadApprovedRwaAssets } from "./rwa.ts";
 
@@ -78,6 +80,24 @@ export const FLIGHTPATH_TOOLS: FlightpathToolMeta[] = [
         blockNumber: { type: "string", pattern: "^[0-9]+$", description: "decimal block number; omit for latest" },
       },
     },
+  },
+  {
+    name: "token_pools",
+    mode: "read",
+    category: "explorer",
+    risk: "none",
+    description:
+      "Find where a token's liquidity is, in one step: takes its largest holders, keeps the contracts, identifies verified Pool/Pair contracts, and reads each pool's tokens, balances (depth), fee tier and spot price. Unverified contract holders are listed as unidentified — they might be pools, locks or treasuries and this cannot tell which. Also reports the token's share of supply each pool holds.",
+    inputSchema: { type: "object", properties: { token: address, limit: { type: "string", pattern: "^[0-9]{1,2}$", description: "how many top holders to scan, 1-50; default 20" } }, required: ["token"] },
+  },
+  {
+    name: "pool_state",
+    mode: "read",
+    category: "network",
+    risk: "none",
+    description:
+      "Read a Uniswap V3 pool straight off the chain: both tokens with symbol and decimals, the pool's balance of each (the depth figure), fee tier, and spot price each way. Use token_holders to find a token's pool contracts first. No USD is computed — combine with a price you read elsewhere and cite both.",
+    inputSchema: { type: "object", properties: { pool: address }, required: ["pool"] },
   },
 
   // ── Explorer reads — what HAPPENED, indexed by Blockscout ─────────────────
@@ -425,6 +445,8 @@ export function createFlightpathTools(fp: Flightpath, selection?: string[]): Exe
       return flat(await readTransaction(hash, fp.target));
     },
     contract_verified: async (args) => flat(await readContractVerification(addr(args, "address"), fp.target)),
+    token_pools: async (args) => flat(await readTokenPools(addr(args, "token"), lim(args, 20), fp.target)),
+    pool_state: async (args) => flat(await readPoolState(addr(args, "pool"), fp.target)),
     block_read: async (args) => {
       const blockNumber = typeof args.blockNumber === "string" ? BigInt(args.blockNumber) : undefined;
       const block = await fp.publicClient.getBlock(

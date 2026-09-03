@@ -24,6 +24,7 @@ export {
   isProviderConfigured,
   providerFrom,
   providerStatus,
+  resolveProviderChain,
   resolveProviderFromEnv,
   type ModelPreference,
   type ProviderCost,
@@ -65,3 +66,6 @@ export function resolveModel(
       throw new Error(`resolveModel: unknown provider "${ref.provider}". Register it in @finch/providers.`);
   }
 }
+export { clearDeadProviders, withFailover } from "./failover.ts";
+export { clearProbeCache, probeProvider, probeProviders, type ProbeStatus, type ProviderProbe } from "./probe.ts";
+export { effectiveParallelism, resolveLiveChain, type LiveChain } from "./live.ts";

@@ -2,6 +2,8 @@ import { aviaryCategorySchema, aviaryListingSchema, getCollections, isDbConfigur
 import { REGISTRY_LISTINGS, withRunCounts } from "@/lib/registry";
 import { listRuns } from "@finch/db";
 import { errorJson, json, rateLimit, readJsonBody, safeErrorMessage } from "@/lib/server/http";
+import { describeGate, checkPublisher } from "@/lib/server/publish-gate";
+import { resolveIdentity } from "@/lib/server/identity";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -78,6 +80,16 @@ export async function POST(request: Request): Promise<Response> {
 
   const body = await readJsonBody(request);
   if (!body.ok) return body.response;
+
+  const identity = await resolveIdentity(request);
+  if (!identity.owner) return errorJson(401, "publishing requires a publisher key — send it as x-finch-key");
+  // The one token-gated action on Finch. Locked until $FINCH exists; a hold
+  // check on the publisher's wallet once it does. Never silently open.
+  const gate = describeGate();
+  if (gate.state !== "open") return errorJson(423, gate.reason, { gate });
+  const verdict = await checkPublisher((body.body as { publisher?: string })?.publisher);
+  if (!verdict.ok) return errorJson(verdict.status, verdict.reason, { gate: verdict.gate, balance: verdict.balance ?? null });
+
 
   const parsed = aviaryListingSchema
     .omit({ createdAt: true, source: true, stats: true, verified: true })

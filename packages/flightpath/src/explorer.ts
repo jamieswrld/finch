@@ -1,4 +1,5 @@
 import { getFlightpathTarget, type FlightpathTarget } from "./chain.ts";
+import { readPoolState, type PoolState } from "./pool.ts";
 
 /**
  * Blockscout explorer reads for Robinhood Chain.
@@ -540,4 +541,57 @@ export async function readContractVerification(
       language: r.data.language ?? null,
     },
   };
+}
+
+
+// ── Pools ──────────────────────────────────────────────────────────────────
+
+export interface TokenPool {
+  pool: string;
+  name: string | null;
+  /** The pool's share of the token's supply, from the holder list. */
+  supplyPct: number | null;
+  state: PoolState | null;
+  error?: string;
+}
+
+/**
+ * Where a token's liquidity actually is, found rather than declared.
+ *
+ * A token's largest holders that are contracts are, very often, its pools.
+ * This takes the top holders, keeps the contracts, asks the explorer what each
+ * one is, and reads V3 state from any whose verified name says Pool or Pair.
+ * One tool call. Previously a finch was asked to do this itself — holders,
+ * then a verification per contract, then a pool read — and ran out of tool
+ * steps before reaching the answer.
+ *
+ * Unnamed contracts are reported as unidentified, not guessed at: an
+ * unverified contract holding 9M tokens could be a pool, a lock, or a
+ * treasury, and nothing here can tell which.
+ */
+export async function readTokenPools(
+  token: string,
+  limit = 20,
+  target = getFlightpathTarget(),
+): Promise<ExplorerResult<{ pools: TokenPool[]; unidentifiedContracts: Array<{ address: string; supplyPct: number | null }>; contractsChecked: number }>> {
+  const holders = await readTokenHolders(token, limit, target);
+  if (!holders.data) return { ...holders, data: null };
+  const contracts = holders.data.holders.filter((h) => h.isContract);
+  const verified = await Promise.all(contracts.map((h) => readContractVerification(h.address, target)));
+
+  const pools: TokenPool[] = [];
+  const unidentified: Array<{ address: string; supplyPct: number | null }> = [];
+  await Promise.all(
+    contracts.map(async (holder, index) => {
+      const name = verified[index]?.data?.name ?? holder.label ?? null;
+      if (name && /pool|pair/i.test(name)) {
+        const state = await readPoolState(holder.address, target);
+        pools.push({ pool: holder.address, name, supplyPct: holder.supplyPct, state: state.data, error: state.error });
+      } else {
+        unidentified.push({ address: holder.address, supplyPct: holder.supplyPct });
+      }
+    }),
+  );
+  pools.sort((a, b) => (b.supplyPct ?? 0) - (a.supplyPct ?? 0));
+  return { reachable: true, source: holders.source, data: { pools, unidentifiedContracts: unidentified, contractsChecked: contracts.length } };
 }

@@ -88,8 +88,8 @@ export function RunHistory({ limit = 8 }: { limit?: number }) {
         {state.status === "ready" && state.data.source === "memory" && state.data.runs.length > 0 && (
           <p className="mt-3 text-[11px] leading-relaxed text-gold-deep">
             {state.data.degraded
-              ? "The configured database is unreachable, so this history is being held in memory and will be lost on restart."
-              : "No database configured — this history lives in memory and is lost on restart. Set MONGODB_URI to make it durable."}
+              ? "The configured database is unreachable, so this history is being held in memory on a single server instance. It is not shared between instances and can disappear between requests."
+              : "No database configured — this history lives in memory on one server instance, is not shared between instances, and can disappear between requests. Set MONGODB_URI to make it durable."}
           </p>
         )}
       </div>

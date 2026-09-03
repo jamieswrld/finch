@@ -3,6 +3,7 @@ import {
   createFlightpath,
   createFlightpathTools,
   MemoryExecutionSink,
+  narrowPolicy,
   type Allowance,
   type ExecutableTool,
   type ExecutionRecord,
@@ -131,7 +132,11 @@ export class Nest {
     // signing-capable instance, derive() re-binds it to the MANIFEST policy
     // without ever surfacing the operator key.
     const baseFp = options.flightpath ?? createFlightpath({ sink, agentId: manifest.identity.handle });
-    const policy = await resolveWalletPolicy(manifest, baseFp);
+    // A manifest is untrusted: it is imported, forked and published by anyone
+    // through the Aviary. Intersect what it asks for with what the host
+    // actually granted, so hatching can only ever narrow authority.
+    const requested = await resolveWalletPolicy(manifest, baseFp);
+    const policy = narrowPolicy(baseFp.policy, requested);
     const effectiveFp = baseFp.derive({ policy, sink, agentId: manifest.identity.handle });
 
     let toolNames = manifest.tools.flightpath;

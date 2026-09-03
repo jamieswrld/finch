@@ -40,6 +40,7 @@ export {
   type PolicyRuleId,
   type Allowance,
   type SpendTracker,
+  narrowPolicy,
   type WalletMode,
   type WalletPolicy,
 } from "./policy.ts";

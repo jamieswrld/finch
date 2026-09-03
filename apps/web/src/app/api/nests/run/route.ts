@@ -2,7 +2,7 @@ import { resolveProviderFromEnv } from "@finch/providers";
 import { runNest, validateTaskGraph, type NestEvent } from "@finch/sdk";
 import { createFlightpath } from "@finch/flightpath";
 import { recordRun } from "@finch/db";
-import { errorJson, rateLimit, readJsonBody } from "@/lib/server/http";
+import { errorJson, rateLimit, readJsonBody, safeErrorMessage } from "@/lib/server/http";
 import { getNestPreset } from "@/lib/nest-presets";
 
 export const runtime = "nodejs";
@@ -129,7 +129,7 @@ export async function POST(request: Request): Promise<Response> {
             totalCost: { inputTokens: 0, outputTokens: 0 },
             startedAt: new Date().toISOString(),
             finishedAt: new Date().toISOString(),
-            haltReason: error instanceof Error ? error.message.slice(0, 300) : "nest run failed",
+            haltReason: safeErrorMessage(error, 300),
           },
         });
       } finally {

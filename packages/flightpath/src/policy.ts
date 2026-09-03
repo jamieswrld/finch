@@ -40,10 +40,83 @@ export const OBSERVER_POLICY: WalletPolicy = {
   allowedContracts: [],
 };
 
+/** Authority ordering: a manifest may move down this list, never up. */
+const MODE_RANK: Record<WalletMode, number> = { none: 0, observer: 1, operator: 2 };
+
+/**
+ * Intersect a requested policy with the policy the host actually granted.
+ *
+ * A manifest is untrusted input — it is imported, forked and published by
+ * anyone through the Aviary. Binding a host's signer to the manifest's own
+ * policy would let a downloaded JSON file set its own spend caps and drop the
+ * host's recipient allowlist, which is the whole permission model inverted.
+ *
+ * Every field narrows and none widens:
+ *  · mode takes the lower authority of the two
+ *  · perDay / perTx take the smaller cap; an asset the host never allowed
+ *    cannot be introduced by the manifest
+ *  · allowlists intersect, and a host list stays in force when the manifest
+ *    omits one (an absent list means "no further restriction", never "no
+ *    restriction at all")
+ *  · approvalThreshold takes the stricter (lower) value
+ *  · rwaApprovedOnly is sticky: once the host requires it, a manifest cannot
+ *    waive it
+ */
+export function narrowPolicy(host: WalletPolicy, requested: WalletPolicy): WalletPolicy {
+  const lower = (a: Address[], b: Address[]) => {
+    const set = new Set(b.map((entry) => entry.toLowerCase()));
+    return a.filter((entry) => set.has(entry.toLowerCase()));
+  };
+
+  const allowances: Allowance[] = [];
+  for (const grant of host.allowances) {
+    const asked = requested.allowances.find(
+      (entry) => String(entry.asset).toLowerCase() === String(grant.asset).toLowerCase(),
+    );
+    if (!asked) continue; // the manifest did not ask for this asset
+    const perDay = asked.perDay < grant.perDay ? asked.perDay : grant.perDay;
+    const hostTx = grant.perTx ?? grant.perDay;
+    const askedTx = asked.perTx ?? asked.perDay;
+    const perTx = askedTx < hostTx ? askedTx : hostTx;
+    allowances.push({ asset: grant.asset, perDay, perTx });
+  }
+
+  const recipients =
+    host.allowedRecipients === undefined
+      ? requested.allowedRecipients
+      : requested.allowedRecipients === undefined
+        ? host.allowedRecipients
+        : lower(host.allowedRecipients, requested.allowedRecipients);
+
+  const thresholds = [host.approvalThreshold, requested.approvalThreshold].filter(
+    (value): value is number => typeof value === "number",
+  );
+
+  return {
+    mode: MODE_RANK[requested.mode] < MODE_RANK[host.mode] ? requested.mode : host.mode,
+    allowances,
+    allowedContracts: lower(host.allowedContracts, requested.allowedContracts),
+    allowedRecipients: recipients,
+    approvalThreshold: thresholds.length > 0 ? Math.min(...thresholds) : undefined,
+    rwaApprovedOnly: host.rwaApprovedOnly === false ? requested.rwaApprovedOnly : true,
+  };
+}
+
 /** Tracks realized spend so daily allowances mean something across restarts. */
 export interface SpendTracker {
   spentInWindow(asset: "native" | Address, windowMs: number): Promise<bigint>;
   recordSpend(asset: "native" | Address, amount: bigint, at?: Date): Promise<void>;
+  /**
+   * Atomically debit `amount` only if it still fits under `cap` for the
+   * window. Returns false when it does not.
+   *
+   * evaluate() reads the spend and later code writes it, and between those two
+   * points any number of concurrent executions can read the same figure and
+   * all conclude they fit — check-then-act, so N executions each just under
+   * the cap spend N times the cap. This collapses the read and the write into
+   * one step, and executeIntent calls it immediately before broadcasting.
+   */
+  reserveSpend?(asset: "native" | Address, amount: bigint, windowMs: number, cap: bigint): Promise<boolean>;
 }
 
 export class MemorySpendTracker implements SpendTracker {
@@ -59,6 +132,26 @@ export class MemorySpendTracker implements SpendTracker {
 
   async recordSpend(asset: "native" | Address, amount: bigint, at?: Date): Promise<void> {
     this.entries.push({ asset: asset.toLowerCase(), amount, at: (at ?? new Date()).getTime() });
+  }
+
+  /**
+   * Atomic by construction: no await separates the read from the write, so
+   * JS runs it to completion without yielding to a racing caller.
+   */
+  async reserveSpend(
+    asset: "native" | Address,
+    amount: bigint,
+    windowMs: number,
+    cap: bigint,
+  ): Promise<boolean> {
+    const cutoff = Date.now() - windowMs;
+    const key = asset.toLowerCase();
+    const spent = this.entries
+      .filter((entry) => entry.asset === key && entry.at >= cutoff)
+      .reduce((sum, entry) => sum + entry.amount, 0n);
+    if (spent + amount > cap) return false;
+    this.entries.push({ asset: key, amount, at: Date.now() });
+    return true;
   }
 }
 
@@ -215,16 +308,39 @@ export function decodedCounterparty(data: string | undefined): string | undefine
  * Whoever gains the ability to move value as a result of this intent.
  * Returns null only when there is genuinely no distinct counterparty.
  */
+/**
+ * The value legs an intent moves. A contract.write can move two at once:
+ * tokens via calldata and ETH via `value`. Shared so evaluate(), reserveSpend()
+ * and recordSpend() can never disagree about what is being spent.
+ */
+function spendLegs(intent: ExecutionIntent): Array<{ asset: "native" | Address; amount: bigint }> {
+  const decoded = intent.kind === "contract.write" ? decodedSpend(intent.data) : undefined;
+  const legs: Array<{ asset: "native" | Address; amount: bigint }> = [];
+  if (decoded) {
+    legs.push({ asset: intent.to as Address, amount: decoded.amount });
+    if (intent.value > 0n) legs.push({ asset: "native", amount: intent.value });
+  } else if (intent.spendAmount > 0n) {
+    legs.push({ asset: intent.spendAsset, amount: intent.spendAmount });
+  }
+  return legs;
+}
+
 function counterpartyOf(intent: ExecutionIntent): string | null {
+  // Precedence rule: whatever the chain will actually act on wins. `meta` is
+  // supplied by whoever built the intent, so trusting it over the calldata let
+  // a caller name an allowlisted recipient in meta while the bytes paid
+  // somebody else. Meta is only a fallback for intents whose destination is
+  // not recoverable from the transaction itself.
   switch (intent.kind) {
     case "transfer.native":
-      return intent.meta?.recipient ?? intent.to;
+      // The native destination IS intent.to. Nothing in meta can change that.
+      return intent.to;
     case "transfer.erc20":
-      return intent.meta?.recipient ?? decodedCounterparty(intent.data) ?? null;
+      return decodedCounterparty(intent.data) ?? intent.meta?.recipient ?? null;
     case "erc20.approve":
-      return intent.meta?.spender ?? decodedCounterparty(intent.data) ?? null;
+      return decodedCounterparty(intent.data) ?? intent.meta?.spender ?? null;
     case "rwa.interact":
-      return intent.meta?.counterparty ?? decodedCounterparty(intent.data) ?? null;
+      return decodedCounterparty(intent.data) ?? intent.meta?.counterparty ?? null;
     case "swap.exactIn":
       // The router is allowlisted, but the swap's output recipient is not
       // implied by that — read it off the meta the intent builder recorded.
@@ -338,11 +454,15 @@ export class PolicyEngine {
     // Allowance accounting. A raw contract.write carrying ERC20 value is
     // repriced here in the token it actually moves — otherwise it would be
     // scored as a zero-value native call and skip every cap below.
-    const decoded = intent.kind === "contract.write" ? decodedSpend(intent.data) : undefined;
-    const spendAsset = decoded ? (intent.to as Address) : intent.spendAsset;
-    const spendAmount = decoded ? decoded.amount : intent.spendAmount;
+    // A contract.write can move value on two legs at once: ETH attached as
+    // `value`, and tokens moved by the calldata. Repricing used to REPLACE the
+    // native leg with the decoded token leg, so attached ETH escaped every cap.
+    // Both are now checked, each against its own allowance.
+    const legs = spendLegs(intent);
 
-    if (spendAmount > 0n) {
+    for (const leg of legs) {
+      const spendAsset = leg.asset;
+      const spendAmount = leg.amount;
       const allowance = policy.allowances.find((entry) => sameAddress(entry.asset, spendAsset));
       if (!allowance) {
         return {
@@ -385,15 +505,40 @@ export class PolicyEngine {
     return { verdict: "allow", rule: "default", reason: "within policy" };
   }
 
-  async recordSpend(intent: ExecutionIntent): Promise<void> {
-    // Same repricing as evaluate(), so what is debited matches what was checked.
-    const decoded = intent.kind === "contract.write" ? decodedSpend(intent.data) : undefined;
-    if (decoded) {
-      await this.spendTracker.recordSpend(intent.to as Address, decoded.amount);
-      return;
+  /**
+   * Reserve every leg of this intent against the daily caps, atomically.
+   *
+   * Returns null on success, or the rule/reason that refused. Callers MUST
+   * treat a refusal as a hard stop before broadcasting: the reservation is the
+   * real enforcement point, and evaluate()'s earlier check is only a fast fail.
+   */
+  async reserveSpend(intent: ExecutionIntent): Promise<{ rule: string; reason: string } | null> {
+    if (!this.spendTracker.reserveSpend) {
+      // A tracker without atomic reservation cannot protect concurrent spends;
+      // recordSpend still debits, so the cap holds serially but not in a race.
+      await this.recordSpend(intent);
+      return null;
     }
-    if (intent.spendAmount > 0n) {
-      await this.spendTracker.recordSpend(intent.spendAsset, intent.spendAmount);
+    for (const leg of spendLegs(intent)) {
+      const allowance = this.policy.allowances.find((entry) => sameAddress(entry.asset, leg.asset));
+      if (!allowance) {
+        return { rule: "allowance.missing", reason: `no allowance configured for asset ${leg.asset}` };
+      }
+      const ok = await this.spendTracker.reserveSpend(leg.asset, leg.amount, DAY_MS, allowance.perDay);
+      if (!ok) {
+        return {
+          rule: "allowance.daily",
+          reason: `daily allowance for ${leg.asset} would be exceeded by this spend`,
+        };
+      }
+    }
+    return null;
+  }
+
+  async recordSpend(intent: ExecutionIntent): Promise<void> {
+    // Debit exactly the legs evaluate() checked, or the caps drift apart.
+    for (const leg of spendLegs(intent)) {
+      await this.spendTracker.recordSpend(leg.asset, leg.amount);
     }
   }
 }

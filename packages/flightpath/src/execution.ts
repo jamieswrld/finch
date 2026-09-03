@@ -57,12 +57,46 @@ export async function executeIntent(
 ): Promise<ExecutionRecord> {
   const existing = await context.sink.get(id);
   if (existing) {
-    // Replaying any settled or in-flight execution is a no-op.
-    if (existing.state !== "awaiting_approval") return existing;
-    // Parked at the approval gate: ONLY an explicitly recorded human approval
-    // releases it. Re-calling with the same id must never be a way around the
-    // gate, so an un-approved parked record is returned untouched.
+    // Parked at the gate: ONLY resumeApprovedIntent releases it. Re-calling
+    // with the same id must never be a way around the gate.
+    if (existing.state === "awaiting_approval") return existing;
+
+    // An id reserved but wedged before anything was signed is retryable: no
+    // transaction exists, so re-running risks nothing. Without this, a
+    // transient policy-store or sink error burned the execution id forever —
+    // every replay saw a non-"awaiting_approval" state and returned the stub.
+    const retryable =
+      existing.state === "failed" && !existing.tx && existing.error?.stage === "policy";
+    if (retryable) {
+      if (context.sink.claimState) {
+        const won = await context.sink.claimState(id, "failed", "created");
+        if (!won) return (await context.sink.get(id)) ?? existing;
+      }
+      existing.state = "created";
+      existing.error = undefined;
+      push(existing, "retry", "re-entered after an infrastructure failure with nothing broadcast");
+    } else if (existing.state !== "approved") {
+      // Anything settled or already in flight is a no-op replay.
+      return existing;
+    }
+
+    // "approved" is the one releasable state, and exactly one caller may take
+    // it. Claiming it moves the record out of that state before any RPC, so a
+    // replay arriving during simulation finds it already taken. Without this
+    // the record stayed releasable across every await and a second call
+    // broadcast a second transaction against one human approval.
     if (!existing.approval) return existing;
+    if (context.sink.claimState) {
+      const won = await context.sink.claimState(id, "approved", "created");
+      if (!won) return (await context.sink.get(id)) ?? existing;
+      existing.state = "created";
+    } else {
+      push(
+        existing,
+        "sink.no_state_claim",
+        "sink cannot transition states atomically — a concurrent replay of this approval is not protected",
+      );
+    }
   }
 
   // A stored record is authoritative: replaying an id with a different intent
@@ -90,7 +124,20 @@ export async function executeIntent(
   }
 
   // 1. Policy.
-  const decision = await context.policy.evaluate(effectiveIntent);
+  let decision: Awaited<ReturnType<typeof context.policy.evaluate>>;
+  try {
+    decision = await context.policy.evaluate(effectiveIntent);
+  } catch (error) {
+    // The spend tracker may be backed by a database. An outage here must not
+    // silently leave the record in "created" with no explanation and no way
+    // back — mark it retryable and say why.
+    const message = error instanceof Error ? error.message : String(error);
+    record.state = "failed";
+    record.error = { stage: "policy", message };
+    push(record, "policy.unavailable", message.slice(0, 300));
+    await context.sink.save(record).catch(() => {});
+    return record;
+  }
   record.policy = decision;
   if (decision.verdict === "deny") {
     record.state = "denied";
@@ -140,7 +187,23 @@ export async function executeIntent(
     return record;
   }
 
-  // 4. Submission.
+  // 4. Allowance reservation — the real enforcement point.
+  //
+  // evaluate() checked the cap earlier, but that check and the later debit are
+  // separated by simulation, so concurrent executions could all read the same
+  // figure and all decide they fit. Reserving here collapses read and write
+  // into one atomic step at the last moment before value can move.
+  const refusal = await context.policy.reserveSpend(effectiveIntent);
+  if (refusal) {
+    record.state = "failed";
+    record.error = { stage: "policy", message: refusal.reason };
+    push(record, `policy.${refusal.rule}`, refusal.reason);
+    await context.sink.save(record);
+    return record;
+  }
+
+  // 5. Submission.
+  let submittedHash: `0x${string}`;
   if (!context.walletClient || !context.account) {
     record.state = "failed";
     record.error = { stage: "submission", message: "no operator wallet attached (observer mode)" };
@@ -157,15 +220,9 @@ export async function executeIntent(
       value: effectiveIntent.value,
       data: effectiveIntent.data,
     });
-    record.tx = { hash, submittedAt: now() };
-    record.state = "submitted";
-    push(record, "submitted", hash);
-    // Debit the allowance at SUBMISSION, not confirmation: once broadcast the
-    // transaction may land even if we lose the receipt. Counting it late (or
-    // never, on a confirmation timeout) would let an agent overspend its cap.
-    await context.policy.recordSpend(effectiveIntent);
-    await context.sink.save(record);
+    submittedHash = hash;
   } catch (error) {
+    // Nothing was broadcast: this is the only place "failed" is honest.
     const message = error instanceof Error ? error.message : String(error);
     record.state = "failed";
     record.error = { stage: "submission", message };
@@ -174,7 +231,27 @@ export async function executeIntent(
     return record;
   }
 
-  // 5. Confirmation + reconciliation.
+  // ── Past this line a transaction is LIVE on chain. ───────────────────────
+  // Nothing that follows may mark the record "failed": bookkeeping that throws
+  // after a successful broadcast used to do exactly that, reporting a real
+  // transaction as failed AND skipping the allowance debit, which freed the
+  // agent to spend the same budget again.
+  record.tx = { hash: submittedHash, submittedAt: now() };
+  record.state = "submitted";
+  push(record, "submitted", submittedHash);
+
+  // The allowance was already debited by the reservation above, so there is
+  // nothing to record here — and nothing that can fail and leave a live
+  // transaction unaccounted for.
+
+  try {
+    await context.sink.save(record);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    push(record, "sink.save_failed", message.slice(0, 200));
+  }
+
+  // 6. Confirmation + reconciliation.
   try {
     const receipt = await context.publicClient.waitForTransactionReceipt({
       hash: record.tx.hash,
@@ -205,7 +282,15 @@ export async function executeIntent(
     push(record, "confirmation.failed", message.slice(0, 300));
   }
 
-  await context.sink.save(record);
+  try {
+    await context.sink.save(record);
+  } catch (error) {
+    // Same rule as above: the transaction is real whether or not we managed to
+    // write it down. Throwing here would lose the record — and its hash — in
+    // the caller, which is strictly worse than returning it unpersisted.
+    const message = error instanceof Error ? error.message : String(error);
+    push(record, "sink.save_failed", message.slice(0, 200));
+  }
   return record;
 }
 
@@ -254,9 +339,11 @@ export async function resumeApprovedIntent(
     }
   }
 
-  // Stamp the approval onto the record BEFORE re-entering executeIntent —
-  // that stamp is the only thing that opens the gate.
+  // Stamp the approval AND leave the parked state in the same step. The stamp
+  // is what opens the gate; staying in "awaiting_approval" while RPC is in
+  // flight is what used to let a concurrent replay through it.
   record.approval = approval;
+  record.state = "approved";
   record.log.push({ at: now(), event: "approved", detail: `by ${approvedBy}` });
   record.policy = { verdict: "allow", rule: "human.approval", reason: `approved by ${approvedBy}` };
   await context.sink.save(record);

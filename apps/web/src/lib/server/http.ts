@@ -1,3 +1,4 @@
+import { scrubMongoUri } from "@finch/db";
 import { NextResponse } from "next/server";
 
 /** Shared server-route helpers: JSON responses, body guards, rate limiting. */
@@ -67,4 +68,32 @@ export function rateLimit(request: Request, cost = 1): NextResponse | null {
     }
   }
   return null;
+}
+
+/**
+ * The ONLY way an error may reach an HTTP response.
+ *
+ * Driver and transport errors quote their connection target back in the
+ * message: MongoParseError carries `user:password@host`, and viem's HTTP
+ * errors carry the full RPC URL including a provider API key in the path. Every
+ * API route here is unauthenticated, and several are CDN-cached, so pasting a
+ * raw `error.message` into a response publishes whichever credential the failing
+ * client happened to be holding.
+ *
+ * Scrub first, truncate second — truncating a leaked secret still leaks a
+ * usable prefix.
+ */
+export function safeErrorMessage(error: unknown, max = 160): string {
+  if (!(error instanceof Error)) return "unknown error";
+  let message = scrubMongoUri(error.message);
+  message = message.replace(/https?:\/\/[^\s"']+/g, (match) => {
+    try {
+      const parsed = new URL(match);
+      const carriesSecret = parsed.pathname.replace(/\/+$/, "").length > 1 || parsed.search.length > 0;
+      return carriesSecret ? `${parsed.origin}/…` : parsed.origin;
+    } catch {
+      return "[url]";
+    }
+  });
+  return message.slice(0, max);
 }

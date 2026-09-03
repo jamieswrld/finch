@@ -14,6 +14,7 @@ import { useFetch } from "@/lib/use-fetch";
 
 interface ActivityResponse {
   provenance: "live" | "seed" | "empty";
+  registryProvenance?: "live" | "seed" | "empty";
   counts: { finches: number; nests: number; runs: number; tasks: number; proofs: number };
   recent: Array<{ runId: string; kind: string; subject: string; status: string; taskCount: number; mode: string }>;
   guarantees: { policyRules: number; modes: string[] };
@@ -61,10 +62,13 @@ export function WorldTelemetry() {
   const data = state.status === "ready" ? state.data : null;
 
   // Left rail: what the registry holds. Right rail: what it has executed.
+  // The registry half of this rail can be seed rows; the run half never is.
+  // Printing them in one undifferentiated list read as network telemetry.
+  const seeded = (data?.registryProvenance ?? data?.provenance) === "seed";
   const left = data
     ? [
-        `NESTS ${data.counts.nests}`,
-        `FINCHES ${data.counts.finches}`,
+        `NESTS ${data.counts.nests}${seeded ? " ·SEED" : ""}`,
+        `FINCHES ${data.counts.finches}${seeded ? " ·SEED" : ""}`,
         `RUNS ${data.counts.runs}`,
         `TASKS ${data.counts.tasks}`,
         `PROOFS ${data.counts.proofs}`,
@@ -88,7 +92,7 @@ export function WorldTelemetry() {
   return (
     <>
       <div className="absolute left-5 top-1/2 hidden -translate-y-1/2 flex-col gap-3 xl:flex">
-        <TopologySketch nodes={data?.counts.nests ?? 0} />
+        <TopologySketch nodes={seeded ? 0 : (data?.counts.nests ?? 0)} />
         <ul className="space-y-1.5 font-mono text-[9px] tracking-[0.08em] text-grey opacity-70">
           {left.map((line) => (
             <li key={line}>{line}</li>

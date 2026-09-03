@@ -164,6 +164,14 @@ export class Flightpath {
     this.sink = options.sink ?? new MemoryExecutionSink();
   }
 
+  /**
+   * The policy this Flightpath was granted. Exposed so a caller binding an
+   * untrusted manifest can intersect against it instead of replacing it.
+   */
+  get policy(): WalletPolicy {
+    return this.options.policy ?? OBSERVER_POLICY;
+  }
+
   get operatorAddress(): Address | undefined {
     return this.account?.address;
   }

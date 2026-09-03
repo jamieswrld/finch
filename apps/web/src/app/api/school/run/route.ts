@@ -1,7 +1,7 @@
 import { hatchFromManifest } from "@finch/sdk";
 import { resolveProviderFromEnv } from "@finch/providers";
 import { recordRun } from "@finch/db";
-import { errorJson, json, rateLimit, readJsonBody } from "@/lib/server/http";
+import { errorJson, json, rateLimit, readJsonBody, safeErrorMessage } from "@/lib/server/http";
 import { getSchoolPreset } from "@/lib/school-presets";
 
 export const runtime = "nodejs";
@@ -34,7 +34,12 @@ export async function POST(request: Request): Promise<Response> {
   if (trimmed.length === 0) return errorJson(400, "input is empty");
 
   // Any configured provider works; free tiers are preferred automatically.
-  const resolved = resolveProviderFromEnv(preset.manifest.model.model);
+  // Pass the manifest's provider/model as a PAIR. Forwarding the model id
+  // alone sent a Hyperbolic model name to Groq, which 404s.
+  const resolved = resolveProviderFromEnv({
+    provider: preset.manifest.model.provider,
+    model: preset.manifest.model.model,
+  });
   if (!resolved) {
     return errorJson(503, "model compute is not configured in this environment", {
       configured: false,
@@ -92,6 +97,6 @@ export async function POST(request: Request): Promise<Response> {
       })),
     });
   } catch (error) {
-    return errorJson(502, `preview run failed: ${error instanceof Error ? error.message.slice(0, 200) : "unknown"}`);
+    return errorJson(502, `preview run failed: ${safeErrorMessage(error, 200)}`);
   }
 }

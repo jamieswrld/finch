@@ -1,7 +1,7 @@
 import { getFlightpathTarget, getNetworkStatus, getPonsConfig } from "@finch/flightpath";
 import { getDb, isDbConfigured } from "@finch/db";
 import { providerStatus, resolveProviderFromEnv } from "@finch/providers";
-import { json } from "@/lib/server/http";
+import { json, safeErrorMessage } from "@/lib/server/http";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,7 +23,7 @@ export async function GET(): Promise<Response> {
         return {
           configured: true,
           reachable: false as boolean | null,
-          error: error instanceof Error ? error.message.slice(0, 140) : "unknown",
+          error: safeErrorMessage(error, 140),
         };
       }
     })(),

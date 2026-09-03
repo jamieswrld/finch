@@ -37,7 +37,7 @@ export const PROVIDER_CATALOG: ProviderSpec[] = [
     baseUrl: "https://api.groq.com/openai/v1",
     envKey: "GROQ_API_KEY",
     envModel: "GROQ_MODEL",
-    defaultModel: "llama-3.3-70b-versatile",
+    defaultModel: "openai/gpt-oss-120b",
     cost: "free-tier",
     notes: "Free tier with rate limits; very fast inference. Good default for public preview traffic.",
   },
@@ -58,7 +58,7 @@ export const PROVIDER_CATALOG: ProviderSpec[] = [
     envKey: "OPENROUTER_API_KEY",
     envModel: "OPENROUTER_MODEL",
     // OpenRouter marks zero-cost models with a :free suffix.
-    defaultModel: "meta-llama/llama-3.3-70b-instruct:free",
+    defaultModel: "google/gemma-4-31b-it:free",
     cost: "free-tier",
     notes: "Routes to many models; :free variants cost nothing but are rate limited and can be busy.",
   },
@@ -131,6 +131,29 @@ export function providerFrom(spec: ProviderSpec, modelOverride?: string): ModelP
   });
 }
 
+/**
+ * A manifest's declared model, as a provider/model PAIR.
+ *
+ * Model ids are not portable between providers: "meta-llama/Llama-3.3-70B-
+ * Instruct" is a Hyperbolic/Together id and means nothing to Groq, which
+ * answers 404. A manifest that asks for a model on one provider must not have
+ * that id forwarded to whichever provider the environment actually resolves.
+ */
+export interface ModelPreference {
+  provider?: string;
+  model?: string;
+}
+
+/**
+ * The model to use on `spec`: the manifest's choice only when it was asking
+ * for THIS provider, then an operator override, then the provider's own
+ * default.
+ */
+function modelFor(spec: ProviderSpec, preferred?: ModelPreference): string {
+  const portable = preferred?.model && preferred.provider === spec.id ? preferred.model : undefined;
+  return portable ?? readEnv(spec.envModel) ?? spec.defaultModel;
+}
+
 export interface ResolvedProvider {
   provider: ModelProvider;
   spec: ProviderSpec;
@@ -146,13 +169,12 @@ export interface ResolvedProvider {
  * Returns null when nothing is configured, so callers can say so rather than
  * failing obscurely.
  */
-export function resolveProviderFromEnv(modelOverride?: string): ResolvedProvider | null {
+export function resolveProviderFromEnv(preferred?: ModelPreference): ResolvedProvider | null {
   const explicit = readEnv("FINCH_PROVIDER");
   if (explicit) {
     const spec = getProviderSpec(explicit);
     if (spec && isProviderConfigured(spec)) {
-      const model = modelOverride ?? readEnv(spec.envModel) ?? spec.defaultModel;
-      return { provider: providerFrom(spec, model), spec, model };
+      return { provider: providerFrom(spec, modelFor(spec, preferred)), spec, model: modelFor(spec, preferred) };
     }
     return null;
   }
@@ -161,7 +183,7 @@ export function resolveProviderFromEnv(modelOverride?: string): ResolvedProvider
   const candidates = PROVIDER_CATALOG.filter(isProviderConfigured).sort((a, b) => rank[a.cost] - rank[b.cost]);
   const spec = candidates[0];
   if (!spec) return null;
-  const model = modelOverride ?? readEnv(spec.envModel) ?? spec.defaultModel;
+  const model = modelFor(spec, preferred);
   return { provider: providerFrom(spec, model), spec, model };
 }
 

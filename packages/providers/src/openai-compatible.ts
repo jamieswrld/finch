@@ -79,6 +79,38 @@ function parseToolCalls(raw: unknown): ToolCall[] {
  * `hyperbolic()` is built on this; so can any future provider — the escape
  * hatch that keeps Finch from being permanently coupled to a single vendor.
  */
+/**
+ * Let optional tool parameters accept null.
+ *
+ * Models routinely emit `{"blockNumber": null}` to mean "I am not supplying
+ * this", and strict server-side validators (Groq's, for one) reject it against
+ * `type: "string"` with a 400 — killing the whole tool call. Widening every
+ * NON-REQUIRED property to accept null makes that round-trip legal without
+ * loosening anything the tool actually requires; handlers already treat a
+ * non-string as absent.
+ */
+function tolerateNullOptionals(parameters: unknown): unknown {
+  if (!parameters || typeof parameters !== "object") return parameters;
+  const schema = parameters as Record<string, unknown>;
+  const properties = schema.properties as Record<string, Record<string, unknown>> | undefined;
+  if (!properties) return schema;
+
+  const required = new Set(Array.isArray(schema.required) ? (schema.required as string[]) : []);
+  const widened: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(properties)) {
+    if (required.has(key) || !value || typeof value !== "object") {
+      widened[key] = value;
+      continue;
+    }
+    const type = value.type;
+    widened[key] =
+      typeof type === "string" && type !== "null"
+        ? { ...value, type: [type, "null"] }
+        : value;
+  }
+  return { ...schema, properties: widened };
+}
+
 export function openAICompatible(options: OpenAICompatibleOptions): ModelProvider {
   const {
     baseUrl,
@@ -147,7 +179,11 @@ export function openAICompatible(options: OpenAICompatibleOptions): ModelProvide
       if (request.tools?.length) {
         body.tools = request.tools.map((tool) => ({
           type: "function",
-          function: { name: tool.name, description: tool.description, parameters: tool.parameters },
+          function: {
+            name: tool.name,
+            description: tool.description,
+            parameters: tolerateNullOptionals(tool.parameters),
+          },
         }));
       }
       if (request.json) body.response_format = { type: "json_object" };

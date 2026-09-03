@@ -107,6 +107,7 @@ export const executionDocSchema = z.object({
     "simulated",
     "simulation_failed",
     "awaiting_approval",
+    "approved",
     "submitted",
     "confirmed",
     "reverted",
@@ -118,6 +119,13 @@ export const executionDocSchema = z.object({
   tx: z.record(z.unknown()).optional(),
   receipt: z.record(z.unknown()).optional(),
   error: z.record(z.unknown()).optional(),
+  /**
+   * The human approval stamp. This MUST be part of the schema: the sink parses
+   * records through it before writing, so an omitted field is not merely
+   * undocumented — it is silently deleted on every save, and an approved
+   * execution would never open the gate again.
+   */
+  approval: z.object({ approvedBy: z.string(), at: z.string() }).optional(),
   log: z.array(z.object({ at: z.string(), event: z.string(), detail: z.string().optional() })),
 });
 export type ExecutionDoc = z.infer<typeof executionDocSchema>;

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { MemorySpendTracker, POLICY_RULES, PolicyEngine, type WalletPolicy } from "../src/policy.ts";
+import { MemorySpendTracker, POLICY_RULES, PolicyEngine, narrowPolicy, type WalletPolicy } from "../src/policy.ts";
 import type { ExecutionIntent } from "../src/types.ts";
 
 const TOKEN = "0x1111111111111111111111111111111111111111" as const;
@@ -225,4 +225,112 @@ test("POLICY_RULES documents every rule the engine can actually emit", async () 
   }
   // Sanity: we exercised a meaningful spread, not one branch.
   assert.ok(emitted.size >= 8, `expected to exercise at least 8 distinct rules, saw ${emitted.size}`);
+});
+
+test("REGRESSION: a manifest cannot widen the authority the host granted", () => {
+  // hatch() used to bind the host's SIGNER to the MANIFEST's policy, so an
+  // imported finch.json set its own caps and dropped the host's allowlist.
+  const host: WalletPolicy = {
+    mode: "operator",
+    allowances: [{ asset: "native", perDay: 10_000n, perTx: 1_000n }],
+    allowedContracts: [ROUTER],
+    allowedRecipients: [FRIEND],
+    approvalThreshold: 0.5,
+    rwaApprovedOnly: true,
+  };
+  // Everything a hostile manifest would ask for.
+  const greedy: WalletPolicy = {
+    mode: "operator",
+    allowances: [
+      { asset: "native", perDay: 10n ** 21n },
+      { asset: TOKEN, perDay: 10n ** 21n },
+    ],
+    allowedContracts: [ROUTER, RWA],
+    allowedRecipients: undefined,
+    approvalThreshold: 1,
+    rwaApprovedOnly: false,
+  };
+
+  const merged = narrowPolicy(host, greedy);
+
+  assert.equal(merged.allowances.length, 1, "an asset the host never granted cannot be introduced");
+  assert.equal(merged.allowances[0]?.asset, "native");
+  assert.equal(merged.allowances[0]?.perDay, 10_000n, "perDay takes the host cap");
+  assert.equal(merged.allowances[0]?.perTx, 1_000n, "perTx takes the host cap");
+  assert.deepEqual(merged.allowedContracts, [ROUTER], "contracts intersect");
+  assert.deepEqual(merged.allowedRecipients, [FRIEND], "an omitted manifest list must not clear the host's");
+  assert.equal(merged.approvalThreshold, 0.5, "the stricter threshold wins");
+  assert.equal(merged.rwaApprovedOnly, true, "a manifest cannot waive the RWA gate");
+});
+
+test("narrowing works in the direction it is supposed to: a manifest may restrict itself", () => {
+  const host: WalletPolicy = {
+    mode: "operator",
+    allowances: [{ asset: "native", perDay: 10_000n }],
+    allowedContracts: [ROUTER, RWA],
+    approvalThreshold: 0.9,
+  };
+  const modest: WalletPolicy = {
+    mode: "observer",
+    allowances: [{ asset: "native", perDay: 5n }],
+    allowedContracts: [ROUTER],
+    allowedRecipients: [FRIEND],
+    approvalThreshold: 0.1,
+  };
+  const merged = narrowPolicy(host, modest);
+  assert.equal(merged.mode, "observer", "the lower authority wins");
+  assert.equal(merged.allowances[0]?.perDay, 5n);
+  assert.deepEqual(merged.allowedContracts, [ROUTER]);
+  assert.deepEqual(merged.allowedRecipients, [FRIEND], "a manifest may add a restriction the host lacked");
+  assert.equal(merged.approvalThreshold, 0.1);
+});
+
+test("REGRESSION: meta cannot name a friendly recipient while the calldata pays a stranger", async () => {
+  // counterpartyOf preferred intent.meta over the decoded calldata, so a
+  // caller could pass meta.recipient = FRIEND on bytes that transfer to
+  // STRANGER and sail through the allowlist.
+  const engine = new PolicyEngine(operatorPolicy({ allowedRecipients: [FRIEND], allowedContracts: [TOKEN] }));
+  const amount = (1n).toString(16).padStart(64, "0");
+  const decision = await engine.evaluate({
+    kind: "transfer.erc20",
+    summary: "erc20 transfer",
+    to: TOKEN,
+    value: 0n,
+    data: `0xa9059cbb${STRANGER.slice(2).padStart(64, "0")}${amount}` as `0x${string}`,
+    spendAsset: TOKEN,
+    spendAmount: 1n,
+    // The lie:
+    meta: { recipient: FRIEND },
+  });
+  assert.equal(decision.verdict, "deny", "the bytes pay STRANGER, so the bytes decide");
+  assert.equal(decision.rule, "recipients.allowlist");
+});
+
+test("REGRESSION: ETH attached to a token-moving contract.write is still capped", async () => {
+  // Repricing replaced the native leg with the decoded token leg, so `value`
+  // rode along uncapped. Both legs must be priced.
+  const engine = new PolicyEngine(
+    operatorPolicy({
+      allowedContracts: [TOKEN],
+      allowedRecipients: [FRIEND],
+      // Generous in the token, tight in ETH.
+      allowances: [
+        { asset: TOKEN, perDay: 10n ** 24n },
+        { asset: "native", perDay: 100n, perTx: 100n },
+      ],
+    }),
+  );
+  const amount = (1n).toString(16).padStart(64, "0");
+  const decision = await engine.evaluate({
+    kind: "contract.write",
+    summary: "token transfer with ETH attached",
+    to: TOKEN,
+    value: 10n ** 18n, // 1 ETH, far over the 100 wei native cap
+    data: `0xa9059cbb${FRIEND.slice(2).padStart(64, "0")}${amount}` as `0x${string}`,
+    spendAsset: "native",
+    spendAmount: 0n,
+    meta: {},
+  });
+  assert.equal(decision.verdict, "deny", "the attached ETH must be checked against the native allowance");
+  assert.equal(decision.rule, "allowance.perTx");
 });

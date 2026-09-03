@@ -358,3 +358,110 @@ test("a sink without reservation still works, but records that it is unprotected
     "the record must say it ran without concurrency protection rather than implying it had it",
   );
 });
+
+test("REGRESSION: a replay during an in-flight approved resume broadcasts once", async () => {
+  // The gate used to be satisfied by (state === "awaiting_approval" && approval
+  // present). resumeApprovedIntent stamped the approval and left the state
+  // parked, then went off to simulate — so for the whole RPC window the stored
+  // record satisfied both halves, and any concurrent replay of the id walked
+  // straight through to a second broadcast against one human approval.
+  const { context, sends } = harness(NEEDS_APPROVAL);
+
+  // Simulation runs BEFORE the approval gate, so the initial park simulates
+  // too. Only hold the resume's simulation open, or the park deadlocks.
+  let holdEnabled = false;
+  let release: () => void = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const client = (context as unknown as { publicClient: { estimateGas: () => Promise<bigint> } }).publicClient;
+  const realEstimate = client.estimateGas;
+  client.estimateGas = async () => {
+    if (holdEnabled) {
+      holdEnabled = false;
+      await held;
+    }
+    return realEstimate();
+  };
+
+  const parked = await executeIntent(context, "inflight-1", smallApproved);
+  assert.equal(parked.state, "awaiting_approval");
+
+  holdEnabled = true;
+  const resuming = resumeApprovedIntent(context, "inflight-1", "operator@finch");
+  // Let the resume reach the held simulation before replaying the id.
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  const replay = await executeIntent(context, "inflight-1", smallApproved);
+  release();
+  await resuming;
+
+  assert.equal(sends.length, 1, "one approval must not become two transactions");
+  assert.equal(replay.id, "inflight-1");
+});
+
+test("REGRESSION: a save failing after broadcast must not report a live tx as failed", async () => {
+  // recordSpend + save used to sit inside the submission try, so a throw from
+  // either flipped an already-broadcast transaction to state "failed". The
+  // hash is real; calling it failed loses a live transaction.
+  const { context, sends } = harness({
+    mode: "operator",
+    allowances: [{ asset: "native", perDay: 10_000n }],
+    allowedContracts: [],
+  });
+  const sink = (context as unknown as { sink: { save: (r: ExecutionRecord) => Promise<void> } }).sink;
+  const realSave = sink.save.bind(sink);
+  sink.save = async (rec: ExecutionRecord) => {
+    if (rec.tx?.hash) throw new Error("sink unavailable");
+    return realSave(rec);
+  };
+
+  const record = await executeIntent(context, "postbroadcast-1", {
+    kind: "transfer.native",
+    summary: "send",
+    to: FRIEND,
+    value: 100n,
+    spendAsset: "native",
+    spendAmount: 100n,
+    meta: { recipient: FRIEND },
+  });
+
+  assert.equal(sends.length, 1, "the transaction really was broadcast");
+  assert.ok(record.tx?.hash, "the hash must be kept so the tx can be reconciled");
+  assert.notEqual(record.state, "failed", "a broadcast transaction is not a failed one");
+  assert.ok(
+    record.log.some((entry) => entry.event === "sink.save_failed"),
+    "the persistence failure must be surfaced, not swallowed",
+  );
+});
+
+test("REGRESSION: concurrent executions cannot overspend one daily allowance", async () => {
+  // evaluate() read the spend and recordSpend() wrote it, with simulation in
+  // between — so three executions each just under the cap all read the same
+  // figure, all concluded they fit, and together spent triple the cap.
+  const { context, sends } = harness({
+    mode: "operator",
+    // Room for exactly two 400-wei sends.
+    allowances: [{ asset: "native", perDay: 1_000n }],
+    allowedContracts: [],
+  });
+  const intent = (n: number): ExecutionIntent => ({
+    kind: "transfer.native",
+    summary: `send ${n}`,
+    to: FRIEND,
+    value: 400n,
+    spendAsset: "native",
+    spendAmount: 400n,
+    meta: { recipient: FRIEND },
+  });
+
+  const results = await Promise.all([
+    executeIntent(context, "cap-1", intent(1)),
+    executeIntent(context, "cap-2", intent(2)),
+    executeIntent(context, "cap-3", intent(3)),
+  ]);
+
+  assert.equal(sends.length, 2, "1000 wei of allowance must fund exactly two 400-wei sends");
+  const refused = results.filter((record) => record.state === "failed");
+  assert.equal(refused.length, 1);
+  assert.match(refused[0]?.error?.message ?? "", /daily allowance/);
+});

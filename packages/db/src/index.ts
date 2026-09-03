@@ -1,4 +1,12 @@
-export { DbNotConfiguredError, closeDb, getDb, getMongoClient, isDbConfigured } from "./client.ts";
+export {
+  DbConnectionError,
+  DbNotConfiguredError,
+  closeDb,
+  getDb,
+  getMongoClient,
+  isDbConfigured,
+  scrubMongoUri,
+} from "./client.ts";
 export { collectionsOf, getCollections, type FinchCollections } from "./collections.ts";
 export { MEMORY_VECTOR_INDEX_NAME, ensureIndexes } from "./indexes.ts";
 export {

@@ -26,11 +26,11 @@ contracts/broadcast/
 *.log
 *.tsbuildinfo
 
+audit-findings.txt
 .vercel
+
+# Order matters: a later pattern beats an earlier negation, so `!.env.example`
+# MUST be the last env rule. A duplicate `.env*` below it silently un-tracks
+# the template.
 .env*
 !.env.example
-
-audit-findings.txt
-
-.vercel
-.env*

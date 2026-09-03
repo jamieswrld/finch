@@ -1,6 +1,8 @@
 import { getCollections } from "./collections.ts";
 import { executionDocSchema, type ExecutionDoc } from "./schemas.ts";
 
+type ExecutionState = ExecutionDoc["state"];
+
 /**
  * MongoDB ExecutionSink — structurally implements the ExecutionSink interface
  * from @finch/flightpath. Every agent action lands here as an auditable,
@@ -8,10 +10,18 @@ import { executionDocSchema, type ExecutionDoc } from "./schemas.ts";
  */
 export function createMongoExecutionSink() {
   return {
+    /**
+     * Upsert by field set, not by replacement.
+     *
+     * replaceOne would delete any field absent from `doc` — so a caller that
+     * read the record before it was approved, then saved it, would erase the
+     * approval stamp and permanently re-park the execution. $set only touches
+     * what the caller actually has.
+     */
     async save(record: Record<string, unknown>): Promise<void> {
       const doc = executionDocSchema.parse(record) as ExecutionDoc;
       const { executions } = await getCollections();
-      await executions.replaceOne({ id: doc.id }, doc, { upsert: true });
+      await executions.updateOne({ id: doc.id }, { $set: doc }, { upsert: true });
     },
 
     async get(id: string): Promise<ExecutionDoc | null> {
@@ -38,13 +48,28 @@ export function createMongoExecutionSink() {
       }
     },
 
-    /** Compare-and-set on the approval stamp: only an unapproved parked record transitions. */
+    /**
+     * Compare-and-set on the approval stamp. The state transition happens in
+     * the same update: leaving the record in "awaiting_approval" while the
+     * caller goes off to simulate would let a concurrent replay satisfy the
+     * gate and broadcast a second transaction.
+     */
     async claimApproval(id: string, approval: { approvedBy: string; at: string }): Promise<boolean> {
       const { executions } = await getCollections();
       const result = await executions.updateOne(
         { id, state: "awaiting_approval", approval: { $exists: false } },
-        { $set: { approval } },
+        { $set: { approval, state: "approved" } },
       );
+      return result.modifiedCount === 1;
+    },
+
+    /**
+     * Compare-and-set on state. One conditional update is the whole guarantee:
+     * whichever caller matches `from` wins, everyone else sees modifiedCount 0.
+     */
+    async claimState(id: string, from: ExecutionState, to: ExecutionState): Promise<boolean> {
+      const { executions } = await getCollections();
+      const result = await executions.updateOne({ id, state: from }, { $set: { state: to } });
       return result.modifiedCount === 1;
     },
   };

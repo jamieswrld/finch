@@ -22,38 +22,38 @@ function PanelHeader({ title, href, hrefLabel }: { title: string; href: string; 
 }
 
 function FinchesPanel() {
-  const state = useFetch<{ source: string; nests: FinchDoc[] }>("/api/finches");
+  const state = useFetch<{ source: string; finches: FinchDoc[] }>("/api/finches");
   return (
     <section className="rounded-xs border border-line bg-bone-raised" aria-label="Your finches">
       <PanelHeader title="finches" href="/app/build" hrefLabel="hatch" />
       <div className="p-4">
-        {state.status === "loading" && <LoadingBlock label="loading nests" />}
+        {state.status === "loading" && <LoadingBlock label="loading finches" />}
         {state.status === "error" && <ErrorBlock message={state.message} onRetry={state.retry} />}
         {state.status === "ready" &&
-          (state.data.nests.length === 0 ? (
+          (state.data.finches.length === 0 ? (
             <EmptyBlock title="no finches yet">Assemble your first finch in the builder — or start in Flight School.</EmptyBlock>
           ) : (
             <ul className="divide-y divide-line/60">
-              {state.data.nests.slice(0, 5).map((nest) => {
-                const manifest = nest.manifest as { identity?: { name?: string; description?: string }; model?: { model?: string } };
+              {state.data.finches.slice(0, 5).map((finch) => {
+                const manifest = finch.manifest as { identity?: { name?: string; description?: string }; model?: { model?: string } };
                 return (
-                  <li key={nest.handle} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+                  <li key={finch.handle} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
                     <FinchGlyph size={16} className="shrink-0 text-ink-soft" />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[13.5px] font-semibold tracking-[-0.01em] text-ink">
-                        {manifest.identity?.name ?? nest.handle}
+                        {manifest.identity?.name ?? finch.handle}
                       </p>
                       <p className="truncate font-mono text-[10.5px] text-grey">
-                        {nest.handle} · {manifest.model?.model ?? "model unset"}
+                        {finch.handle} · {manifest.model?.model ?? "model unset"}
                       </p>
                     </div>
-                    <Badge tone={nest.status === "hatched" ? "green" : "sage"}>{nest.status}</Badge>
+                    <Badge tone={finch.status === "hatched" ? "green" : "sage"}>{finch.status}</Badge>
                   </li>
                 );
               })}
             </ul>
           ))}
-        {state.status === "ready" && state.data.source === "seed" && state.data.nests.length > 0 && (
+        {state.status === "ready" && state.data.source === "seed" && state.data.finches.length > 0 && (
           <p className="mt-3 flex items-center gap-2">
             <DataBadge source="seed" />
             <span className="text-[11px] text-grey">sample finches, not yours</span>

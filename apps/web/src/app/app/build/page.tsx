@@ -4,7 +4,7 @@ import { FinchBuilder } from "@/components/build/FinchBuilder";
 import { LoadingBlock } from "@/components/ui/StateBlocks";
 
 export const metadata: Metadata = {
-  title: "Nest Builder",
+  title: "Finch Builder",
   description:
     "Assemble a Finch visually — identity, model, memory, tools, permissions, wallet, triggers, budget — then hatch it.",
 };

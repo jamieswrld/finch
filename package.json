@@ -2,7 +2,7 @@
   "name": "finch",
   "version": "0.1.0",
   "private": true,
-  "description": "FINCH — infrastructure for intelligent systems on Robinhood Chain.",
+  "description": "FINCH \u2014 infrastructure for intelligent systems on Robinhood Chain.",
   "workspaces": [
     "apps/*",
     "packages/*"
@@ -14,7 +14,8 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "seed": "npm run seed -w @finch/db",
     "test": "npm run test --workspaces --if-present",
-    "check": "npm run typecheck && npm run test"
+    "check": "npm run typecheck && npm run test",
+    "check:secrets": "node scripts/check-secrets.mjs"
   },
   "devDependencies": {
     "typescript": "^5.7.0"

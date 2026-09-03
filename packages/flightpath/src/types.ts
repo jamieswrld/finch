@@ -38,6 +38,7 @@ export type ExecutionState =
   | "simulated"
   | "simulation_failed"
   | "awaiting_approval"
+  | "approved"
   | "submitted"
   | "confirmed"
   | "reverted"
@@ -137,6 +138,13 @@ export interface ExecutionSink {
    * twice. Must be a compare-and-set.
    */
   claimApproval?(id: string, approval: { approvedBy: string; at: string }): Promise<boolean>;
+  /**
+   * Move a record from one state to another only if it is currently in
+   * `from`. Returns false when someone else already moved it. This is what
+   * stops two callers from both acting on a single approval: the winner
+   * transitions the record out of the releasable state before any await.
+   */
+  claimState?(id: string, from: ExecutionState, to: ExecutionState): Promise<boolean>;
 }
 
 export class MemoryExecutionSink implements ExecutionSink {
@@ -162,6 +170,15 @@ export class MemoryExecutionSink implements ExecutionSink {
     const found = this.records.get(id);
     if (!found || found.state !== "awaiting_approval" || found.approval) return false;
     found.approval = approval;
+    // Leaving this parked would let a concurrent replay through the gate.
+    found.state = "approved";
+    return true;
+  }
+
+  async claimState(id: string, from: ExecutionState, to: ExecutionState): Promise<boolean> {
+    const found = this.records.get(id);
+    if (!found || found.state !== from) return false;
+    found.state = to;
     return true;
   }
 

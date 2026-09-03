@@ -1,0 +1,5 @@
+#!/bin/sh
+# Block commits that stage secret-shaped content. Bypass is possible with
+# --no-verify, which is deliberate: the guard should be hard to trip by
+# accident and easy to override on purpose.
+node scripts/check-secrets.mjs || exit 1

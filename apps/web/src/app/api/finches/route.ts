@@ -1,7 +1,7 @@
 import { getCollections, isDbConfigured, type FinchDoc } from "@finch/db";
 import { seedFinches } from "@finch/db/seeds";
 import { safeValidateManifest } from "@finch/sdk";
-import { errorJson, json, rateLimit, readJsonBody } from "@/lib/server/http";
+import { errorJson, json, rateLimit, readJsonBody, safeErrorMessage } from "@/lib/server/http";
 import { canWrite, resolveIdentity } from "@/lib/server/identity";
 
 export const runtime = "nodejs";
@@ -18,7 +18,7 @@ export async function GET(): Promise<Response> {
       return json({
         source: "seed",
         degraded: true,
-        note: `database unreachable (${error instanceof Error ? error.message.slice(0, 120) : "unknown"})`,
+        note: `database unreachable (${safeErrorMessage(error, 120)})`,
         finches: seedFinches,
       });
     }
@@ -80,6 +80,6 @@ export async function POST(request: Request): Promise<Response> {
     await finches.insertOne({ ...doc, owner: identity.owner ?? undefined });
     return json({ saved: true, updated: false, handle: doc.handle, status: "draft" }, { status: 201 });
   } catch (error) {
-    return errorJson(502, `finch save failed: ${error instanceof Error ? error.message.slice(0, 160) : "unknown"}`);
+    return errorJson(502, `finch save failed: ${safeErrorMessage(error, 160)}`);
   }
 }

@@ -12,6 +12,38 @@ import { MongoClient, type Db } from "mongodb";
  *    raw collections are never proxied to the client.
  */
 
+/**
+ * A connection failure that is safe to show anyone.
+ *
+ * MongoParseError and several driver errors quote the connection string back
+ * in `.message` — including `user:password@host`. API routes surface database
+ * errors to unauthenticated callers, so the raw driver message must never be
+ * the thing that escapes. The original is kept on `cause` for server logs and
+ * is never serialized into a response.
+ */
+export class DbConnectionError extends Error {
+  constructor(cause: unknown) {
+    super("database connection failed");
+    this.name = "DbConnectionError";
+    this.cause = cause;
+  }
+}
+
+/** Replace any credentialed Mongo URI inside arbitrary text with a safe label. */
+export function scrubMongoUri(message: string): string {
+  return message.replace(
+    /mongodb(\+srv)?:\/\/[^\s"']*/g,
+    (match) => {
+      try {
+        const parsed = new URL(match);
+        return `${parsed.protocol}//${parsed.hostname}/…`;
+      } catch {
+        return "mongodb://…";
+      }
+    },
+  );
+}
+
 export class DbNotConfiguredError extends Error {
   constructor() {
     super("MONGODB_URI is not set — the data layer is not configured in this environment");
@@ -31,14 +63,21 @@ export async function getMongoClient(): Promise<MongoClient> {
   }
   if (!isDbConfigured()) throw new DbNotConfiguredError();
   if (!clientPromise) {
-    const client = new MongoClient(process.env.MONGODB_URI as string, {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 4000,
-    });
-    clientPromise = client.connect().catch((error) => {
+    // Both the constructor (URI parsing) and connect() can throw with the
+    // connection string embedded in the message, so both are wrapped.
+    try {
+      const client = new MongoClient(process.env.MONGODB_URI as string, {
+        maxPoolSize: 10,
+        serverSelectionTimeoutMS: 4000,
+      });
+      clientPromise = client.connect().catch((error) => {
+        clientPromise = null;
+        throw new DbConnectionError(error);
+      });
+    } catch (error) {
       clientPromise = null;
-      throw error;
-    });
+      throw new DbConnectionError(error);
+    }
   }
   return clientPromise;
 }

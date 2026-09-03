@@ -60,6 +60,39 @@ export function publicEndpointLabel(url: string): string {
   }
 }
 
+/**
+ * Strip endpoint credentials out of an error message before it can be served.
+ *
+ * viem builds messages that embed the endpoint, e.g. "HTTP request failed /
+ * Status: 429 / URL: https://host/v2/<APIKEY>", and its own redaction removes
+ * only basic-auth
+ * user:pass — path and query keys survive verbatim. /api/chain and /api/status
+ * are unauthenticated and CDN-cached, so a routine 429 from a paid provider
+ * would otherwise hand that provider's billing key to every visitor.
+ *
+ * Endpoint health is public; the credential is not.
+ */
+export function scrubEndpoints(message: string, urls: readonly string[]): string {
+  let safe = message;
+  for (const url of urls) {
+    if (!url) continue;
+    safe = safe.split(url).join(publicEndpointLabel(url));
+    // Also catch the URL with a trailing slash or query appended by the client.
+    try {
+      const parsed = new URL(url);
+      if (parsed.pathname.replace(/\/+$/, "").length > 1 || parsed.search.length > 0) {
+        safe = safe.split(parsed.href).join(publicEndpointLabel(url));
+      }
+    } catch {
+      // a malformed configured URL cannot be matched structurally; the plain
+      // string replace above is the best available
+    }
+  }
+  // Belt and braces: any residual absolute URL with a non-trivial path is
+  // reduced to its origin, so an endpoint we did not know about cannot leak.
+  return safe.replace(/https?:\/\/[^\s"']+/g, (match) => publicEndpointLabel(match));
+}
+
 /** Raw JSON-RPC for methods viem does not expose (web3_clientVersion). */
 async function rawRpc(url: string, method: string, params: unknown[] = []): Promise<unknown> {
   const response = await fetch(url, {
@@ -93,7 +126,7 @@ export async function probeEndpoints(target: FlightpathTarget = getFlightpathTar
           reachable: false,
           latencyMs: Date.now() - started,
           blockNumber: null,
-          error: error instanceof Error ? error.message.slice(0, 140) : "unknown error",
+          error: error instanceof Error ? scrubEndpoints(error.message, [url]).slice(0, 140) : "unknown error",
         } satisfies EndpointHealth;
       }
     }),
@@ -170,7 +203,7 @@ export async function getNetworkStatus(target: FlightpathTarget = getFlightpathT
     return {
       ...base,
       latencyMs: Date.now() - started,
-      error: error instanceof Error ? error.message.slice(0, 200) : "network read failed",
+      error: error instanceof Error ? scrubEndpoints(error.message, target.rpcUrls).slice(0, 200) : "network read failed",
       sampledAt: nowIso(),
     };
   }

@@ -38,7 +38,10 @@ export async function GET(): Promise<Response> {
   const tasks = history.runs.reduce((sum, run) => sum + run.taskCount, 0);
 
   let counts: Counts = { ...EMPTY, runs: history.runs.length, tasks };
-  let provenance: "live" | "seed" | "empty" = history.runs.length > 0 ? "live" : "empty";
+  // Provenance is per-figure, because the two halves have different origins.
+  // Runs are always real events; the registry counts may be seed rows. One
+  // real run does not turn a seeded listing into a registration.
+  let registryProvenance: "live" | "seed" | "empty" = "empty";
 
   if (isDbConfigured()) {
     try {
@@ -53,18 +56,21 @@ export async function GET(): Promise<Response> {
       counts = { finches, nests, runs: runTotal, tasks, proofs };
       // Rows that came from the seed file are seed rows no matter which
       // database they are sitting in.
-      provenance = runTotal > 0 ? "live" : seeded > 0 ? "seed" : "empty";
+      registryProvenance = seeded > 0 ? "seed" : finches + nests > 0 ? "live" : "empty";
     } catch {
       counts = { ...counts, finches: seedAviaryListings.length, nests: seedNests.length };
-      provenance = "seed";
+      registryProvenance = "seed";
     }
   } else {
     counts = { ...counts, finches: seedAviaryListings.length, nests: seedNests.length };
-    provenance = history.runs.length > 0 ? "live" : "seed";
+    registryProvenance = "seed";
   }
 
   return json({
-    provenance,
+    /** Where the finches/nests counts came from. Runs and tasks are always real. */
+    provenance: registryProvenance,
+    registryProvenance,
+    runsProvenance: history.runs.length > 0 ? "live" : "empty",
     durable: history.source === "db",
     counts,
     /** Most recent real work, newest first — objective, scale, outcome. */

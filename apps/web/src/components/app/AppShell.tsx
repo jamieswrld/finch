@@ -18,6 +18,8 @@ const TABS = [
 
 interface ActivityResponse {
   counts: { finches: number; nests: number; runs: number; tasks: number; proofs: number };
+  provenance?: "live" | "seed" | "empty";
+  registryProvenance?: "live" | "seed" | "empty";
 }
 
 /**
@@ -33,9 +35,13 @@ function WorkStrip() {
   if (state.status !== "ready") return null;
   const { counts } = state.data;
 
+  // Only runs and tasks are unconditionally real. The registry figures can be
+  // seed rows, and showing them unmarked in the app chrome presents sample
+  // data as the network's actual contents on every single page.
+  const seeded = (state.data.registryProvenance ?? state.data.provenance) === "seed";
   const items = [
-    { value: counts.nests, label: "nests", hint: "Coordinated swarms in the registry" },
-    { value: counts.finches, label: "finches", hint: "Agents published to the Aviary" },
+    { value: counts.nests, label: seeded ? "nests (seed)" : "nests", hint: seeded ? "Reference nests — not live registrations" : "Coordinated swarms in the registry" },
+    { value: counts.finches, label: seeded ? "finches (seed)" : "finches", hint: seeded ? "Reference agents — not live registrations" : "Agents published to the Aviary" },
     { value: counts.runs, label: "runs", hint: "Executions carried out" },
     { value: counts.tasks, label: "tasks", hint: "Tasks dispatched inside those runs" },
   ];

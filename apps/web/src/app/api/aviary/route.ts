@@ -1,6 +1,6 @@
 import { aviaryCategorySchema, aviaryListingSchema, getCollections, isDbConfigured } from "@finch/db";
 import { seedAviaryListings } from "@finch/db/seeds";
-import { errorJson, json, rateLimit, readJsonBody } from "@/lib/server/http";
+import { errorJson, json, rateLimit, readJsonBody, safeErrorMessage } from "@/lib/server/http";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -41,7 +41,7 @@ export async function GET(request: Request): Promise<Response> {
         {
           source: "seed",
           degraded: true,
-          note: `registry database unreachable (${error instanceof Error ? error.message.slice(0, 120) : "unknown"}); serving seed data`,
+          note: `registry database unreachable (${safeErrorMessage(error, 120)}); serving seed data`,
           listings: filterSeeds(category?.success ? category.data : null, q),
         },
         { status: 200 },
@@ -104,6 +104,6 @@ export async function POST(request: Request): Promise<Response> {
     await aviaryListings.insertOne(listing);
     return json({ published: true, slug: listing.slug }, { status: 201 });
   } catch (error) {
-    return errorJson(502, `registry write failed: ${error instanceof Error ? error.message.slice(0, 160) : "unknown"}`);
+    return errorJson(502, `registry write failed: ${safeErrorMessage(error, 160)}`);
   }
 }

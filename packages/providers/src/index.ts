@@ -25,6 +25,7 @@ export {
   providerFrom,
   providerStatus,
   resolveProviderFromEnv,
+  type ModelPreference,
   type ProviderCost,
   type ProviderSpec,
   type ResolvedProvider,

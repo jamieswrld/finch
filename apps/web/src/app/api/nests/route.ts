@@ -1,6 +1,6 @@
 import { nestDocSchema, getCollections, isDbConfigured } from "@finch/db";
 import { seedNests } from "@finch/db/seeds";
-import { errorJson, json, rateLimit, readJsonBody } from "@/lib/server/http";
+import { errorJson, json, rateLimit, readJsonBody, safeErrorMessage } from "@/lib/server/http";
 import { canWrite, resolveIdentity } from "@/lib/server/identity";
 
 export const runtime = "nodejs";
@@ -20,7 +20,7 @@ export async function GET(): Promise<Response> {
       return json({
         source: "seed",
         degraded: true,
-        note: `database unreachable (${error instanceof Error ? error.message.slice(0, 120) : "unknown"})`,
+        note: `database unreachable (${safeErrorMessage(error, 120)})`,
         nests: seedNests,
       });
     }
@@ -84,6 +84,6 @@ export async function POST(request: Request): Promise<Response> {
     }
     return json({ saved: true, slug: parsed.data.slug, status: "draft" }, { status: 201 });
   } catch (error) {
-    return errorJson(502, `nest save failed: ${error instanceof Error ? error.message.slice(0, 160) : "unknown"}`);
+    return errorJson(502, `nest save failed: ${safeErrorMessage(error, 160)}`);
   }
 }

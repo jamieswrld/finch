@@ -289,7 +289,66 @@ const addressWatch = nest({
   ],
 });
 
-export const NEST_PRESETS: NestManifest[] = [chainIntelligence, ponsIntelligence, rwaResearch, addressWatch];
+// ── 5. Token Due Diligence — a real token, read three ways, then judged ────
+
+const tokenDueDiligence = nest({
+  id: "token-due-diligence",
+  name: "Token Due Diligence Nest",
+  objective: "Assess a token on Robinhood Chain from its onchain facts: supply, holder concentration, and recent activity.",
+  description: "Token profile → holder concentration → transfer activity → risk read. Set the objective to a token address.",
+  coordinatorInstructions:
+    "Write a due-diligence note on the token named in the objective. Lead with the hard numbers the finches read: supply, holders, top-holder share, recent transfer pattern. Concentration and activity are facts; whether they are good or bad depends on the token's purpose, so say what the numbers are before saying what they might mean. If the objective contains no token address, say so and stop.",
+  finches: [
+    member({
+      handle: "profile-finch",
+      name: "Profile Finch",
+      role: "Reads the token's identity, supply and market data from the explorer.",
+      instructions:
+        "You are Profile Finch. Extract the token address from the objective and call token_profile, then token_data for the onchain view. Report name, symbol, decimals, total supply, holder count, price, market cap and 24h volume exactly as returned; say 'unpriced' where the explorer has no rate. If no address is present in the objective, say exactly that.",
+      tools: ["token_profile", "token_data", "contract_verified"],
+    }),
+    member({
+      handle: "holder-finch",
+      name: "Holder Finch",
+      role: "Measures how concentrated ownership is.",
+      instructions:
+        "You are Holder Finch. Call token_holders with limit 10 for the token in the objective. Report the top 10 with balance and share of supply, mark which are contracts, and compute the combined share of the top 1, top 5 and top 10. Identify a burn address (0x…dEaD or 0x000…000) as a burn address, not as a holder. Numbers only, then one line on what the concentration pattern is.",
+      tools: ["token_holders"],
+    }),
+    member({
+      handle: "activity-finch",
+      name: "Activity Finch",
+      role: "Reads recent transfer activity.",
+      instructions:
+        "You are Activity Finch. Call token_transfers with limit 20 for the token in the objective. Report how many transfers you see, the block range and time span they cover, the largest transfer, and whether flow is concentrated between a few addresses or spread out. Do not infer trading volume beyond what the transfers show.",
+      tools: ["token_transfers"],
+    }),
+    member({
+      handle: "diligence-finch",
+      name: "Diligence Finch",
+      role: "Reads the three channels and writes the risk section.",
+      instructions:
+        "You are Diligence Finch. You receive the profile, holder analysis and activity read. Write a short risk section: supply and dilution facts, concentration facts, activity facts, and verification status. Each point cites which channel it came from. Where the data cannot support a conclusion, say what would be needed. No tools; work only from the channels.",
+      tools: [],
+      temperature: 0.1,
+    }),
+  ],
+  tasks: [
+    { id: "t1", finch: "profile-finch", title: "Profile the token", instruction: "Profile the token named in the objective.", dependsOn: [], outputChannel: "token.profile" },
+    { id: "t2", finch: "holder-finch", title: "Measure holder concentration", instruction: "Token profile:\n{{token.profile}}\n\nMeasure holder concentration for this token.", dependsOn: ["t1"], outputChannel: "token.holders" },
+    { id: "t3", finch: "activity-finch", title: "Read recent activity", instruction: "Token profile:\n{{token.profile}}\n\nRead this token's recent transfer activity.", dependsOn: ["t1"], outputChannel: "token.activity" },
+    {
+      id: "t4",
+      finch: "diligence-finch",
+      title: "Write the risk read",
+      instruction: "Profile:\n{{token.profile}}\n\nHolders:\n{{token.holders}}\n\nActivity:\n{{token.activity}}\n\nWrite the risk section.",
+      dependsOn: ["t2", "t3"],
+      outputChannel: "token.risk",
+    },
+  ],
+});
+
+export const NEST_PRESETS: NestManifest[] = [chainIntelligence, ponsIntelligence, rwaResearch, addressWatch, tokenDueDiligence];
 
 export function getNestPreset(id: string): NestManifest | undefined {
   return NEST_PRESETS.find((preset) => preset.identity.id === id);

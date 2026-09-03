@@ -2,6 +2,18 @@ import { parseUnits, type Address } from "viem";
 import { explorerBlockUrl } from "./chain.ts";
 import type { Flightpath } from "./flightpath.ts";
 import { getNetworkStatus } from "./network.ts";
+import {
+  readChainStats,
+  readContractVerification,
+  readTokenHolders,
+  readTokenList,
+  readTokenProfile,
+  readTokenTransfers,
+  readTransaction,
+  readWalletHoldings,
+  readWalletProfile,
+  readWalletTransactions,
+} from "./explorer.ts";
 import { creatorTaxOn, getPonsConfig, FINCH_CREATOR_TAX_BPS } from "./pons.ts";
 import { loadApprovedRwaAssets } from "./rwa.ts";
 
@@ -26,7 +38,8 @@ export type ToolCategory =
   | "pons"
   | "tokens"
   | "portfolio"
-  | "rwa";
+  | "rwa"
+  | "explorer";
 
 export type ToolRisk = "none" | "low" | "high";
 
@@ -65,6 +78,101 @@ export const FLIGHTPATH_TOOLS: FlightpathToolMeta[] = [
         blockNumber: { type: "string", pattern: "^[0-9]+$", description: "decimal block number; omit for latest" },
       },
     },
+  },
+
+  // ── Explorer reads — what HAPPENED, indexed by Blockscout ─────────────────
+  // The RPC answers "what is the chain right now"; these answer history:
+  // holders, activity, volume, verification. Every one reports reachable:false
+  // with a reason when the explorer cannot be read, and a finch must say so.
+  {
+    name: "chain_stats",
+    mode: "read",
+    category: "explorer",
+    risk: "none",
+    description:
+      "Whole-chain counters from the explorer: total blocks, total transactions, total addresses, transactions today, average block time, slow/average/fast gas in gwei, ETH price in USD.",
+    inputSchema: { type: "object", properties: {  } },
+  },
+  {
+    name: "wallet_profile",
+    mode: "read",
+    category: "explorer",
+    risk: "none",
+    description:
+      "Who an address is: native ETH balance, whether it is a contract (and verified), explorer label, scam flag, creator and creation tx for contracts, lifetime transaction count and token-transfer count.",
+    inputSchema: { type: "object", properties: { address }, required: ["address"] },
+  },
+  {
+    name: "wallet_transactions",
+    mode: "read",
+    category: "explorer",
+    risk: "none",
+    description:
+      "Most recent transactions sent to or from an address, newest first: hash, block, time, status, method, counterparty, value and fee in ETH.",
+    inputSchema: { type: "object", properties: { address, limit: { type: "string", pattern: "^[0-9]{1,2}$", description: "how many rows, 1-50; default 10" } }, required: ["address"] },
+  },
+  {
+    name: "wallet_holdings",
+    mode: "read",
+    category: "explorer",
+    risk: "none",
+    description:
+      "Every ERC-20 an address holds, with balance, USD price where the explorer has one, and USD value. Tokens with no price report null rather than a guess.",
+    inputSchema: { type: "object", properties: { address }, required: ["address"] },
+  },
+  {
+    name: "token_profile",
+    mode: "read",
+    category: "explorer",
+    risk: "none",
+    description:
+      "A token as the explorer indexes it: name, symbol, decimals, holder count, total supply, USD price, market cap, 24h volume.",
+    inputSchema: { type: "object", properties: { token: address }, required: ["token"] },
+  },
+  {
+    name: "token_holders",
+    mode: "read",
+    category: "explorer",
+    risk: "none",
+    description:
+      "Largest holders of a token, largest first, each with balance, share of total supply in percent, and whether the holder is a contract. Also the total holder count.",
+    inputSchema: { type: "object", properties: { token: address, limit: { type: "string", pattern: "^[0-9]{1,2}$", description: "how many rows, 1-50; default 10" } }, required: ["token"] },
+  },
+  {
+    name: "token_transfers",
+    mode: "read",
+    category: "explorer",
+    risk: "none",
+    description:
+      "Most recent transfers of a token, newest first: tx, block, time, from, to, amount.",
+    inputSchema: { type: "object", properties: { token: address, limit: { type: "string", pattern: "^[0-9]{1,2}$", description: "how many rows, 1-50; default 10" } }, required: ["token"] },
+  },
+  {
+    name: "token_list",
+    mode: "read",
+    category: "explorer",
+    risk: "none",
+    description:
+      "ERC-20 tokens the explorer ranks on Robinhood Chain, with holders, USD price, market cap and 24h volume where known.",
+    inputSchema: { type: "object", properties: { limit: { type: "string", pattern: "^[0-9]{1,2}$", description: "how many rows, 1-50; default 10" } } },
+  },
+  {
+    name: "tx_lookup",
+    mode: "read",
+    category: "explorer",
+    risk: "none",
+    description:
+      "One transaction by hash: status, block, time, confirmations, method, from, to, created contract, value and fee in ETH.",
+    inputSchema: { type: "object", properties: { hash: { type: "string", pattern: "^0x[a-fA-F0-9]{64}$", description: "transaction hash" } }, required: ["hash"] },
+  },
+  {
+    name: "contract_verified",
+    mode: "read",
+    category: "explorer",
+    risk: "none",
+    description:
+      "Whether a contract's source code is published and verified on the explorer, and if so its name, compiler and language. Unverified is a definite answer, not an error.",
+    inputSchema: { type: "object", properties: { address }, required: ["address"] },
   },
   {
     name: "balance_native",
@@ -249,6 +357,30 @@ function str(args: Record<string, unknown>, key: string): string {
   return value;
 }
 
+/** Optional row limit, clamped to the explorer's page size. */
+function lim(args: Record<string, unknown>, fallback = 10): number {
+  const raw = typeof args.limit === "string" ? Number(args.limit) : Number.NaN;
+  return Number.isFinite(raw) && raw >= 1 ? Math.min(raw, 50) : fallback;
+}
+
+/**
+ * Present an explorer result to a model. Data is spread to the top level (or
+ * under `key` when it is a list) so the useful part is not buried, while
+ * reachable/error/source stay visible so failure is never mistaken for
+ * emptiness.
+ */
+function flat<T>(
+  result: { reachable: boolean; error?: string; source: string; data: T | null },
+  key?: string,
+): Record<string, unknown> {
+  const head = { source: result.source, reachable: result.reachable, error: result.error ?? null };
+  if (result.data === null) return head;
+  if (key) return { ...head, [key]: result.data };
+  return typeof result.data === "object" && !Array.isArray(result.data)
+    ? { ...head, ...(result.data as object) }
+    : { ...head, data: result.data };
+}
+
 function addr(args: Record<string, unknown>, key: string): Address {
   const value = str(args, key);
   if (!/^0x[a-fA-F0-9]{40}$/.test(value)) throw new Error(`tool argument "${key}" is not a valid address`);
@@ -276,6 +408,23 @@ export function createFlightpathTools(fp: Flightpath, selection?: string[]): Exe
         error: status.error ?? null,
       };
     },
+    // Explorer reads return the whole result — reachable, error, source — so a
+    // finch sees a failed read as a failed read, never as an empty dataset.
+    chain_stats: async () => flat(await readChainStats(fp.target)),
+    wallet_profile: async (args) => flat(await readWalletProfile(addr(args, "address"), fp.target)),
+    wallet_transactions: async (args) =>
+      flat(await readWalletTransactions(addr(args, "address"), lim(args), fp.target), "transactions"),
+    wallet_holdings: async (args) => flat(await readWalletHoldings(addr(args, "address"), fp.target), "holdings"),
+    token_profile: async (args) => flat(await readTokenProfile(addr(args, "token"), fp.target)),
+    token_holders: async (args) => flat(await readTokenHolders(addr(args, "token"), lim(args), fp.target)),
+    token_transfers: async (args) => flat(await readTokenTransfers(addr(args, "token"), lim(args), fp.target), "transfers"),
+    token_list: async (args) => flat(await readTokenList(lim(args, 20), fp.target), "tokens"),
+    tx_lookup: async (args) => {
+      const hash = str(args, "hash");
+      if (!/^0x[a-fA-F0-9]{64}$/.test(hash)) throw new Error('tool argument "hash" is not a transaction hash');
+      return flat(await readTransaction(hash, fp.target));
+    },
+    contract_verified: async (args) => flat(await readContractVerification(addr(args, "address"), fp.target)),
     block_read: async (args) => {
       const blockNumber = typeof args.blockNumber === "string" ? BigInt(args.blockNumber) : undefined;
       const block = await fp.publicClient.getBlock(

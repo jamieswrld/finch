@@ -20,6 +20,12 @@ import { arbitrumSepolia } from "viem/chains";
 export const ROBINHOOD_CHAIN_ID = 4663;
 export const DEFAULT_ROBINHOOD_RPC_URL = "https://rpc.mainnet.chain.robinhood.com";
 export const DEFAULT_ROBINHOOD_EXPLORER_URL = "https://explorer.mainnet.chain.robinhood.com";
+/**
+ * The explorer's JSON API lives on a different host from its UI. The UI host
+ * 301-redirects every /api path to the bare root of this one, dropping the
+ * path, so pointing API reads at the UI host silently returns HTML.
+ */
+export const DEFAULT_ROBINHOOD_EXPLORER_API_URL = "https://robinhoodchain.blockscout.com";
 
 /** Arbitrum Nitro: sequencer-confirmed blocks land fast, L1 finality lags. */
 export const ROBINHOOD_STACK = "Arbitrum Nitro";
@@ -34,6 +40,8 @@ export interface FlightpathTarget {
   transport: Transport;
   robinhoodConfigured: boolean;
   explorerUrl?: string;
+  /** Blockscout JSON API base (no trailing slash). Distinct from explorerUrl. */
+  explorerApiUrl?: string;
   label: string;
 }
 
@@ -54,6 +62,7 @@ export function getRobinhoodChainConfig(): {
   chainId: number;
   rpcUrls: string[];
   explorerUrl: string;
+  explorerApiUrl: string;
   name: string;
 } {
   const chainId = readEnv("ROBINHOOD_CHAIN_ID") ?? readEnv("NEXT_PUBLIC_ROBINHOOD_CHAIN_ID");
@@ -67,6 +76,7 @@ export function getRobinhoodChainConfig(): {
       readEnv("ROBINHOOD_EXPLORER_URL") ??
       readEnv("NEXT_PUBLIC_ROBINHOOD_EXPLORER_URL") ??
       DEFAULT_ROBINHOOD_EXPLORER_URL,
+    explorerApiUrl: readEnv("ROBINHOOD_EXPLORER_API_URL") ?? DEFAULT_ROBINHOOD_EXPLORER_API_URL,
     name: readEnv("NEXT_PUBLIC_ROBINHOOD_CHAIN_NAME") ?? "Robinhood Chain",
   };
 }
@@ -102,6 +112,7 @@ export function getFlightpathTarget(): FlightpathTarget {
       transport: buildTransport([devRpc]),
       robinhoodConfigured: false,
       explorerUrl: arbitrumSepolia.blockExplorers?.default.url,
+      explorerApiUrl: undefined,
       label: "dev target · arbitrum sepolia (FLIGHTPATH_FORCE_DEV)",
     };
   }
@@ -114,6 +125,7 @@ export function getFlightpathTarget(): FlightpathTarget {
     transport: buildTransport(config.rpcUrls),
     robinhoodConfigured: true,
     explorerUrl: config.explorerUrl,
+    explorerApiUrl: config.explorerApiUrl,
     label: `${config.name} · ${config.chainId}`,
   };
 }

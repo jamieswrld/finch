@@ -274,7 +274,7 @@ export function NestRunner({ manifest }: { manifest: NestManifest }) {
         <span className="font-mono text-[12.5px] font-medium uppercase tracking-[0.14em] text-ink">
           nest/{manifest.identity.id}
         </span>
-        <Badge tone="sage">mode · preview</Badge>
+        <Badge tone="sage">read-only</Badge>
         <Badge tone="grey">{manifest.finches.length} finches</Badge>
         <Badge tone="grey">{manifest.tasks.length} tasks</Badge>
         {run && (

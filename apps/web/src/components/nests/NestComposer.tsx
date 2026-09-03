@@ -236,7 +236,7 @@ export function NestComposer() {
         </button>
         <span className="ml-auto flex items-center gap-2">
           <span title="Simulate and Live modes activate with the Robinhood execution release.">
-            <Badge tone="sage">mode · preview</Badge>
+            <Badge tone="sage">read-only</Badge>
           </span>
           <DataBadge source={state.data.source === "db" ? "db" : "builtin"} />
           {state.data.note && <span className="text-[11px] text-gold-deep">{state.data.note}</span>}

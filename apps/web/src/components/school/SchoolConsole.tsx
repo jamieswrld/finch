@@ -36,7 +36,7 @@ function PresetGrid({ onSelect }: { onSelect: (preset: SchoolPreset) => void }) 
         >
           <div className="flex items-center justify-between">
             <span className="font-mono text-[12.5px] font-medium uppercase tracking-[0.14em] text-ink">{preset.title}</span>
-            <Badge tone="sage">read only</Badge>
+            <Badge tone="sage">read-only</Badge>
           </div>
           <p className="mt-2 text-[13px] leading-snug text-ink-soft">{preset.blurb}</p>
           <p className="mt-4 font-mono text-[10.5px] uppercase tracking-[0.1em] text-green-deep opacity-0 transition-opacity group-hover:opacity-100">
@@ -102,7 +102,7 @@ function Console({ preset, onBack }: { preset: SchoolPreset; onBack: () => void 
         </button>
         <span className="h-4 w-px bg-line-strong" aria-hidden />
         <span className="font-mono text-[12.5px] font-medium uppercase tracking-[0.14em] text-ink">
-          {preset.title} <span className="text-grey">/</span> <span className="text-green-deep">preview</span>
+          {preset.title}
         </span>
         <Badge tone="sage">read only</Badge>
         <button
@@ -174,7 +174,7 @@ function Console({ preset, onBack }: { preset: SchoolPreset; onBack: () => void 
         <div className="mt-4" aria-live="polite">
           {state.phase === "running" && (
             <p className="font-mono text-[11.5px] text-grey">
-              hatching preset → running preview
+              hatching preset → running
               <span style={{ animation: "finch-blink 1.2s steps(1) infinite" }}> ▮</span>
             </p>
           )}

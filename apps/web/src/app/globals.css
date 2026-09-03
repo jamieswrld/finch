@@ -265,3 +265,40 @@ body {
   90% { opacity: 0.2; }
   100% { transform: translate(-8vw, 46vh) rotate(184deg) scale(0.38); opacity: 0; }
 }
+
+/* ── Corridor motion ──────────────────────────────────────────────────────
+   The hero was a still drawing with birds passing over it. These give the
+   drawing itself a pulse. Everything animates transform, opacity or
+   stroke-dashoffset only, so it stays on the compositor and off the main
+   thread; the reduced-motion block above neutralises all of it. */
+
+/* Data in transit along the flightpath. */
+@keyframes finch-dash-flow {
+  to { stroke-dashoffset: -180; }
+}
+
+/* The waypoint where the flightpath crosses the corridor throat. */
+@keyframes finch-node-pulse {
+  0%, 100% { r: 3; opacity: 0.75; }
+  50% { r: 4.4; opacity: 0.35; }
+}
+
+/* A signal ring leaving the waypoint and dissipating. */
+@keyframes finch-ping {
+  0% { r: 3; opacity: 0.5; }
+  100% { r: 26; opacity: 0; }
+}
+
+/* Barely-there breathing so the corridor never reads as a static JPEG. */
+@keyframes finch-corridor-drift {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.012); }
+}
+
+/* Light travelling down a corridor edge ray. */
+@keyframes finch-ray-sweep {
+  0% { opacity: 0; stroke-dashoffset: 0; }
+  18% { opacity: 0.5; }
+  70% { opacity: 0; }
+  100% { opacity: 0; stroke-dashoffset: -420; }
+}

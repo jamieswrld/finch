@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { FinchGlyph } from "@/components/birds/FinchGlyph";
 import { WorldBackground } from "./WorldBackground";
+import { RunsOn } from "./RunsOn";
 import { LiveWork } from "./LiveWork";
 
 const SYSTEM_ICONS: Array<{ href: string; label: string; icon: React.ReactNode }> = [
@@ -112,48 +113,6 @@ function ActionMatrix() {
   );
 }
 
-const ECOSYSTEM = [
-  { name: "Robinhood", role: "network", href: "https://robinhood.com", mark: <span className="text-[15px] font-semibold tracking-[-0.01em]">Robinhood</span> },
-  { name: "MongoDB", role: "data", href: "https://www.mongodb.com", mark: <span className="text-[15px] font-medium">MongoDB</span> },
-  { name: "Hyperbolic", role: "compute", href: "https://hyperbolic.xyz", mark: <span className="font-mono text-[13.5px] font-medium tracking-[0.04em]">hyperbolic</span> },
-  { name: "Pons", role: "launch", href: null, mark: <span className="text-[13.5px] font-semibold tracking-[0.3em]">PONS</span> },
-];
-
-function EcosystemRail() {
-  return (
-    <div className="relative z-10">
-      <p className="text-center font-mono text-[9px] uppercase tracking-[0.2em] text-grey-faint">
-        ecosystem infrastructure
-      </p>
-      <ul className="mt-3 flex flex-wrap items-start justify-center gap-x-12 gap-y-4">
-        {ECOSYSTEM.map((entry) => (
-          <li key={entry.name} className="text-center">
-            {entry.href ? (
-              <a
-                href={entry.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-grey transition-colors hover:text-green-deep"
-                aria-label={`${entry.name} — opens official site`}
-              >
-                {entry.mark}
-              </a>
-            ) : (
-              <span className="cursor-default text-grey-faint" title="no official Pons link published yet">
-                {entry.mark}
-                <span className="ml-1.5 align-middle font-mono text-[8px] uppercase tracking-[0.14em] text-grey-faint">
-                  link pending
-                </span>
-              </span>
-            )}
-            <p className="mt-1 font-mono text-[8.5px] uppercase tracking-[0.18em] text-grey-faint">{entry.role}</p>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
 function BottomBar() {
   return (
     <div className="relative z-10 border-t border-line/70">
@@ -226,7 +185,7 @@ export function World() {
       </div>
 
       <div className="relative z-10 pb-5">
-        <EcosystemRail />
+        <RunsOn />
       </div>
 
       <BottomBar />

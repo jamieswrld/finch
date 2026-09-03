@@ -44,8 +44,19 @@ function Corridor() {
       className="absolute inset-0 h-full w-full"
       aria-hidden
     >
-      {frames}
-      {/* corridor edge rays */}
+      <g style={{ animation: "finch-corridor-drift 19s ease-in-out infinite", transformOrigin: "720px 348px" }}>
+        {frames}
+      </g>
+      {/* corridor edge rays, with light periodically running down one */}
+      <g
+        stroke="#00c805"
+        strokeWidth="1.2"
+        strokeDasharray="34 420"
+        opacity="0"
+        style={{ animation: "finch-ray-sweep 11s linear infinite" }}
+      >
+        <line x1={outer.x0} y1={outer.y1} x2={inner.x0} y2={inner.y1} />
+      </g>
       <g stroke="#191b14" strokeWidth="1" opacity="0.045">
         <line x1={outer.x0} y1={outer.y0} x2={inner.x0} y2={inner.y0} />
         <line x1={outer.x1} y1={outer.y0} x2={inner.x1} y2={inner.y0} />
@@ -67,8 +78,10 @@ function Corridor() {
         strokeWidth="1"
         strokeDasharray="2 7"
         opacity="0.14"
+        style={{ animation: "finch-dash-flow 6s linear infinite" }}
       />
-      <circle cx={726} cy={352} r={3} fill="#00c805" opacity="0.7" />
+      <circle cx={726} cy={352} r={3} fill="#00c805" style={{ animation: "finch-node-pulse 3.4s ease-in-out infinite" }} />
+      <circle cx={726} cy={352} r={3} fill="none" stroke="#00c805" strokeWidth="1" style={{ animation: "finch-ping 4.6s ease-out infinite" }} />
     </svg>
   );
 }

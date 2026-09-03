@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Murmuration } from "@/components/birds/Murmuration";
 import { ChainTelemetry } from "@/components/chain/ChainTelemetry";
+import { TrackedContracts } from "@/components/chain/TrackedContracts";
 import { NetworkCounters } from "@/components/landing/NetworkCounters";
 
 export const metadata: Metadata = {
@@ -34,6 +35,11 @@ export default function NetworkPage() {
         <section aria-label="Chain telemetry" className="mb-10">
           <p className="label-mono mb-3">chain telemetry — live</p>
           <ChainTelemetry />
+        </section>
+
+        <section aria-label="Tracked contracts" className="mb-10">
+          <p className="label-mono mb-3">tracked contracts — chain 4663</p>
+          <TrackedContracts />
         </section>
 
         <NetworkCounters />

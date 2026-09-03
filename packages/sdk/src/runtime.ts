@@ -13,7 +13,7 @@ import {
 } from "@finch/flightpath";
 import { parseUnits, type Address } from "viem";
 import type { FinchManifest } from "./manifest.ts";
-import { ephemeralMemory, nullMemory, type MemoryAdapter } from "./memory.ts";
+import { ephemeralMemory, formatRecall, nullMemory, type MemoryAdapter } from "./memory.ts";
 
 export interface RunStep {
   type: "model" | "tool";
@@ -209,7 +209,7 @@ export class Nest {
       ...(recalled.length > 0
         ? [{
             role: "system" as const,
-            content: `Relevant memory:\n${recalled.map((item) => `- [${item.role}] ${item.content}`).join("\n")}`,
+            content: formatRecall(recalled),
           }]
         : []),
       { role: "user", content: input },

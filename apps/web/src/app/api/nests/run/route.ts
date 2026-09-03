@@ -1,7 +1,7 @@
 import { effectiveParallelism, resolveLiveChain, withFailover } from "@finch/providers";
-import { runNest, validateTaskGraph, type NestEvent } from "@finch/sdk";
+import { runNest, subjectOf, validateTaskGraph, type NestEvent } from "@finch/sdk";
 import { createFlightpath } from "@finch/flightpath";
-import { recordRun } from "@finch/db";
+import { appendHiveFindings, createHiveMemory, isDbConfigured, recordRun } from "@finch/db";
 import { errorJson, rateLimit, readJsonBody, safeErrorMessage } from "@/lib/server/http";
 import { resolveIdentity } from "@/lib/server/identity";
 import { getNestPreset } from "@/lib/nest-presets";
@@ -114,6 +114,15 @@ export async function POST(request: Request): Promise<Response> {
     executionPolicy: { ...manifest.executionPolicy, maxParallel: parallelism.value },
   };
 
+  // The hive: shared memory keyed by what this run is about. Every member
+  // finch reads prior findings on the subject before working; a completed
+  // BUILTIN run writes its channel outputs back. Submitted nests read but do
+  // not write — shared memory is an injection surface, and a stranger's
+  // manifest must not be able to seed what every later finch is told.
+  const subject = subjectOf(manifest.identity.objective);
+  const hive = isDbConfigured() && subject ? createHiveMemory({ subject }) : undefined;
+  const mayWriteHive = Boolean(hive) && submitted === undefined;
+
   const runId = `run_${crypto.randomUUID()}`;
   const encoder = new TextEncoder();
 
@@ -155,10 +164,27 @@ export async function POST(request: Request): Promise<Response> {
           // Every member finch runs on the configured provider; the manifest
           // names a model, the environment decides who serves it.
           resolveProvider: () => withFailover(chain),
-          hatchOptions: () => ({ flightpath }),
+          hatchOptions: () => ({ flightpath, ...(hive ? { memory: hive } : {}) }),
           onEvent: send,
           signal: abort.signal,
         });
+        // A completed builtin run teaches the hive. Failed or halted runs do
+        // not: a channel that was never produced has nothing true to say.
+        if (mayWriteHive && hive && subject && finished.status === "completed") {
+          try {
+            const written = await appendHiveFindings({
+              runId,
+              nestId: manifest.identity.id,
+              subject,
+              tasks: finished.tasks.map((task) => ({ finch: task.finch, outputChannel: task.outputChannel, status: task.status })),
+              channels: finished.channels,
+            });
+            send({ type: "hive.written", subject, findings: written } as unknown as NestEvent);
+          } catch {
+            // Memory is a convenience layered on a run that already succeeded;
+            // a write failure must not be reported as a run failure.
+          }
+        }
         // Leave a record — a run the product showed you should not vanish.
         await recordRun({
           runId,

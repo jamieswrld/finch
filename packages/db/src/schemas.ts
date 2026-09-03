@@ -143,6 +143,14 @@ export const memoryItemDocSchema = z.object({
   /** Embedding vector for Atlas Vector Search (dimension set by the embed model). */
   embedding: z.array(z.number()).optional(),
   at: z.string(),
+  // Provenance — see MemoryItem in @finch/sdk. A stored finding must be able
+  // to say where it came from, or it cannot be trusted or purged.
+  subject: z.string().max(64).optional(),
+  runId: z.string().max(80).optional(),
+  nestId: z.string().max(64).optional(),
+  finch: z.string().max(64).optional(),
+  channel: z.string().max(80).optional(),
+  source: z.enum(["run", "user"]).optional(),
 });
 export type MemoryItemDoc = z.infer<typeof memoryItemDocSchema>;
 

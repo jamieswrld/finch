@@ -17,7 +17,7 @@ export {
   postCreditEntry,
   type PostCreditEntryInput,
 } from "./credits.ts";
-export { createMongoMemory, type MongoMemoryOptions } from "./memory.ts";
+export { HIVE_NAMESPACE, appendHiveFindings, createHiveMemory, createMongoMemory, type HiveItem, type MongoMemoryOptions } from "./memory.ts";
 export { createMongoExecutionSink, listExecutions } from "./execution-sink.ts";
 export { summarizeLedger, type TreasurySummary } from "./treasury.ts";
 export {

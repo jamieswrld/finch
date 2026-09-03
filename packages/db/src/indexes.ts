@@ -28,6 +28,7 @@ export async function ensureIndexes(db: Db): Promise<string[]> {
   await add(COLLECTIONS.executions, { state: 1, createdAt: -1 });
 
   await add(COLLECTIONS.memoryItems, { namespace: 1, at: -1 });
+  await add(COLLECTIONS.memoryItems, { namespace: 1, subject: 1, at: -1 });
 
   await add(COLLECTIONS.feeEvents, { txHash: 1, logIndex: 1 }, { unique: true });
   await add(COLLECTIONS.feeEvents, { blockNumber: -1 });

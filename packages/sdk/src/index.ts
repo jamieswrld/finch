@@ -29,7 +29,7 @@ export {
   type TaskStatus,
 } from "./nest.ts";
 export { Nest, resolveWalletPolicy, type HatchOptions, type NestRunResult, type RunStep } from "./runtime.ts";
-export { ephemeralMemory, nullMemory, type MemoryAdapter, type MemoryItem } from "./memory.ts";
+export { ephemeralMemory, nullMemory, type MemoryAdapter, type MemoryItem, describeAge, formatRecall, subjectOf } from "./memory.ts";
 export {
   addressSchema,
   allowanceSchema,

@@ -1,5 +1,5 @@
 import { getFlightpathTarget, getRegistryConfig, isRegistered, registryId } from "@finch/flightpath";
-import { REGISTRY_LISTINGS, getRegistryListing, withRunCounts } from "@/lib/registry";
+import { REGISTRY_FINCHES, REGISTRY_NESTS } from "@/lib/registry";
 import { json } from "@/lib/server/http";
 
 export const runtime = "nodejs";
@@ -25,11 +25,24 @@ export async function GET(): Promise<Response> {
     });
   }
 
-  // Check the seeded handles against the chain. Anything not registered says so.
+  // The registry id is namespaced by kind — keccak("finch:handle") is a
+  // different id from keccak("nest:handle"), which is the whole point of the
+  // namespace. Checking every listing as a FINCH reported all four nests as
+  // unregistered while they were registered under their own ids.
+  const subjects = [
+    ...REGISTRY_FINCHES.map((listing) => ({ kind: "FINCH" as const, slug: listing.slug })),
+    ...REGISTRY_NESTS.map((listing) => ({ kind: "NEST" as const, slug: listing.slug })),
+  ];
+
   const checks = await Promise.all(
-    REGISTRY_LISTINGS.slice(0, 24).map(async (listing) => {
-      const id = registryId("FINCH", listing.slug);
-      return { slug: listing.slug, id, registered: await isRegistered(id, target) };
+    subjects.slice(0, 24).map(async (subject) => {
+      const id = registryId(subject.kind, subject.slug);
+      return {
+        slug: subject.slug,
+        kind: subject.kind.toLowerCase(),
+        id,
+        registered: await isRegistered(id, target),
+      };
     }),
   );
 

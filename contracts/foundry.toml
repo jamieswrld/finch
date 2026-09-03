@@ -1,3 +1,4 @@
+# Setup: run `forge install foundry-rs/forge-std --no-git` once; lib/ is gitignored.
 [profile.default]
 src = "src"
 out = "out"

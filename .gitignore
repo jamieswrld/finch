@@ -17,6 +17,10 @@ dist/
 .env.*.local
 
 # foundry
+# Vendored dependencies — restore with `forge install` in contracts/.
+# Committing them would also drag forge-std's test fixtures, which contain
+# the well-known public Anvil keys, into a public repo for no reason.
+contracts/lib/
 contracts/cache/
 contracts/out/
 contracts/broadcast/

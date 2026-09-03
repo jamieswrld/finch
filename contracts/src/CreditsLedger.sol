@@ -9,7 +9,7 @@ interface IERC20 {
 /// @notice ARCHITECTURAL SKETCH ONLY. $FINCH does not exist onchain yet and
 ///         no token-settled payments are live anywhere in Finch. This
 ///         contract pins down the intended shape of $FINCH network
-///         consumption so the offchain accounting (@finch/db credits) and the
+///         consumption so the offchain accounting (the finch/db credits package) and the
 ///         eventual onchain settlement share one model:
 ///
 ///           deposit $FINCH → CreditsPurchased event → offchain double-entry

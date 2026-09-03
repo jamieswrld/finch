@@ -1,5 +1,5 @@
 import { getFlightpathTarget, getRegistryConfig, isRegistered, registryId } from "@finch/flightpath";
-import { seedAviaryListings } from "@finch/db/seeds";
+import { REGISTRY_LISTINGS, getRegistryListing, withRunCounts } from "@/lib/registry";
 import { json } from "@/lib/server/http";
 
 export const runtime = "nodejs";
@@ -27,7 +27,7 @@ export async function GET(): Promise<Response> {
 
   // Check the seeded handles against the chain. Anything not registered says so.
   const checks = await Promise.all(
-    seedAviaryListings.slice(0, 24).map(async (listing) => {
+    REGISTRY_LISTINGS.slice(0, 24).map(async (listing) => {
       const id = registryId("FINCH", listing.slug);
       return { slug: listing.slug, id, registered: await isRegistered(id, target) };
     }),

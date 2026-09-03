@@ -1,5 +1,5 @@
 import { nestDocSchema, getCollections, isDbConfigured } from "@finch/db";
-import { seedNests } from "@finch/db/seeds";
+import { REGISTRY_NESTS } from "@/lib/registry";
 import { errorJson, json, rateLimit, readJsonBody, safeErrorMessage } from "@/lib/server/http";
 import { canWrite, resolveIdentity } from "@/lib/server/identity";
 
@@ -15,17 +15,17 @@ export async function GET(): Promise<Response> {
       // An empty collection means we are serving seed rows — say so, rather
       // than stamping demo data with a "registry" badge.
       if (rows.length > 0) return json({ source: "db", nests: rows });
-      return json({ source: "seed", nests: seedNests });
+      return json({ source: "builtin", nests: REGISTRY_NESTS });
     } catch (error) {
       return json({
-        source: "seed",
+        source: "builtin",
         degraded: true,
         note: `database unreachable (${safeErrorMessage(error, 120)})`,
-        nests: seedNests,
+        nests: REGISTRY_NESTS,
       });
     }
   }
-  return json({ source: "seed", nests: seedNests });
+  return json({ source: "builtin", nests: REGISTRY_NESTS });
 }
 
 /** POST /api/nests — save a nest draft. Persists structure only; never claims execution. */

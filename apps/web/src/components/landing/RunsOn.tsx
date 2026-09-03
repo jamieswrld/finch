@@ -6,9 +6,10 @@ import { BrandMark } from "@/components/brand/BrandMark";
  * Deliberately short. An exhaustive rail of every provider in the catalog read
  * as noise at the bottom of the hero; five names that matter reads as a fact.
  *
- * The heading is "infrastructure", not "partners". Every name here is software
- * or a network Finch actually uses, which is checkable. Calling any of them a
- * partner would assert a relationship none of them agreed to.
+ * The heading is "infrastructure", not "partners" — and that word is doing the
+ * work. Every name here is software or a network Finch actually uses, which is
+ * a checkable claim. Calling any of them a partner would assert a relationship
+ * none of them agreed to, so the heading must never drift to that.
  */
 
 interface Entry {
@@ -82,11 +83,6 @@ export function RunsOn() {
           </li>
         ))}
       </ul>
-
-      {/* One line, and every reasonable misreading of the row above is closed. */}
-      <p className="mt-4 text-center font-mono text-[8px] uppercase tracking-[0.14em] text-grey-faint/70">
-        names and marks identify software Finch uses · not endorsements or partnerships
-      </p>
     </div>
   );
 }

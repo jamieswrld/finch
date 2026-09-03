@@ -89,8 +89,13 @@ export const aviaryListingSchema = z.object({
   toolNames: z.array(z.string()).default([]),
   verified: z.boolean().default(false),
   version: z.string().default("0.1.0"),
-  /** "seed" rows are pre-launch sample registry entries, labeled in the UI. */
-  source: z.enum(["seed", "published"]).default("published"),
+  /**
+   * "builtin" rows ship with the deployment and are runnable immediately;
+   * "published" rows were registered by a user. There is deliberately no
+   * "sample" tier — a listing that cannot be opened and run does not belong
+   * in a registry at all.
+   */
+  source: z.enum(["builtin", "published"]).default("published"),
   createdAt: z.string(),
 });
 export type AviaryListing = z.infer<typeof aviaryListingSchema>;

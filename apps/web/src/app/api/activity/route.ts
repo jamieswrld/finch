@@ -1,5 +1,5 @@
 import { getCollections, isDbConfigured, listRuns } from "@finch/db";
-import { seedAviaryListings, seedNests } from "@finch/db/seeds";
+import { REGISTRY_FINCHES, REGISTRY_NESTS } from "@/lib/registry";
 import { POLICY_RULES } from "@finch/flightpath";
 import { json } from "@/lib/server/http";
 
@@ -38,32 +38,35 @@ export async function GET(): Promise<Response> {
   const tasks = history.runs.reduce((sum, run) => sum + run.taskCount, 0);
 
   let counts: Counts = { ...EMPTY, runs: history.runs.length, tasks };
-  // Provenance is per-figure, because the two halves have different origins.
-  // Runs are always real events; the registry counts may be seed rows. One
-  // real run does not turn a seeded listing into a registration.
-  let registryProvenance: "live" | "seed" | "empty" = "empty";
+
+  // There is no sample tier any more. Everything countable is either a real
+  // row in a database or a builtin manifest this deployment can actually run,
+  // so "provenance" now says which of those two, not real-versus-mock.
+  let registryProvenance: "live" | "builtin" = "builtin";
 
   if (isDbConfigured()) {
     try {
       const collections = await getCollections();
-      const [finches, nests, proofs, seeded, runTotal] = await Promise.all([
+      const [published, publishedNests, proofs, runTotal] = await Promise.all([
         collections.aviaryListings.countDocuments({}),
         collections.nests.countDocuments({}),
         collections.executions.countDocuments({ state: "confirmed" }),
-        collections.aviaryListings.countDocuments({ source: "seed" }),
         collections.runs.countDocuments({}),
       ]);
-      counts = { finches, nests, runs: runTotal, tasks, proofs };
-      // Rows that came from the seed file are seed rows no matter which
-      // database they are sitting in.
-      registryProvenance = seeded > 0 ? "seed" : finches + nests > 0 ? "live" : "empty";
+      // Builtins always exist; anything in the database is on top of them.
+      counts = {
+        finches: REGISTRY_FINCHES.length + published,
+        nests: REGISTRY_NESTS.length + publishedNests,
+        runs: runTotal,
+        tasks,
+        proofs,
+      };
+      registryProvenance = published + publishedNests > 0 ? "live" : "builtin";
     } catch {
-      counts = { ...counts, finches: seedAviaryListings.length, nests: seedNests.length };
-      registryProvenance = "seed";
+      counts = { ...counts, finches: REGISTRY_FINCHES.length, nests: REGISTRY_NESTS.length };
     }
   } else {
-    counts = { ...counts, finches: seedAviaryListings.length, nests: seedNests.length };
-    registryProvenance = "seed";
+    counts = { ...counts, finches: REGISTRY_FINCHES.length, nests: REGISTRY_NESTS.length };
   }
 
   return json({

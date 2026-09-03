@@ -19,7 +19,7 @@ interface Capability {
 }
 
 interface ListingResponse {
-  source: "db" | "seed";
+  source: "db" | "builtin";
   listing: AviaryListing;
   capabilities: Capability[];
   permissions: { requiresWrites: boolean; walletMode: string; note: string };
@@ -91,7 +91,7 @@ const nest = await createFinch("my-finch")
           <p className="mt-3 max-w-2xl text-[14.5px] leading-relaxed text-ink-soft">{listing.description}</p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <Badge tone={trust.tone}>{trust.label}</Badge>
-            {listing.source === "seed" && <DataBadge source="seed" />}
+            {listing.source === "builtin" && <DataBadge source="builtin" />}
             {listing.chains.map((chain) => (
               <Badge key={chain} tone="sage">
                 {chain}
@@ -185,7 +185,7 @@ const nest = await createFinch("my-finch")
                   : `${listing.pricing.credits ?? 0} cr / ${listing.pricing.model === "per_call" ? "call" : "mo"}`}
               </Row>
             </dl>
-            {listing.source === "seed" && (
+            {listing.source === "builtin" && (
               <p className="mt-3 text-[11.5px] leading-relaxed text-gold-deep">
                 Seed listing — these usage figures are sample data, not measured traffic. Published listings report
                 metered calls.

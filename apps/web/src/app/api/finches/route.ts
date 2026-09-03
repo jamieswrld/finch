@@ -1,5 +1,5 @@
 import { getCollections, isDbConfigured, type FinchDoc } from "@finch/db";
-import { seedFinches } from "@finch/db/seeds";
+import { REGISTRY_FINCHES } from "@/lib/registry";
 import { safeValidateManifest } from "@finch/sdk";
 import { errorJson, json, rateLimit, readJsonBody, safeErrorMessage } from "@/lib/server/http";
 import { canWrite, resolveIdentity } from "@/lib/server/identity";
@@ -16,14 +16,14 @@ export async function GET(): Promise<Response> {
       return json({ source: "db", finches: rows });
     } catch (error) {
       return json({
-        source: "seed",
+        source: "builtin",
         degraded: true,
         note: `database unreachable (${safeErrorMessage(error, 120)})`,
-        finches: seedFinches,
+        finches: REGISTRY_FINCHES,
       });
     }
   }
-  return json({ source: "seed", finches: seedFinches });
+  return json({ source: "builtin", finches: REGISTRY_FINCHES });
 }
 
 /**

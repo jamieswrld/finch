@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { seedAviaryListings } from "@finch/db/seeds";
+import { REGISTRY_LISTINGS, getRegistryListing, withRunCounts } from "@/lib/registry";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://finch.fun";
 
@@ -18,7 +18,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/app/build", priority: 0.6 },
   ];
 
-  const listings = seedAviaryListings.map((listing) => ({
+  const listings = REGISTRY_LISTINGS.map((listing) => ({
     url: `${SITE_URL}/app/aviary/${listing.slug}`,
     changeFrequency: "weekly" as const,
     priority: 0.4,

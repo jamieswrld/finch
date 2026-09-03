@@ -53,9 +53,9 @@ function FinchesPanel() {
               })}
             </ul>
           ))}
-        {state.status === "ready" && state.data.source === "seed" && state.data.finches.length > 0 && (
+        {state.status === "ready" && state.data.source === "builtin" && state.data.finches.length > 0 && (
           <p className="mt-3 flex items-center gap-2">
-            <DataBadge source="seed" />
+            <DataBadge source="builtin" />
             <span className="text-[11px] text-grey">sample finches, not yours</span>
           </p>
         )}
@@ -65,7 +65,7 @@ function FinchesPanel() {
 }
 
 function AviaryPanel() {
-  const state = useFetch<{ source: "db" | "seed"; listings: AviaryListing[] }>("/api/aviary");
+  const state = useFetch<{ source: "db" | "builtin"; listings: AviaryListing[] }>("/api/aviary");
   return (
     <section className="rounded-xs border border-line bg-bone-raised" aria-label="Aviary highlights">
       <PanelHeader title="aviary — most called" href="/app/aviary" hrefLabel="browse" />
@@ -94,9 +94,9 @@ function AviaryPanel() {
                 </li>
               ))}
             </ul>
-            {state.data.listings.some((listing) => listing.source === "seed") && (
+            {state.data.listings.some((listing) => listing.source === "builtin") && (
               <p className="mt-3 flex items-center gap-2">
-                <DataBadge source="seed" />
+                <DataBadge source="builtin" />
                 <span className="text-[11px] text-grey">
                   includes seed rows, whose call counts are sample figures rather than measured traffic
                 </span>
@@ -136,7 +136,7 @@ function SchoolPanel() {
 }
 
 function NestsPanel() {
-  const state = useFetch<{ source: "db" | "seed"; nests: NestDoc[] }>("/api/nests");
+  const state = useFetch<{ source: "db" | "builtin"; nests: NestDoc[] }>("/api/nests");
   return (
     <section className="rounded-xs border border-line bg-bone-raised" aria-label="Nests">
       <PanelHeader title="nests" href="/app/nests?tab=compose" hrefLabel="compose" />
@@ -163,9 +163,9 @@ function NestsPanel() {
             ))}
           </ul>
         )}
-        {state.status === "ready" && state.data.source === "seed" && state.data.nests.length > 0 && (
+        {state.status === "ready" && state.data.source === "builtin" && state.data.nests.length > 0 && (
           <p className="mt-3 flex items-center gap-2">
-            <DataBadge source="seed" />
+            <DataBadge source="builtin" />
             <span className="text-[11px] text-grey">preset nests, sample data</span>
           </p>
         )}

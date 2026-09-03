@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getCollections, isDbConfigured } from "@finch/db";
-import { seedAviaryListings } from "@finch/db/seeds";
+import { REGISTRY_LISTINGS, getRegistryListing, withRunCounts } from "@/lib/registry";
 import { ListingDetail } from "@/components/aviary/ListingDetail";
 
 /**
@@ -17,7 +17,7 @@ import { ListingDetail } from "@/components/aviary/ListingDetail";
  * error. Claiming "not found" on a transport failure would be a lie.
  */
 async function listingExists(slug: string): Promise<boolean> {
-  if (seedAviaryListings.some((entry) => entry.slug === slug)) return true;
+  if (REGISTRY_LISTINGS.some((entry) => entry.slug === slug)) return true;
   if (!isDbConfigured()) return false;
   try {
     const { aviaryListings } = await getCollections();
@@ -29,7 +29,7 @@ async function listingExists(slug: string): Promise<boolean> {
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  const listing = seedAviaryListings.find((entry) => entry.slug === slug);
+  const listing = REGISTRY_LISTINGS.find((entry) => entry.slug === slug);
   return {
     title: listing ? listing.name : "Listing",
     description: listing?.description ?? "An Aviary listing on the Finch network.",
@@ -37,7 +37,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 }
 
 export function generateStaticParams() {
-  return seedAviaryListings.map((listing) => ({ slug: listing.slug }));
+  return REGISTRY_LISTINGS.map((listing) => ({ slug: listing.slug }));
 }
 
 export default async function AviaryListingPage({ params }: { params: Promise<{ slug: string }> }) {

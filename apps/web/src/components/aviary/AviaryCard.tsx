@@ -46,7 +46,7 @@ export function AviaryCard({ listing }: { listing: AviaryListing }) {
         </div>
         <span className="flex shrink-0 items-center gap-1.5">
           <TrustBadge listing={listing} />
-          {listing.source === "seed" && <Badge tone="gold">seed</Badge>}
+          {listing.source === "builtin" && <Badge tone="gold">seed</Badge>}
         </span>
       </header>
 

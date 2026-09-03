@@ -13,7 +13,7 @@ import { useFetch } from "@/lib/use-fetch";
 import { NestCanvas } from "./NestCanvas";
 
 interface NestsResponse {
-  source: "db" | "seed";
+  source: "db" | "builtin";
   degraded?: boolean;
   note?: string;
   nests: NestDoc[];
@@ -238,7 +238,7 @@ export function NestComposer() {
           <span title="Simulate and Live modes activate with the Robinhood execution release.">
             <Badge tone="sage">mode · preview</Badge>
           </span>
-          <DataBadge source={state.data.source === "db" ? "db" : "seed"} />
+          <DataBadge source={state.data.source === "db" ? "db" : "builtin"} />
           {state.data.note && <span className="text-[11px] text-gold-deep">{state.data.note}</span>}
         </span>
       </div>

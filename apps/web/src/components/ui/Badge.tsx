@@ -25,16 +25,15 @@ export function Badge({ tone = "grey", children }: { tone?: Tone; children: Reac
  * Labels the provenance of displayed data. Used everywhere data renders so
  * pre-launch sample content is never mistaken for live activity.
  */
-export function DataBadge({ source }: { source: "live" | "db" | "seed" | "offline" | "demo" }) {
+export function DataBadge({ source }: { source: "live" | "db" | "builtin" | "offline" }) {
   switch (source) {
     case "live":
       return <Badge tone="green">live</Badge>;
     case "db":
       return <Badge tone="sage">registry</Badge>;
-    case "seed":
-      return <Badge tone="gold">seed data</Badge>;
-    case "demo":
-      return <Badge tone="gold">demo data</Badge>;
+    case "builtin":
+      // Not a caveat: builtins are shipped, runnable manifests.
+      return <Badge tone="sage">builtin</Badge>;
     case "offline":
       return <Badge tone="grey">offline</Badge>;
   }

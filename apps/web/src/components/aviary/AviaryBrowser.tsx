@@ -19,7 +19,7 @@ const CATEGORIES: Array<{ key: AviaryCategory | "all"; label: string }> = [
 ];
 
 interface AviaryResponse {
-  source: "db" | "seed";
+  source: "db" | "builtin";
   degraded?: boolean;
   note?: string;
   listings: AviaryListing[];
@@ -97,11 +97,11 @@ export function AviaryBrowser() {
         {state.status === "ready" && (
           <>
             <div className="mb-4 flex flex-wrap items-center gap-3">
-              <DataBadge source={state.data.source === "db" ? "db" : "seed"} />
+              <DataBadge source={state.data.source === "db" ? "db" : "builtin"} />
               <span className="font-mono text-[11px] text-grey tnum">
                 {state.data.listings.length} listing{state.data.listings.length === 1 ? "" : "s"}
               </span>
-              {state.data.source === "seed" && !state.data.degraded && (
+              {state.data.source === "builtin" && !state.data.degraded && (
                 <span className="text-[11.5px] text-grey">
                   Pre-launch sample registry — published listings replace these at launch.
                 </span>

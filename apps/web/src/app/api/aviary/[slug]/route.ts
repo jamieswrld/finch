@@ -1,6 +1,6 @@
 import { FLIGHTPATH_TOOLS, getRegistryConfig, isRegistered, registryId } from "@finch/flightpath";
 import { getCollections, isDbConfigured } from "@finch/db";
-import { seedAviaryListings } from "@finch/db/seeds";
+import { REGISTRY_LISTINGS, getRegistryListing, withRunCounts } from "@/lib/registry";
 import { errorJson, json } from "@/lib/server/http";
 
 export const runtime = "nodejs";
@@ -15,8 +15,8 @@ export async function GET(_request: Request, context: { params: Promise<{ slug: 
   const { slug } = await context.params;
   if (!/^[a-z0-9-]{2,64}$/.test(slug)) return errorJson(400, "invalid slug");
 
-  let listing = seedAviaryListings.find((entry) => entry.slug === slug) ?? null;
-  let source: "db" | "seed" = "seed";
+  let listing = REGISTRY_LISTINGS.find((entry) => entry.slug === slug) ?? null;
+  let source: "db" | "builtin" = "builtin";
 
   if (isDbConfigured()) {
     try {

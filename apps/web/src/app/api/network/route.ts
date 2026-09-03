@@ -1,5 +1,5 @@
 import { getCollections, isDbConfigured } from "@finch/db";
-import { seedAviaryListings, seedNests } from "@finch/db/seeds";
+import { REGISTRY_FINCHES, REGISTRY_NESTS } from "@/lib/registry";
 import { json } from "@/lib/server/http";
 
 export const runtime = "nodejs";
@@ -16,31 +16,33 @@ export async function GET(): Promise<Response> {
   if (isDbConfigured()) {
     try {
       const collections = await getCollections();
-      const [finches, nests, executions, proofs, seededFinches] = await Promise.all([
+      const [finches, nests, executions, proofs] = await Promise.all([
         collections.aviaryListings.countDocuments({}),
         collections.nests.countDocuments({}),
         collections.executions.countDocuments({}),
         // A proof of flight exists for exactly the confirmed executions.
         collections.executions.countDocuments({ state: "confirmed" }),
-        collections.aviaryListings.countDocuments({ source: "seed" }),
       ]);
       return json({
-        // A database holding seeded rows is still reporting seed data. Saying
-        // "db" here would dress sample rows as live registrations.
-        source: seededFinches > 0 ? "seed" : "db",
-        seededRows: seededFinches,
-        counts: { finches, nests, executions, proofsOfFlight: proofs },
+        source: "db",
+        counts: {
+          // Builtins are always available on top of whatever is registered.
+          finches: REGISTRY_FINCHES.length + finches,
+          nests: REGISTRY_NESTS.length + nests,
+          executions,
+          proofsOfFlight: proofs,
+        },
         at: new Date().toISOString(),
       });
     } catch {
-      // fall through to seed counts, labeled
+      // fall through to the builtin counts
     }
   }
   return json({
-    source: "seed",
+    source: "builtin",
     counts: {
-      finches: seedAviaryListings.length,
-      nests: seedNests.length,
+      finches: REGISTRY_FINCHES.length,
+      nests: REGISTRY_NESTS.length,
       executions: 0,
       proofsOfFlight: 0,
     },

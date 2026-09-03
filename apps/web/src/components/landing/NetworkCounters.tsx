@@ -4,7 +4,7 @@ import { DataBadge } from "@/components/ui/Badge";
 import { useFetch } from "@/lib/use-fetch";
 
 interface NetworkStats {
-  source: "db" | "seed";
+  source: "db" | "builtin";
   counts: { finches: number; nests: number; executions: number; proofsOfFlight: number };
 }
 
@@ -31,7 +31,7 @@ export function NetworkCounters() {
         ))}
       </div>
       <p className="mt-2 flex items-center gap-2 font-mono text-[9.5px] uppercase tracking-[0.1em] text-grey-faint">
-        {state.status === "ready" && <DataBadge source={state.data.source === "db" ? "db" : "seed"} />}
+        {state.status === "ready" && <DataBadge source={state.data.source === "db" ? "db" : "builtin"} />}
         {state.status === "error" ? (
           <span className="text-red-deep">
             counts unavailable — {state.message}

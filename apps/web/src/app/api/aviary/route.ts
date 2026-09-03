@@ -1,5 +1,6 @@
 import { aviaryCategorySchema, aviaryListingSchema, getCollections, isDbConfigured } from "@finch/db";
-import { seedAviaryListings } from "@finch/db/seeds";
+import { REGISTRY_LISTINGS, withRunCounts } from "@/lib/registry";
+import { listRuns } from "@finch/db";
 import { errorJson, json, rateLimit, readJsonBody, safeErrorMessage } from "@/lib/server/http";
 
 export const runtime = "nodejs";
@@ -39,22 +40,27 @@ export async function GET(request: Request): Promise<Response> {
       // Database configured but unreachable — surface the degraded state honestly.
       return json(
         {
-          source: "seed",
+          source: "builtin",
           degraded: true,
           note: `registry database unreachable (${safeErrorMessage(error, 120)}); serving seed data`,
-          listings: filterSeeds(category?.success ? category.data : null, q),
+          listings: await filterRegistry(category?.success ? category.data : null, q),
         },
         { status: 200 },
       );
     }
   }
 
-  return json({ source: "seed", listings: filterSeeds(category?.success ? category.data : null, q) });
+  return json({ source: "builtin", listings: await filterRegistry(category?.success ? category.data : null, q) });
 }
 
-function filterSeeds(category: string | null, q: string) {
+/**
+ * Filter the builtin registry, with call counts folded in from REAL run
+ * history. A listing nobody has run reports 0, because that is the number.
+ */
+async function filterRegistry(category: string | null, q: string) {
+  const history = await listRuns(100);
   const needle = q.toLowerCase();
-  return seedAviaryListings
+  return withRunCounts(REGISTRY_LISTINGS, history.runs)
     .filter((listing) => !category || listing.category === category)
     .filter(
       (listing) =>

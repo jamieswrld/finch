@@ -244,13 +244,6 @@ body {
   90% { opacity: 0.42; }
   100% { transform: translate(-10vw, 26vh) rotate(200deg) scale(0.7); opacity: 0; }
 }
-@keyframes finch-cross-e {
-  0% { transform: translate(-6vw, 14vh) rotate(4deg) scale(0.42); opacity: 0; }
-  12% { opacity: 0.22; }
-  55% { transform: translate(50vw, 34vh) rotate(-2deg) scale(0.5); opacity: 0.22; }
-  90% { opacity: 0.22; }
-  100% { transform: translate(107vw, 56vh) rotate(-8deg) scale(0.42); opacity: 0; }
-}
 @keyframes finch-cross-f {
   0% { transform: translate(-9vw, 84vh) rotate(-20deg) scale(0.95); opacity: 0; }
   7% { opacity: 0.5; }

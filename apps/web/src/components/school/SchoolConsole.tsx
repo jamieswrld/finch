@@ -105,14 +105,15 @@ function Console({ preset, onBack }: { preset: SchoolPreset; onBack: () => void 
           {preset.title} <span className="text-grey">/</span> <span className="text-green-deep">preview</span>
         </span>
         <Badge tone="sage">read only</Badge>
+        <button
+          type="button"
+          onClick={() => setShowManifest((value) => !value)}
+          className="font-mono text-[10.5px] uppercase tracking-[0.08em] text-grey underline decoration-line-strong underline-offset-2 transition-colors hover:text-ink"
+          title="The exact document this finch runs — fork it and run it yourself"
+        >
+          {showManifest ? "hide definition" : "definition"}
+        </button>
         <span className="ml-auto flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setShowManifest((value) => !value)}
-            className="rounded-xs border border-line-strong px-2 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-ink-soft hover:border-ink hover:text-ink"
-          >
-            {showManifest ? "hide manifest" : "view manifest"}
-          </button>
           <Link
             href={`/app/build?school=${preset.slug}`}
             className="rounded-xs border border-line-strong px-2 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-ink-soft hover:border-green-deep hover:text-green-deep"

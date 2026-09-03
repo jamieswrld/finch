@@ -312,8 +312,8 @@ export function NestComposer() {
             <Button onClick={saveNest} disabled={saveState.phase === "saving"}>
               {saveState.phase === "saving" ? "saving…" : "Save Nest"}
             </Button>
-            <Button variant="secondary" onClick={exportRunnableNest}>
-              export runnable nest.json
+            <Button variant="secondary" onClick={exportRunnableNest} title="Downloads the runnable nest.json — run it yourself with runNest() from @finch/sdk">
+              Export nest
             </Button>
             <Button variant="secondary" onClick={exportNest}>
               export diagram

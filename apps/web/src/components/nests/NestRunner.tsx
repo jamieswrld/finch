@@ -277,14 +277,15 @@ export function NestRunner({ manifest }: { manifest: NestManifest }) {
             {doneCount}/{run.tasks.length} done · {run.totalCost.inputTokens}→{run.totalCost.outputTokens} tok
           </span>
         )}
+        <button
+          type="button"
+          onClick={() => setShowManifest((value) => !value)}
+          className="font-mono text-[10.5px] uppercase tracking-[0.08em] text-grey underline decoration-line-strong underline-offset-2 transition-colors hover:text-ink"
+          title="The exact document this nest runs — export it and run it yourself"
+        >
+          {showManifest ? "hide definition" : "definition"}
+        </button>
         <span className="ml-auto flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setShowManifest((value) => !value)}
-            className="rounded-xs border border-line-strong px-2 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-ink-soft hover:border-ink hover:text-ink"
-          >
-            {showManifest ? "hide nest.json" : "view nest.json"}
-          </button>
           {phase === "running" ? (
             <Button variant="secondary" className="h-8 px-3" onClick={stop}>
               stop

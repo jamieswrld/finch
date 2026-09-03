@@ -97,7 +97,6 @@ const FLOCK = [
   { animation: "finch-cross-b", duration: "41s", delay: "9s", w: 11, h: 9, fill: "#43463c" },
   { animation: "finch-cross-c", duration: "52s", delay: "4s", w: 9, h: 7, fill: "#6f7268" },
   { animation: "finch-cross-d", duration: "36s", delay: "17s", w: 14, h: 11, fill: "#2b2d25" },
-  { animation: "finch-cross-e", duration: "63s", delay: "23s", w: 8, h: 6, fill: "#9b9e93" },
   { animation: "finch-cross-f", duration: "26s", delay: "12s", w: 20, h: 16, fill: "#191b14" },
   { animation: "finch-cross-g", duration: "58s", delay: "31s", w: 7, h: 6, fill: "#9b9e93" },
 ];

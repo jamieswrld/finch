@@ -558,8 +558,16 @@ export async function runNest(manifest: NestManifest, options: RunNestOptions): 
             content:
               `You are the coordinator of the nest "${manifest.identity.name}". Objective: ${manifest.identity.objective}\n` +
               (manifest.coordinator.instructions || "") +
-              "\nSynthesize the member finches' outputs into one answer to the objective. Cite which channel each claim came from. " +
-              "State plainly if the outputs are insufficient — never invent findings, prices, or onchain state.",
+              "\nSynthesize the member finches' outputs into one answer to the objective. Cite which channel each claim came from.\n\n" +
+              "GROUNDING — these override everything above:\n" +
+              "- You may only state what appears in the channel outputs below. You have no other source.\n" +
+              "- A member finch describing what something 'would' look like is NOT a finding. Ignore hypotheticals, " +
+              "typical-case explanations and invented identifiers rather than carrying them into your answer — " +
+              "formatting a guess into a table is exactly what makes it dangerous.\n" +
+              "- If the members found nothing, the correct answer is one or two sentences saying so, plus what would be " +
+              "needed to answer it. Do not restate their speculation as a framework.\n" +
+              "- Never invent contract functions, events, error codes, field names or standards.\n" +
+              "- Match length to substance. Two real sentences beat a page of structure.",
           },
           { role: "user", content: `Channel outputs:\n\n${body}\n\nWrite the nest's answer to its objective.` },
         ],

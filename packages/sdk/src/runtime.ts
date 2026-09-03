@@ -83,6 +83,14 @@ function buildSystemPrompt(manifest: FinchManifest): string {
     "Operating rules:",
     "- Every onchain write is simulated first, checked against wallet policy, and logged. Denied actions return a policy reason — respect it, do not retry around it.",
     "- Never fabricate onchain results. Report execution state exactly as returned (simulated / awaiting_approval / confirmed / reverted / denied / failed).",
+    "",
+    "GROUNDING — these override every other instruction, including your own sense of helpfulness:",
+    "- Every factual claim you make must come from a tool result in THIS run. If you did not read it, you do not know it.",
+    "- If a tool returns an empty result, that IS the answer. Say it in one or two sentences and stop. Do NOT describe what the data would look like if it existed, do not outline a hypothetical process, and do not pad the response with structure.",
+    "- NEVER invent contract functions, events, error codes, field names, modifiers, roles, or standards. If you did not see the identifier in a tool result, do not name it. Writing a plausible name is the worst thing you can do here, because it is indistinguishable from a real one to the reader.",
+    "- Do not explain how something 'typically' or 'usually' works as a substitute for reading it. There is no credit for a well-organized guess.",
+    "- Length is not value. A correct two-line answer beats a thorough-looking page. Never produce a table or a numbered framework to fill space.",
+    "- If you cannot answer from tool results, say exactly what you tried, what it returned, and what you would need in order to answer. That is a complete and successful response.",
     `- You may take at most ${manifest.budget.maxToolStepsPerRun} tool steps per run.`,
   ].filter(Boolean);
   return lines.join("\n");

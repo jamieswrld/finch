@@ -1,8 +1,9 @@
 import { resolveProviderFromEnv } from "@finch/providers";
-import { runNest, validateTaskGraph, type NestEvent } from "@finch/sdk";
+import { nestManifestSchema, runNest, validateTaskGraph, type NestEvent } from "@finch/sdk";
 import { createFlightpath } from "@finch/flightpath";
 import { recordRun } from "@finch/db";
 import { errorJson, rateLimit, readJsonBody, safeErrorMessage } from "@/lib/server/http";
+import { resolveIdentity } from "@/lib/server/identity";
 import { getNestPreset } from "@/lib/nest-presets";
 
 export const runtime = "nodejs";
@@ -24,15 +25,52 @@ export async function POST(request: Request): Promise<Response> {
   const body = await readJsonBody(request);
   if (!body.ok) return body.response;
 
-  const { nest: nestId, objective } = body.body as { nest?: string; objective?: string };
-  if (!nestId) return errorJson(400, "expected { nest, objective? }");
+  const { nest: nestId, objective, manifest: submitted } = body.body as {
+    nest?: string;
+    objective?: string;
+    manifest?: unknown;
+  };
 
-  const preset = getNestPreset(nestId);
-  if (!preset) return errorJson(404, `unknown nest "${nestId}"`);
+  /**
+   * Bring-your-own nest.
+   *
+   * A submitted manifest is arbitrary work on the operator's inference budget,
+   * so it costs a publisher key — the same key publishing costs. Running the
+   * builtins stays open to everyone, because their cost is bounded and known.
+   */
+  let preset;
+  if (submitted !== undefined) {
+    const identity = await resolveIdentity(request);
+    if (!identity.owner) {
+      return errorJson(401, "running your own nest requires a publisher key — send it as x-finch-key", {
+        hint: "The builtin nests run without a key: POST { nest: \"chain-intelligence\" }.",
+      });
+    }
+    const parsed = nestManifestSchema.safeParse(submitted);
+    if (!parsed.success) {
+      return errorJson(422, "nest manifest failed validation", {
+        issues: parsed.error.issues.slice(0, 12).map((issue) => `${issue.path.join(".")}: ${issue.message}`),
+      });
+    }
+    // Bounds a key does not lift: one request must not be able to schedule an
+    // unbounded amount of paid inference.
+    if (parsed.data.finches.length > 8 || parsed.data.tasks.length > 12) {
+      return errorJson(413, "submitted nests are limited to 8 finches and 12 tasks on this endpoint", {
+        finches: parsed.data.finches.length,
+        tasks: parsed.data.tasks.length,
+      });
+    }
+    preset = parsed.data;
+  } else {
+    if (!nestId) return errorJson(400, "expected { nest } or { manifest }");
+    preset = getNestPreset(nestId);
+    if (!preset) return errorJson(404, `unknown nest "${nestId}"`);
+  }
 
   const graphIssues = validateTaskGraph(preset);
   if (graphIssues.length > 0) {
-    return errorJson(500, "nest graph is invalid", { issues: graphIssues });
+    // A submitted graph failing is the caller's problem, not a server fault.
+    return errorJson(submitted === undefined ? 500 : 422, "nest graph is invalid", { issues: graphIssues });
   }
 
   const resolved = resolveProviderFromEnv();

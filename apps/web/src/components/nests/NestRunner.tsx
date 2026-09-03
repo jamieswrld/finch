@@ -6,6 +6,7 @@ import { DartGlyph } from "@/components/birds/FinchGlyph";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { CodeBlock } from "@/components/ui/CodeBlock";
+import { ConnectNest } from "./ConnectNest";
 
 /**
  * The nest console. A run is a DAG of tasks streamed over SSE — each task card
@@ -153,6 +154,10 @@ function Inspector({ task }: { task: TaskRecord }) {
 }
 
 export function NestRunner({ manifest }: { manifest: NestManifest }) {
+  // Whatever host the visitor is on — so a copied command targets the site
+  // they are looking at, not a hardcoded domain that may not be theirs.
+  const origin = typeof window === "undefined" ? "https://finch.fun" : window.location.origin;
+
   const [objective, setObjective] = useState(manifest.identity.objective);
   const [run, setRun] = useState<NestRunState | null>(null);
   const [phase, setPhase] = useState<"idle" | "running" | "done" | "error" | "not-configured">("idle");
@@ -398,6 +403,8 @@ export function NestRunner({ manifest }: { manifest: NestManifest }) {
           </p>
         )}
       </div>
+
+      <ConnectNest manifest={manifest} origin={origin} />
     </div>
   );
 }

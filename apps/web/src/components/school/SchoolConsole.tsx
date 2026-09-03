@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useAccount } from "wagmi";
+import { SignPanel, type PreparedExecution } from "./SignPanel";
 import { DartGlyph, FinchGlyph } from "@/components/birds/FinchGlyph";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -20,7 +22,7 @@ interface TraceStep {
 type RunState =
   | { phase: "idle" }
   | { phase: "running" }
-  | { phase: "done"; output: string | null; haltedBy?: string; error?: string; steps: TraceStep[]; usage: { inputTokens: number; outputTokens: number } }
+  | { phase: "done"; output: string | null; haltedBy?: string; error?: string; steps: TraceStep[]; usage: { inputTokens: number; outputTokens: number }; executions: PreparedExecution[]; mode: string }
   | { phase: "not-configured"; hint?: string }
   | { phase: "error"; message: string };
 
@@ -59,6 +61,7 @@ function PresetGrid({ onSelect }: { onSelect: (preset: SchoolPreset) => void }) 
 function Console({ preset, onBack }: { preset: SchoolPreset; onBack: () => void }) {
   const [input, setInput] = useState("");
   const [state, setState] = useState<RunState>({ phase: "idle" });
+  const { address } = useAccount();
   const [showManifest, setShowManifest] = useState(false);
 
   async function run(prompt?: string): Promise<void> {
@@ -70,7 +73,7 @@ function Console({ preset, onBack }: { preset: SchoolPreset; onBack: () => void 
       const response = await fetch("/api/school/run", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ preset: preset.slug, input: text }),
+        body: JSON.stringify({ signer: address ?? undefined, preset: preset.slug, input: text }),
       });
       const payload = (await response.json()) as Record<string, unknown>;
       if (response.status === 503 && payload.configured === false) {
@@ -85,6 +88,8 @@ function Console({ preset, onBack }: { preset: SchoolPreset; onBack: () => void 
         phase: "done",
         output: (payload.output as string | null) ?? null,
         haltedBy: payload.haltedBy as string | undefined,
+        executions: (payload.executions as PreparedExecution[] | undefined) ?? [],
+        mode: (payload.mode as string | undefined) ?? "preview",
         error: payload.error as string | undefined,
         steps: (payload.steps as TraceStep[]) ?? [],
         usage: (payload.usage as { inputTokens: number; outputTokens: number }) ?? { inputTokens: 0, outputTokens: 0 },
@@ -218,6 +223,13 @@ function Console({ preset, onBack }: { preset: SchoolPreset; onBack: () => void 
                   </span>
                 </summary>
                 <ol className="divide-y divide-line/60 border-t border-line">
+                  {state.executions
+                    .filter((execution) => execution.state === "awaiting_signature")
+                    .map((execution) => (
+                      <div key={execution.id} className="mb-4">
+                        <SignPanel execution={execution} />
+                      </div>
+                    ))}
                   {state.steps.map((step, index) => (
                     <li key={index} className="px-3 py-2.5">
                       <p className="flex items-center gap-2 font-mono text-[11px]">

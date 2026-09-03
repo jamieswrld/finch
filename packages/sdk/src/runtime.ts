@@ -263,7 +263,12 @@ export class Nest {
               if (tool.meta.mode === "write") {
                 const record = result as ExecutionRecord;
                 executions.push(record);
-                ok = record.state === "confirmed" || record.state === "awaiting_approval";
+                // A write that parked for a human — approval or signature — did
+                // what it should. Counting it as a failure trips the kill switch.
+                ok =
+                  record.state === "confirmed" ||
+                  record.state === "awaiting_approval" ||
+                  record.state === "awaiting_signature";
               }
               resultText = JSON.stringify(result, (_key, value) => (typeof value === "bigint" ? value.toString() : value));
             } catch (error) {

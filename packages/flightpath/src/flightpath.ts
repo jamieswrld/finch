@@ -66,6 +66,12 @@ export interface FlightpathOptions {
    * daily allowance survives process restarts and is not reset by re-hatching.
    */
   spendTracker?: SpendTracker;
+  /**
+   * Prepare transactions for this address to sign in its own wallet instead
+   * of signing server-side. No key is involved; execution parks at
+   * awaiting_signature with the exact transaction.
+   */
+  externalSigner?: Address;
 }
 
 export interface TransferParams {
@@ -182,7 +188,7 @@ export class Flightpath {
    * to a manifest-derived policy — the private key never surfaces.
    */
   derive(
-    overrides: Partial<Pick<FlightpathOptions, "policy" | "sink" | "agentId" | "swapVenue" | "rwaApprovedAssets" | "confirmations">>,
+    overrides: Partial<Pick<FlightpathOptions, "policy" | "sink" | "agentId" | "swapVenue" | "rwaApprovedAssets" | "confirmations" | "externalSigner">>,
   ): Flightpath {
     return new Flightpath({
       ...this.options,
@@ -205,6 +211,8 @@ export class Flightpath {
       sink: this.sink,
       agentId: this.options.agentId,
       confirmations: this.options.confirmations,
+      signing: this.options.externalSigner ? "external" : this.walletClient ? "server" : undefined,
+      externalSigner: this.options.externalSigner,
     };
   }
 

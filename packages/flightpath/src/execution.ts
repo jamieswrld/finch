@@ -1,4 +1,4 @@
-import type { Account, Chain, PublicClient, WalletClient } from "viem";
+import type { Account, Address, Chain, PublicClient, WalletClient } from "viem";
 import type { PolicyEngine } from "./policy.ts";
 import type { ExecutionIntent, ExecutionRecord, ExecutionSink } from "./types.ts";
 
@@ -14,6 +14,15 @@ export interface ExecutionContext {
   agentId?: string;
   confirmations?: number;
   confirmationTimeoutMs?: number;
+  /**
+   * Who signs. "server" is the operator wallet on this context. "external" is
+   * a wallet this process never holds — a visitor's browser — so execution
+   * stops after simulation with the exact transaction prepared, and resumes
+   * only when a signed hash that matches it is presented.
+   */
+  signing?: "server" | "external";
+  /** The address the transaction is prepared for when signing is external. */
+  externalSigner?: Address;
 }
 
 function baseRecord(context: ExecutionContext, id: string, intent: ExecutionIntent): ExecutionRecord {
@@ -150,9 +159,11 @@ export async function executeIntent(
 
   // 2. Simulation — mandatory before anything is signed.
   try {
-    const account = context.account;
+    // Simulate as whoever will actually sign: an external signer's balance
+    // and nonce are what the chain will check, not the server's.
+    const simulateAs = context.signing === "external" ? context.externalSigner : context.account?.address;
     const gas = await context.publicClient.estimateGas({
-      account: account ?? undefined,
+      account: simulateAs ?? undefined,
       to: effectiveIntent.to,
       value: effectiveIntent.value,
       data: effectiveIntent.data,
@@ -160,7 +171,7 @@ export async function executeIntent(
     if (effectiveIntent.data) {
       // eth_call surfaces reverts with reasons that estimateGas can miss.
       await context.publicClient.call({
-        account: account ?? undefined,
+        account: simulateAs ?? undefined,
         to: effectiveIntent.to,
         value: effectiveIntent.value,
         data: effectiveIntent.data,
@@ -174,6 +185,34 @@ export async function executeIntent(
     record.simulation = { ok: false, error: message, simulatedAt: now() };
     record.error = { stage: "simulation", message };
     push(record, "simulation.failed", message.slice(0, 300));
+    await context.sink.save(record);
+    return record;
+  }
+
+  // 3a. External signing: stop here with the transaction prepared.
+  //
+  // Nothing past this point can run without a signer this process does not
+  // have. The record parks with the exact to/value/data/gas, and the policy
+  // verdict — including needs_approval — travels with it: when the visitor's
+  // own wallet is the signer, the visitor is the approver, and signing is the
+  // approval. Spend is accounted when a matching signed hash arrives, never
+  // for a transaction that was only proposed.
+  if (context.signing === "external") {
+    record.state = "awaiting_signature";
+    record.prepared = {
+      from: context.externalSigner,
+      to: effectiveIntent.to,
+      value: effectiveIntent.value.toString(),
+      data: effectiveIntent.data,
+      gas: record.simulation?.gasEstimate ?? "0",
+    };
+    push(
+      record,
+      "awaiting_signature",
+      decision.verdict === "needs_approval"
+        ? `prepared for ${context.externalSigner ?? "external signer"} — policy flagged a large spend; the signer is the approver`
+        : `prepared for ${context.externalSigner ?? "external signer"}`,
+    );
     await context.sink.save(record);
     return record;
   }

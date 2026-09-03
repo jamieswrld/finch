@@ -64,6 +64,30 @@ export function createMongoExecutionSink() {
     },
 
     /**
+     * Record a broadcast hash with a targeted update — no whole-document
+     * parse. This runs the instant a signed transaction is on chain; if any
+     * unrelated field on the stored document fails validation here, the hash
+     * is lost while the money has moved. A $set of exactly the fields that
+     * changed cannot be blocked by a field that did not.
+     */
+    async setTx(id: string, tx: { hash: string; submittedAt: string }, entry: { at: string; event: string; detail?: string }): Promise<void> {
+      const { executions } = await getCollections();
+      await executions.updateOne({ id }, { $set: { tx }, $push: { log: entry } });
+    },
+
+    /** Settle a submitted record from its receipt, targeted for the same reason. */
+    async settle(
+      id: string,
+      state: "confirmed" | "reverted",
+      receipt: Record<string, unknown>,
+      entry: { at: string; event: string; detail?: string },
+    ): Promise<boolean> {
+      const { executions } = await getCollections();
+      const result = await executions.updateOne({ id, state: "submitted" }, { $set: { state, receipt }, $push: { log: entry } });
+      return result.modifiedCount === 1;
+    },
+
+    /**
      * Compare-and-set on state. One conditional update is the whole guarantee:
      * whichever caller matches `from` wins, everyone else sees modifiedCount 0.
      */

@@ -25,6 +25,9 @@ function preset(input: {
   description: string;
   instructions: string;
   tools: string[];
+  /** Grant writes. Off by default: a preset is read-only unless it says otherwise. */
+  permissions?: { allowWrites: boolean; rwaApprovedOnly: boolean };
+  wallet?: { mode: "none" | "observer" | "operator"; allowances: Array<{ asset: string; perDay: string; perTx?: string }>; allowedContracts: string[] };
 }): SchoolPreset {
   return {
     slug: input.slug,
@@ -45,8 +48,8 @@ function preset(input: {
       model: { provider: "hyperbolic", model: "meta-llama/Llama-3.3-70B-Instruct", temperature: 0.2, maxTokens: 1400 },
       memory: { kind: "ephemeral", maxItems: 16 },
       tools: { flightpath: input.tools, services: [] },
-      permissions: { allowWrites: false, rwaApprovedOnly: true },
-      wallet: { mode: "observer", allowances: [], allowedContracts: [] },
+      permissions: input.permissions ?? { allowWrites: false, rwaApprovedOnly: true },
+      wallet: input.wallet ?? { mode: "observer", allowances: [], allowedContracts: [] },
       triggers: [{ kind: "manual" }],
       budget: { maxActionsPerDay: 200, maxComputeCreditsPerDay: 200, maxToolStepsPerRun: 6, killSwitch: { maxConsecutiveFailures: 3 } },
       deployment: { runtime: "self-hosted", status: "draft" },
@@ -125,6 +128,23 @@ export const SCHOOL_PRESETS: SchoolPreset[] = [
       "compare live gas to the explorer's slow/average/fast",
     ],
     tools: ["network_status", "chain_stats", "block_read", "token_list"],
+  }),
+  preset({
+    slug: "courier-finch",
+    title: "Courier Finch",
+    blurb: "The first finch that does something: proposes a native transfer for you to sign.",
+    description: "Prepares a native ETH transfer on Robinhood Chain for your own wallet to sign. Nothing moves without your signature.",
+    instructions:
+      "You are Courier Finch. You prepare native ETH transfers on Robinhood Chain (id 4663) for the visitor to sign in their own wallet — you never hold a key and nothing you do moves funds by itself. Only propose a transfer when the visitor gives BOTH a recipient address and an amount; if either is missing, ask for it and do not call the tool. Never invent an address or an amount. Call transfer_native once with exactly what was given. The policy caps you at 0.01 ETH per transfer and 0.05 ETH per day; if a request exceeds them, say so and do not call the tool. After calling the tool, report its state exactly: awaiting_signature means it is prepared and waiting for the visitor's wallet; denied means policy refused it and why.",
+    prompts: [
+      "send 0.001 ETH to 0x55bb1a9F0252d37121F1344e3693B59dD1Ce0389",
+      "what are your limits?",
+      "send 1 ETH to 0x…",
+      "prepare a transfer of 0.005 ETH to 0x…",
+    ],
+    tools: ["transfer_native", "balance_native", "network_status"],
+    permissions: { allowWrites: true, rwaApprovedOnly: true },
+    wallet: { mode: "operator", allowances: [{ asset: "native", perDay: "0.05", perTx: "0.01" }], allowedContracts: [] },
   }),
   preset({
     slug: "pons-scout",

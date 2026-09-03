@@ -39,6 +39,7 @@ export type ExecutionState =
   | "simulation_failed"
   | "awaiting_approval"
   | "approved"
+  | "awaiting_signature"
   | "submitted"
   | "confirmed"
   | "reverted"
@@ -96,6 +97,18 @@ export interface ExecutionRecord {
    */
   approval?: { approvedBy: string; at: string };
   simulation?: SimulationResult;
+  /**
+   * The exact transaction handed to an external signer, set when the record
+   * parks at awaiting_signature. Whatever comes back as signed is compared to
+   * this field by field before the record advances.
+   */
+  prepared?: {
+    from?: Address;
+    to: Address;
+    value: string;
+    data?: Hex;
+    gas: string;
+  };
   tx?: {
     hash: Hex;
     submittedAt: string;

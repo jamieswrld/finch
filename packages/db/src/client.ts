@@ -69,6 +69,11 @@ export async function getMongoClient(): Promise<MongoClient> {
       const client = new MongoClient(process.env.MONGODB_URI as string, {
         maxPoolSize: 10,
         serverSelectionTimeoutMS: 4000,
+        // A field set to undefined in memory was being written as null, and
+        // z.string().optional() rejects null on the way back in. The first
+        // save of a record passed; the save that recorded a real transaction
+        // hash threw. Undefined means "absent" and must be stored as absent.
+        ignoreUndefined: true,
       });
       clientPromise = client.connect().catch((error) => {
         clientPromise = null;

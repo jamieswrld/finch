@@ -330,10 +330,10 @@ export async function runNest(manifest: NestManifest, options: RunNestOptions): 
   }
 
   const policy = manifest.executionPolicy;
-  if (policy.mode !== "preview") {
-    throw new Error(
-      `nest execution mode "${policy.mode}" is not available yet — only preview (read-only) nests can run today`,
-    );
+  if (policy.mode === "live") {
+    // Live nests need a signer per member. Simulate mode runs writes through
+    // policy and simulation and parks them prepared; nothing is sent.
+    throw new Error('nest execution mode "live" is not available yet — preview (read-only) and simulate (prepare-only) nests can run today');
   }
 
   const finchByHandle = new Map(manifest.finches.map((finch) => [finch.handle, finch]));

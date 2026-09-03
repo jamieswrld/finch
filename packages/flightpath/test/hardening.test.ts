@@ -465,3 +465,50 @@ test("REGRESSION: concurrent executions cannot overspend one daily allowance", a
   assert.equal(refused.length, 1);
   assert.match(refused[0]?.error?.message ?? "", /daily allowance/);
 });
+
+test("external signing parks with the exact prepared transaction and sends nothing", async () => {
+  // The step from read-only to "does things", without a server key: the
+  // finch proposes, policy and simulation run, and the record stops with the
+  // transaction prepared for the visitor's wallet. Nothing is broadcast.
+  const { context, sends } = harness({
+    mode: "operator",
+    allowances: [{ asset: "native", perDay: 10_000n, perTx: 1_000n }],
+    allowedContracts: [],
+  });
+  const external = context as unknown as { signing?: string; externalSigner?: string; walletClient?: unknown; account?: unknown };
+  external.signing = "external";
+  external.externalSigner = FRIEND;
+  external.walletClient = undefined; // this process holds no key
+
+  const record = await executeIntent(context, "ext-1", {
+    kind: "transfer.native",
+    summary: "send 500 to a friend",
+    to: FRIEND,
+    value: 500n,
+    spendAsset: "native",
+    spendAmount: 500n,
+    meta: { recipient: FRIEND },
+  });
+
+  assert.equal(sends.length, 0, "nothing may be broadcast from a process with no signer");
+  assert.equal(record.state, "awaiting_signature");
+  assert.equal(record.simulation?.ok, true, "simulation still ran, as the signer");
+  assert.equal(record.prepared?.to, FRIEND);
+  assert.equal(record.prepared?.value, "500");
+  assert.equal(record.prepared?.from, FRIEND);
+  assert.ok(record.prepared?.gas && record.prepared.gas !== "0", "the prepared gas comes from the simulation");
+});
+
+test("external signing turns needs_approval into awaiting_signature — the signer is the approver", async () => {
+  const { context, sends } = harness(NEEDS_APPROVAL);
+  const external = context as unknown as { signing?: string; externalSigner?: string; walletClient?: unknown };
+  external.signing = "external";
+  external.externalSigner = FRIEND;
+  external.walletClient = undefined;
+
+  const record = await executeIntent(context, "ext-2", smallApproved);
+  assert.equal(sends.length, 0);
+  assert.equal(record.state, "awaiting_signature");
+  assert.equal(record.policy?.verdict, "needs_approval", "the verdict is recorded, not erased");
+  assert.ok(record.log.some((entry) => /signer is the approver/.test(entry.detail ?? "")));
+});

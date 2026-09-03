@@ -113,6 +113,7 @@ export const executionDocSchema = z.object({
     "simulation_failed",
     "awaiting_approval",
     "approved",
+    "awaiting_signature",
     "submitted",
     "confirmed",
     "reverted",
@@ -131,6 +132,17 @@ export const executionDocSchema = z.object({
    * execution would never open the gate again.
    */
   approval: z.object({ approvedBy: z.string(), at: z.string() }).optional(),
+  /** The transaction handed to an external signer; see ExecutionRecord.prepared. */
+  prepared: z
+    .object({
+      // nullish, not optional: rows written before ignoreUndefined carry null.
+      from: addressString.nullish(),
+      to: addressString,
+      value: z.string(),
+      data: z.string().nullish(),
+      gas: z.string(),
+    })
+    .optional(),
   log: z.array(z.object({ at: z.string(), event: z.string(), detail: z.string().optional() })),
 });
 export type ExecutionDoc = z.infer<typeof executionDocSchema>;

@@ -62,7 +62,6 @@ export function ConnectNest({ manifest, origin }: { manifest: NestManifest; orig
     `# your own nest — export it from the composer first`,
     `curl -N ${origin}/api/nests/run \\`,
     `  -H 'content-type: application/json' \\`,
-    `  -H 'x-finch-key: YOUR_KEY' \\`,
     `  -d "$(jq -c '{manifest: ., objective: "your objective"}' my-nest.json)"`,
   ].join("\n");
 
@@ -110,9 +109,9 @@ export function ConnectNest({ manifest, origin }: { manifest: NestManifest; orig
           <Snippet label="run a nest you wrote yourself" code={own} />
 
           <p className="max-w-2xl text-[12px] leading-relaxed text-grey-faint">
-            Builtin nests run without a key. Submitting your own manifest needs a publisher key, because it spends this
-            deployment&rsquo;s inference budget — and it is capped at 8 finches and 12 tasks per request. Every run is
-            read-only: observer wallet, no signer, writes denied by policy.
+            No key needed — builtin nests and your own manifests both run as-is. A manifest is capped at 8 finches and
+            12 tasks per request. Every run is read-only unless you supply a signer: observer wallet, writes denied by
+            policy.
           </p>
         </div>
       )}

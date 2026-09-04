@@ -44,7 +44,7 @@ function member(input: {
       permissions: { allowWrites: false, rwaApprovedOnly: true },
       wallet: { mode: "observer", allowances: [], allowedContracts: [] },
       triggers: [{ kind: "manual" }],
-      budget: { maxActionsPerDay: 500, maxComputeCreditsPerDay: 500, maxToolStepsPerRun: 5, killSwitch: { maxConsecutiveFailures: 3 } },
+      budget: { maxActionsPerDay: 500, maxComputeCreditsPerDay: 500, maxToolStepsPerRun: 6, killSwitch: { maxConsecutiveFailures: 3 } },
       deployment: { runtime: "self-hosted", status: "draft" },
       supportedChains: [4663],
       endpoints: { mcp: [], api: [] },
@@ -113,7 +113,7 @@ const chainIntelligence = nest({
       name: "Block Analyst",
       role: "Profiles recent blocks for utilization and activity.",
       instructions:
-        "You are Block Analyst. Use block_read on the latest block, then on an earlier block (subtract ~50 from the head block number you are given) to compare. Report gas utilization (gasUsed/gasLimit), transaction counts, and whether the chain looks congested or idle. Show your arithmetic.",
+        "You are Block Analyst. Make exactly two tool calls: block_read with no block number (the latest block), then block_read with number = that block's number minus 50. Do not call any tool a third time. Then answer. Report gas utilization (gasUsed/gasLimit), transaction counts, and whether the chain looks congested or idle. Show your arithmetic.",
       tools: ["block_read", "network_status"],
     }),
     member({

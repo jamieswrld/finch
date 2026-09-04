@@ -4,7 +4,6 @@ import { runNest, subjectOf, validateTaskGraph, type NestEvent } from "@finch/sd
 import { createFlightpath, type ExecutionSink, type WalletPolicy } from "@finch/flightpath";
 import { appendHiveFindings, createHiveMemory, createMongoExecutionSink, createMongoSpendTracker, isDbConfigured, recordRun } from "@finch/db";
 import { errorJson, rateLimit, readJsonBody, safeErrorMessage } from "@/lib/server/http";
-import { resolveIdentity } from "@/lib/server/identity";
 import { getNestPreset } from "@/lib/nest-presets";
 import { UnresolvedFinchError, hydrateNestMembers, nestInputSchema } from "@/lib/registry";
 
@@ -43,12 +42,9 @@ export async function POST(request: Request): Promise<Response> {
    */
   let preset;
   if (submitted !== undefined) {
-    const identity = await resolveIdentity(request);
-    if (!identity.owner) {
-      return errorJson(401, "running your own nest requires a publisher key — send it as x-finch-key", {
-        hint: "The builtin nests run without a key: POST { nest: \"chain-intelligence\" }.",
-      });
-    }
+    // No key needed. Anyone can run a nest they wrote — that is the product.
+    // The request is still bounded: 8 finches, 12 tasks, the rate limit, and
+    // read-only execution unless a signer is supplied.
     // Members may be registry references ({ handle, ref: "registry" }) — the
     // composition feature. They are resolved to real manifests here, before the
     // strict schema and the graph validator ever see the nest.

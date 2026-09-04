@@ -65,10 +65,18 @@ export function canWrite(identity: Identity, existingOwner: string | null | unde
   // into a shared database, which on a public deployment means anyone on the
   // internet can fill the registry with rows nobody can remove.
   if (!identity.owner) {
+    // Anyone may create. A record created without a key has no owner, and an
+    // unowned record can never be overwritten — by anyone — so an anonymous
+    // creation is permanent as published rather than a name someone else can
+    // take over. Sign for a free key to own what you publish and edit it later.
+    if (existingOwner === undefined) return { ok: true, mode: "create" };
     return {
       ok: false,
-      status: 401,
-      reason: "publishing requires a publisher key — send it as x-finch-key. Reading and running finches need no key.",
+      status: existingOwner === null ? 409 : 401,
+      reason:
+        existingOwner === null
+          ? "this name is taken by a record published without a key; it cannot be overwritten — choose another name"
+          : "this name belongs to a publisher — present the key that owns it (x-finch-key) to update it",
     };
   }
   if (existingOwner === undefined || existingOwner === null) {

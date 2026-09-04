@@ -31,8 +31,8 @@ export async function readJsonBody(request: Request): Promise<{ ok: true; body: 
  * production replaces this with a shared store (documented in SECURITY.md).
  */
 const buckets = new Map<string, { tokens: number; updatedAt: number }>();
-const BUCKET_CAPACITY = 20;
-const REFILL_PER_SECOND = 0.5;
+const BUCKET_CAPACITY = 60;
+const REFILL_PER_SECOND = 1.5;
 
 export function rateLimit(request: Request, cost = 1): NextResponse | null {
   // x-forwarded-for is client-writable. Trust only the hop your proxy appends:

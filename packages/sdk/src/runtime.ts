@@ -302,7 +302,27 @@ export class Nest {
           messages.push({ role: "tool", content: resultText.slice(0, 16_000), toolCallId: call.id, name: call.name });
         }
       }
-      return { output: null, steps, executions, usage, haltedBy: "max_steps" };
+      // Out of tool steps. Ask for the answer from what is already in hand
+      // rather than returning nothing: a report from partial evidence that
+      // says it is partial beats a task that fails silently. No tools are
+      // offered on this turn, so the model cannot keep reaching for them.
+      messages.push({
+        role: "user",
+        content:
+          "You have used every tool step available for this run. Answer now using only the tool results above. Say plainly what you could not check. Do not call tools.",
+      });
+      const last = await this.provider.chat({
+        messages,
+        temperature: this.manifest.model.temperature,
+        maxTokens: this.manifest.model.maxTokens,
+        signal: this.controller.signal,
+      });
+      usage.inputTokens += last.usage.inputTokens;
+      usage.outputTokens += last.usage.outputTokens;
+      const output = last.content && last.content.trim().length > 0 ? last.content : null;
+      steps.push({ type: "model", at: new Date().toISOString(), summary: output ? "final response after the step limit" : "no answer after the step limit", ok: Boolean(output) });
+      if (output) await this.memory.append({ role: "assistant", content: output });
+      return { output, steps, executions, usage, haltedBy: "max_steps" };
     } catch (error) {
       return {
         output: null,

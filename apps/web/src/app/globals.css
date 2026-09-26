@@ -7,7 +7,7 @@
 
 /*
   FINCH design system.
-  Bone ground, near-black ink, Robinhood green as a working accent (never a
+  Bone ground, near-black ink, a bright green as a working accent (never a
   wash), muted sage, small gold moments. Thin borders, 2px radii, tight
   spacing, editorial + technical type. No gradients, no glass, no glow.
 */
@@ -29,7 +29,7 @@
   --color-line-strong: #c2bfae;
 
   /* accents */
-  --color-green: #00c805; /* Robinhood green — marks, lines, dots only */
+  --color-green: #00c805; /* signal green — marks, lines, dots only */
   --color-green-deep: #0a7227; /* text-safe green */
   --color-green-wash: #e4f2e2;
   --color-sage: #a3b098;

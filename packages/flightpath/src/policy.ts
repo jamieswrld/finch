@@ -1,21 +1,25 @@
-import type { Address } from "viem";
-import type { ExecutionIntent, PolicyDecision } from "./types.ts";
+import { findAssociatedTokenPda } from "@solana-program/token";
+import { base64ToBytes, readU32, readU64, WSOL_MINT, type SerializedInstruction } from "./codec.ts";
+import type { ExecutionIntent, PolicyDecision, SpendAsset } from "./types.ts";
 
 /**
  * Wallet policy — the boundary between an agent and funds.
  *
  * An agent NEVER holds unrestricted custody. It operates a restricted wallet
- * whose authority is defined here (mirrored onchain by OperatorBudget.sol):
+ * whose authority is defined here:
  *
- *   Finch treasury wallet  →  restricted operator wallet  →  budgets/allowances
+ *   Finch treasury wallet  →  restricted operator keypair (bounded float)  →  budgets/allowances
+ *
+ * or, for user-signed execution, the visitor's own wallet — in which case the
+ * visitor's signature is the final gate and this policy is the first one.
  */
 
 export type WalletMode = "none" | "observer" | "operator";
 
 export interface Allowance {
-  /** "native" or an ERC20 token address. */
-  asset: "native" | Address;
-  /** Max spend per rolling 24h window, in the asset's smallest unit. */
+  /** "native" (SOL, and wrapped SOL) or an SPL mint address. */
+  asset: SpendAsset;
+  /** Max spend per rolling 24h window, in the asset's smallest unit (lamports for SOL). */
   perDay: bigint;
   /** Max spend in a single transaction. Defaults to perDay. */
   perTx?: bigint;
@@ -24,10 +28,10 @@ export interface Allowance {
 export interface WalletPolicy {
   mode: WalletMode;
   allowances: Allowance[];
-  /** Contracts the agent may call with arbitrary calldata (contract.write, swap routers). */
-  allowedContracts: Address[];
-  /** If set, native/ERC20 transfers may only go to these recipients. */
-  allowedRecipients?: Address[];
+  /** Programs the agent may invoke with arbitrary instructions (program_invoke, swap routers). */
+  allowedPrograms: string[];
+  /** If set, value may only move to these counterparties. */
+  allowedRecipients?: string[];
   /** Spends above this fraction of the daily allowance require human approval (0–1). */
   approvalThreshold?: number;
   /** RWA writes must target the approved registry. Defaults to true and cannot be waived silently. */
@@ -37,8 +41,34 @@ export interface WalletPolicy {
 export const OBSERVER_POLICY: WalletPolicy = {
   mode: "observer",
   allowances: [],
-  allowedContracts: [],
+  allowedPrograms: [],
 };
+
+// ── Programs Flightpath understands ─────────────────────────────────────────
+
+export const SYSTEM_PROGRAM = "11111111111111111111111111111111";
+export const TOKEN_PROGRAM = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
+export const TOKEN_2022_PROGRAM = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
+export const ASSOCIATED_TOKEN_PROGRAM = "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL";
+export const COMPUTE_BUDGET_PROGRAM = "ComputeBudget111111111111111111111111111111";
+/** SPL Memo v2 — the memo program RPC nodes index and parse. */
+export const MEMO_PROGRAM = "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr";
+/** Every deployed memo program: v1, v2, and the newer one the memo client defaults to. */
+export const MEMO_PROGRAMS = [MEMO_PROGRAM, "Memo1UhkJRfHyvLMcVucJwxXeuD728EqVDDwQDxFMNo", "Memo4c2pN8afCj432Lb7RMVKi9PbQnnW7ewFFaV3oAH"];
+export const JUPITER_PROGRAM = "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4";
+
+const TOKEN_PROGRAMS = new Set([TOKEN_PROGRAM, TOKEN_2022_PROGRAM]);
+
+/** Programs that cannot move value or run arbitrary code: they set fees or write a log line. */
+const INERT_PROGRAMS = new Set([COMPUTE_BUDGET_PROGRAM, ...MEMO_PROGRAMS]);
+
+/**
+ * The chain's own plumbing a swap route needs around the router call:
+ * wrapping SOL, creating the signer's token accounts, closing the wrapper.
+ * These are not allowlisted programs — each instruction is checked by
+ * swapPlumbingViolation to touch only the signer's own accounts.
+ */
+const SWAP_PLUMBING = new Set([SYSTEM_PROGRAM, TOKEN_PROGRAM, TOKEN_2022_PROGRAM, ASSOCIATED_TOKEN_PROGRAM, ...INERT_PROGRAMS]);
 
 /** Authority ordering: a manifest may move down this list, never up. */
 const MODE_RANK: Record<WalletMode, number> = { none: 0, observer: 1, operator: 2 };
@@ -61,18 +91,18 @@ const MODE_RANK: Record<WalletMode, number> = { none: 0, observer: 1, operator: 
  *  · approvalThreshold takes the stricter (lower) value
  *  · rwaApprovedOnly is sticky: once the host requires it, a manifest cannot
  *    waive it
+ *
+ * Addresses compare exactly: base58 is case-sensitive.
  */
 export function narrowPolicy(host: WalletPolicy, requested: WalletPolicy): WalletPolicy {
-  const lower = (a: Address[], b: Address[]) => {
-    const set = new Set(b.map((entry) => entry.toLowerCase()));
-    return a.filter((entry) => set.has(entry.toLowerCase()));
+  const lower = (a: string[], b: string[]) => {
+    const set = new Set(b);
+    return a.filter((entry) => set.has(entry));
   };
 
   const allowances: Allowance[] = [];
   for (const grant of host.allowances) {
-    const asked = requested.allowances.find(
-      (entry) => String(entry.asset).toLowerCase() === String(grant.asset).toLowerCase(),
-    );
+    const asked = requested.allowances.find((entry) => entry.asset === grant.asset);
     if (!asked) continue; // the manifest did not ask for this asset
     const perDay = asked.perDay < grant.perDay ? asked.perDay : grant.perDay;
     const hostTx = grant.perTx ?? grant.perDay;
@@ -95,7 +125,7 @@ export function narrowPolicy(host: WalletPolicy, requested: WalletPolicy): Walle
   return {
     mode: MODE_RANK[requested.mode] < MODE_RANK[host.mode] ? requested.mode : host.mode,
     allowances,
-    allowedContracts: lower(host.allowedContracts, requested.allowedContracts),
+    allowedPrograms: lower(host.allowedPrograms, requested.allowedPrograms),
     allowedRecipients: recipients,
     approvalThreshold: thresholds.length > 0 ? Math.min(...thresholds) : undefined,
     rwaApprovedOnly: host.rwaApprovedOnly === false ? requested.rwaApprovedOnly : true,
@@ -104,8 +134,8 @@ export function narrowPolicy(host: WalletPolicy, requested: WalletPolicy): Walle
 
 /** Tracks realized spend so daily allowances mean something across restarts. */
 export interface SpendTracker {
-  spentInWindow(asset: "native" | Address, windowMs: number): Promise<bigint>;
-  recordSpend(asset: "native" | Address, amount: bigint, at?: Date): Promise<void>;
+  spentInWindow(asset: SpendAsset, windowMs: number): Promise<bigint>;
+  recordSpend(asset: SpendAsset, amount: bigint, at?: Date): Promise<void>;
   /**
    * Atomically debit `amount` only if it still fits under `cap` for the
    * window. Returns false when it does not.
@@ -116,41 +146,34 @@ export interface SpendTracker {
    * the cap spend N times the cap. This collapses the read and the write into
    * one step, and executeIntent calls it immediately before broadcasting.
    */
-  reserveSpend?(asset: "native" | Address, amount: bigint, windowMs: number, cap: bigint): Promise<boolean>;
+  reserveSpend?(asset: SpendAsset, amount: bigint, windowMs: number, cap: bigint): Promise<boolean>;
 }
 
 export class MemorySpendTracker implements SpendTracker {
   private entries: Array<{ asset: string; amount: bigint; at: number }> = [];
 
-  async spentInWindow(asset: "native" | Address, windowMs: number): Promise<bigint> {
+  async spentInWindow(asset: SpendAsset, windowMs: number): Promise<bigint> {
     const cutoff = Date.now() - windowMs;
-    const key = asset.toLowerCase();
     return this.entries
-      .filter((entry) => entry.asset === key && entry.at >= cutoff)
+      .filter((entry) => entry.asset === asset && entry.at >= cutoff)
       .reduce((sum, entry) => sum + entry.amount, 0n);
   }
 
-  async recordSpend(asset: "native" | Address, amount: bigint, at?: Date): Promise<void> {
-    this.entries.push({ asset: asset.toLowerCase(), amount, at: (at ?? new Date()).getTime() });
+  async recordSpend(asset: SpendAsset, amount: bigint, at?: Date): Promise<void> {
+    this.entries.push({ asset, amount, at: (at ?? new Date()).getTime() });
   }
 
   /**
    * Atomic by construction: no await separates the read from the write, so
    * JS runs it to completion without yielding to a racing caller.
    */
-  async reserveSpend(
-    asset: "native" | Address,
-    amount: bigint,
-    windowMs: number,
-    cap: bigint,
-  ): Promise<boolean> {
+  async reserveSpend(asset: SpendAsset, amount: bigint, windowMs: number, cap: bigint): Promise<boolean> {
     const cutoff = Date.now() - windowMs;
-    const key = asset.toLowerCase();
     const spent = this.entries
-      .filter((entry) => entry.asset === key && entry.at >= cutoff)
+      .filter((entry) => entry.asset === asset && entry.at >= cutoff)
       .reduce((sum, entry) => sum + entry.amount, 0n);
     if (spent + amount > cap) return false;
-    this.entries.push({ asset: key, amount, at: Date.now() });
+    this.entries.push({ asset, amount, at: Date.now() });
     return true;
   }
 }
@@ -170,28 +193,28 @@ export const POLICY_RULES = [
     why: "Observer and none-mode finches have no write authority at all. This is the default, so a finch is read-only until you deliberately grant otherwise.",
   },
   {
+    id: "instructions.recognized",
+    verdict: "deny",
+    when: "An instruction cannot be priced: an unchecked token transfer or approval (it names no mint), any other System or Token instruction that can move value (close account, set authority, burn…), or — outside program_invoke and swaps — an instruction to any other program.",
+    why: "The policy reads the instructions the transaction will actually execute. Anything it cannot put a price on does not get to ride along.",
+  },
+  {
     id: "recipients.allowlist",
     verdict: "deny",
     when: "A counterparty is not on allowedRecipients (when that list is set).",
-    why: "Counterparty means whoever ends up able to move value: a transfer's recipient, an approval's spender, an RWA action's other side — not just transfer destinations.",
+    why: "Counterparty means whoever ends up able to move value: a transfer's recipient, an approval's delegate, a swap's output owner — not just transfer destinations.",
   },
   {
-    id: "contracts.allowlist",
+    id: "programs.allowlist",
     verdict: "deny",
-    when: "A contract call, swap, approval or ERC20 transfer targets a contract outside allowedContracts.",
-    why: "Anything that hands calldata to a contract must name that contract up front, approvals included.",
+    when: "A program_invoke or swap calls a program outside allowedPrograms.",
+    why: "Anything that hands instructions to a program must name that program up front. Allowlisting a program is the act of trusting its code.",
   },
   {
     id: "rwa.approved",
     verdict: "deny",
-    when: "An RWA interaction targets an asset outside the approved registry.",
+    when: "An RWA interaction targets a mint outside the approved registry.",
     why: "Permissioned real-world assets are gated to an explicit registry, and a manifest cannot waive the gate.",
-  },
-  {
-    id: "rwa.contracts",
-    verdict: "deny",
-    when: "RWA registry gating was opted out of and the target is not an allowlisted contract.",
-    why: "Even with the registry gate off, the target must still be named.",
   },
   {
     id: "allowance.missing",
@@ -209,7 +232,7 @@ export const POLICY_RULES = [
     id: "allowance.daily",
     verdict: "deny",
     when: "The rolling 24h spend would exceed perDay.",
-    why: "Spend is debited at submission, so a transaction that broadcasts always counts even if its receipt is lost.",
+    why: "Spend is debited at submission, so a transaction that broadcasts always counts even if its confirmation is lost.",
   },
   {
     id: "allowance.approvalThreshold",
@@ -233,124 +256,231 @@ export const POLICY_RULES = [
 
 export type PolicyRuleId = (typeof POLICY_RULES)[number]["id"];
 
-function sameAddress(a: string, b: string): boolean {
-  return a.toLowerCase() === b.toLowerCase();
+// ── Instruction decoding ─────────────────────────────────────────────────────
+
+/** SPL Token and Token-2022 share these instruction discriminators. */
+const TOKEN_IX = { transfer: 3, approve: 4, transferChecked: 12, approveChecked: 13, syncNative: 17 } as const;
+const SYSTEM_TRANSFER = 2;
+
+export type SpendLeg = { asset: SpendAsset; amount: bigint };
+
+/** A value movement read straight out of one instruction. */
+export type DecodedMove =
+  | { kind: "sol.transfer"; from: string; to: string; lamports: bigint }
+  | { kind: "token.transfer"; program: string; source: string; mint: string; destination: string; authority: string; amount: bigint; decimals: number }
+  | { kind: "token.approve"; program: string; source: string; mint: string; delegate: string; owner: string; amount: bigint; decimals: number };
+
+export type DecodedInstruction =
+  | { kind: "inert"; program: string }
+  | { kind: "sync-native"; program: string }
+  | { kind: "move"; move: DecodedMove }
+  | { kind: "unpriced"; program: string; reason: string }
+  | { kind: "opaque"; program: string };
+
+function account(ix: SerializedInstruction, index: number): string | null {
+  return ix.accounts[index]?.address ?? null;
 }
 
 /**
- * Value-moving function selectors. An allowlisted contract is still a contract
- * you can hand `transfer(attacker, all)` to, so a raw contract.write must not
- * be a way around the counterparty allowlist.
+ * Read one instruction far enough to know what value it moves. Opaque means
+ * "some other program" — its effect is whatever that program's code does,
+ * which only an allowlist can vouch for.
  */
-const VALUE_MOVING_SELECTORS: Record<
-  string,
-  { name: string; recipientArgIndex: number; amountArgIndex?: number }
-> = {
-  "0xa9059cbb": { name: "transfer(address,uint256)", recipientArgIndex: 0, amountArgIndex: 1 },
-  "0x095ea7b3": { name: "approve(address,uint256)", recipientArgIndex: 0, amountArgIndex: 1 },
-  "0x23b872dd": { name: "transferFrom(address,address,uint256)", recipientArgIndex: 1, amountArgIndex: 2 },
-  // ERC721 transfers move a token id, not a fungible amount — recipient only.
-  "0x42842e0e": { name: "safeTransferFrom(address,address,uint256)", recipientArgIndex: 1 },
-  "0xb88d4fde": { name: "safeTransferFrom(address,address,uint256,bytes)", recipientArgIndex: 1 },
-};
+export function decodeInstruction(ix: SerializedInstruction): DecodedInstruction {
+  const program = ix.programAddress;
+  if (program === COMPUTE_BUDGET_PROGRAM && ix.data.length > 0) {
+    // SetComputeUnitPrice (3) buys priority with the signer's SOL — a spend
+    // no allowance covers. Flightpath sets priority itself when configured;
+    // an intent may not.
+    const discriminator = base64ToBytes(ix.data)[0];
+    if (discriminator === 3) return { kind: "unpriced", program, reason: "an intent may not set its own priority fee" };
+  }
+  if (INERT_PROGRAMS.has(program)) return { kind: "inert", program };
 
-/** Read the Nth 32-byte ABI word of calldata as an address. */
-function addressArg(data: string, index: number): string | null {
-  const body = data.slice(10); // strip 0x + 4-byte selector
-  const start = index * 64;
-  const word = body.slice(start, start + 64);
-  if (word.length !== 64) return null;
-  return `0x${word.slice(24)}`;
+  let data: Uint8Array;
+  try {
+    data = base64ToBytes(ix.data);
+  } catch {
+    return { kind: "unpriced", program, reason: "instruction data is not valid base64" };
+  }
+
+  if (program === SYSTEM_PROGRAM) {
+    const discriminator = readU32(data, 0);
+    const lamports = readU64(data, 4);
+    const from = account(ix, 0);
+    const to = account(ix, 1);
+    if (discriminator === SYSTEM_TRANSFER && data.length === 12 && lamports !== null && from && to) {
+      return { kind: "move", move: { kind: "sol.transfer", from, to, lamports } };
+    }
+    return { kind: "unpriced", program, reason: `System instruction ${discriminator ?? "?"} is not a plain SOL transfer` };
+  }
+
+  if (TOKEN_PROGRAMS.has(program)) {
+    const discriminator = data[0];
+    if (discriminator === TOKEN_IX.syncNative && data.length === 1) return { kind: "sync-native", program };
+    if ((discriminator === TOKEN_IX.transferChecked || discriminator === TOKEN_IX.approveChecked) && data.length === 10) {
+      const amount = readU64(data, 1);
+      const decimals = data[9]!;
+      const [a0, a1, a2, a3] = [account(ix, 0), account(ix, 1), account(ix, 2), account(ix, 3)];
+      if (amount === null || !a0 || !a1 || !a2 || !a3) {
+        return { kind: "unpriced", program, reason: "token instruction is missing accounts" };
+      }
+      return discriminator === TOKEN_IX.transferChecked
+        ? { kind: "move", move: { kind: "token.transfer", program, source: a0, mint: a1, destination: a2, authority: a3, amount, decimals } }
+        : { kind: "move", move: { kind: "token.approve", program, source: a0, mint: a1, delegate: a2, owner: a3, amount, decimals } };
+    }
+    if (discriminator === TOKEN_IX.transfer || discriminator === TOKEN_IX.approve) {
+      return { kind: "unpriced", program, reason: "unchecked token transfer/approve names no mint, so it cannot be priced — use the checked form" };
+    }
+    return { kind: "unpriced", program, reason: `token instruction ${discriminator ?? "?"} can move value outside an allowance` };
+  }
+
+  if (program === ASSOCIATED_TOKEN_PROGRAM) {
+    return { kind: "unpriced", program, reason: "creating a token account spends rent outside any allowance" };
+  }
+
+  return { kind: "opaque", program };
 }
 
-/** Read the Nth 32-byte ABI word of calldata as a uint256. */
-function uintArg(data: string, index: number): bigint | null {
-  const body = data.slice(10);
-  const start = index * 64;
-  const word = body.slice(start, start + 64);
-  if (word.length !== 64) return null;
+/** Wrapped SOL is SOL: one allowance, one cap. */
+function assetOf(mint: string): SpendAsset {
+  return mint === WSOL_MINT ? "native" : mint;
+}
+
+export interface InstructionAnalysis {
+  moves: DecodedMove[];
+  programs: string[];
+  /** Programs whose instructions Flightpath cannot see into. */
+  opaque: string[];
+  unpriced: Array<{ program: string; reason: string }>;
+}
+
+export function analyzeInstructions(instructions: SerializedInstruction[]): InstructionAnalysis {
+  const moves: DecodedMove[] = [];
+  const programs = new Set<string>();
+  const opaque = new Set<string>();
+  const unpriced: Array<{ program: string; reason: string }> = [];
+  for (const ix of instructions) {
+    programs.add(ix.programAddress);
+    const decoded = decodeInstruction(ix);
+    if (decoded.kind === "move") moves.push(decoded.move);
+    else if (decoded.kind === "opaque") opaque.add(decoded.program);
+    else if (decoded.kind === "unpriced") unpriced.push({ program: decoded.program, reason: decoded.reason });
+  }
+  return { moves, programs: [...programs], opaque: [...opaque], unpriced };
+}
+
+/**
+ * The value legs an intent moves, summed per asset. A swap's route is opaque
+ * by design, so its spend is the quoted input the builder declared — the
+ * router cannot take more than that amount in. Every other kind is priced
+ * from its instructions alone, so a builder cannot understate what it sends.
+ */
+export function spendLegs(intent: ExecutionIntent): SpendLeg[] {
+  if (intent.kind === "swap.exactIn") {
+    return intent.spendAmount > 0n ? [{ asset: intent.spendAsset, amount: intent.spendAmount }] : [];
+  }
+  const totals = new Map<SpendAsset, bigint>();
+  for (const move of analyzeInstructions(intent.instructions).moves) {
+    const asset = move.kind === "sol.transfer" ? "native" : assetOf(move.mint);
+    const amount = move.kind === "sol.transfer" ? move.lamports : move.amount;
+    if (amount > 0n) totals.set(asset, (totals.get(asset) ?? 0n) + amount);
+  }
+  return [...totals.entries()].map(([asset, amount]) => ({ asset, amount }));
+}
+
+/**
+ * Whoever ends up able to move value because of this intent.
+ *
+ * Precedence rule: what the chain will act on wins. `meta` is supplied by
+ * whoever built the intent, so trusting it over the instructions would let a
+ * caller name an allowlisted recipient in meta while the bytes pay somebody
+ * else. A token transfer's destination is a token ACCOUNT; it resolves to
+ * meta.recipient only when it is exactly that wallet's associated token
+ * account for the mint — otherwise the raw account is the counterparty, and
+ * a raw token account is never on a wallet allowlist.
+ */
+export async function counterpartiesOf(intent: ExecutionIntent): Promise<string[]> {
+  if (intent.kind === "swap.exactIn") {
+    return intent.meta?.recipient ? [intent.meta.recipient] : [];
+  }
+  const parties: string[] = [];
+  for (const move of analyzeInstructions(intent.instructions).moves) {
+    if (move.kind === "sol.transfer") parties.push(move.to);
+    else if (move.kind === "token.approve") parties.push(move.delegate);
+    else parties.push(await resolveTokenDestination(move, intent.meta?.recipient));
+  }
+  return parties;
+}
+
+const TOKEN_CLOSE_ACCOUNT = 9;
+
+async function ataOf(owner: string, mint: string, tokenProgram: string): Promise<string | null> {
   try {
-    return BigInt(`0x${word}`);
+    const [ata] = await findAssociatedTokenPda({ owner: owner as never, mint: mint as never, tokenProgram: tokenProgram as never });
+    return ata;
   } catch {
     return null;
   }
 }
 
 /**
- * The value a raw contract call moves, in the token contract being called.
- * Without this, an ERC20 transfer smuggled through contract.write would be
- * priced as a zero-value native call and skip allowance accounting entirely.
+ * A swap's route is opaque, but the plumbing around it is not: every System,
+ * Token and associated-token instruction a route carries must act on the
+ * signer's own accounts. Wrapping SOL pays the signer's wrapped-SOL account,
+ * account creation creates the signer's accounts at the signer's expense, and
+ * closing the wrapper refunds the signer. Anything else — a SOL transfer to a
+ * third party slipped into a quote response, a close that refunds someone
+ * else — is refused. Returns the violation, or null.
  */
-export function decodedSpend(
-  data: string | undefined,
-): { amount: bigint; amountArgIndex: number } | undefined {
-  if (!data || data.length < 10) return undefined;
-  const known = VALUE_MOVING_SELECTORS[data.slice(0, 10).toLowerCase()];
-  if (!known || known.amountArgIndex === undefined) return undefined;
-  const amount = uintArg(data, known.amountArgIndex);
-  if (amount === null) return undefined;
-  return { amount, amountArgIndex: known.amountArgIndex };
-}
-
-/**
- * Decode a raw contract call far enough to find who ends up able to move
- * value. Returns undefined when the call is not a known value-moving one.
- */
-export function decodedCounterparty(data: string | undefined): string | undefined {
-  if (!data || data.length < 10) return undefined;
-  const selector = data.slice(0, 10).toLowerCase();
-  const known = VALUE_MOVING_SELECTORS[selector];
-  if (!known) return undefined;
-  return addressArg(data, known.recipientArgIndex) ?? undefined;
-}
-
-/**
- * Whoever gains the ability to move value as a result of this intent.
- * Returns null only when there is genuinely no distinct counterparty.
- */
-/**
- * The value legs an intent moves. A contract.write can move two at once:
- * tokens via calldata and ETH via `value`. Shared so evaluate(), reserveSpend()
- * and recordSpend() can never disagree about what is being spent.
- */
-function spendLegs(intent: ExecutionIntent): Array<{ asset: "native" | Address; amount: bigint }> {
-  const decoded = intent.kind === "contract.write" ? decodedSpend(intent.data) : undefined;
-  const legs: Array<{ asset: "native" | Address; amount: bigint }> = [];
-  if (decoded) {
-    legs.push({ asset: intent.to as Address, amount: decoded.amount });
-    if (intent.value > 0n) legs.push({ asset: "native", amount: intent.value });
-  } else if (intent.spendAmount > 0n) {
-    legs.push({ asset: intent.spendAsset, amount: intent.spendAmount });
+export async function swapPlumbingViolation(intent: ExecutionIntent): Promise<string | null> {
+  const owner = intent.meta?.recipient;
+  if (!owner) return "a swap intent must name its recipient (the signer)";
+  for (const ix of intent.instructions) {
+    const program = ix.programAddress;
+    if (!SWAP_PLUMBING.has(program) || INERT_PROGRAMS.has(program)) continue;
+    const decoded = decodeInstruction(ix);
+    if (program === SYSTEM_PROGRAM) {
+      if (decoded.kind !== "move" || decoded.move.kind !== "sol.transfer") return "a swap carries a System instruction other than wrapping SOL";
+      const wrapped = await ataOf(owner, WSOL_MINT, TOKEN_PROGRAM);
+      if (decoded.move.from !== owner || decoded.move.to !== wrapped) {
+        return `a swap moves SOL to ${decoded.move.to}, which is not the signer's wrapped-SOL account`;
+      }
+      continue;
+    }
+    if (TOKEN_PROGRAMS.has(program)) {
+      if (decoded.kind === "sync-native") continue;
+      const data = base64ToBytes(ix.data);
+      if (data[0] === TOKEN_CLOSE_ACCOUNT && data.length === 1 && account(ix, 1) === owner && account(ix, 2) === owner) continue;
+      return "a swap carries a token instruction other than syncing or closing the signer's own wrapped-SOL account";
+    }
+    if (program === ASSOCIATED_TOKEN_PROGRAM) {
+      // [payer, associated account, wallet, mint, system, token program]
+      const [payer, created, wallet, mint, , tokenProgram] = ix.accounts.map((meta) => meta.address);
+      const expected = wallet && mint && tokenProgram ? await ataOf(wallet, mint, tokenProgram) : null;
+      if (payer !== owner || wallet !== owner || !created || created !== expected) {
+        return "a swap creates a token account that is not the signer's own";
+      }
+      continue;
+    }
   }
-  return legs;
+  return null;
 }
 
-function counterpartyOf(intent: ExecutionIntent): string | null {
-  // Precedence rule: whatever the chain will actually act on wins. `meta` is
-  // supplied by whoever built the intent, so trusting it over the calldata let
-  // a caller name an allowlisted recipient in meta while the bytes paid
-  // somebody else. Meta is only a fallback for intents whose destination is
-  // not recoverable from the transaction itself.
-  switch (intent.kind) {
-    case "transfer.native":
-      // The native destination IS intent.to. Nothing in meta can change that.
-      return intent.to;
-    case "transfer.erc20":
-      return decodedCounterparty(intent.data) ?? intent.meta?.recipient ?? null;
-    case "erc20.approve":
-      return decodedCounterparty(intent.data) ?? intent.meta?.spender ?? null;
-    case "rwa.interact":
-      return decodedCounterparty(intent.data) ?? intent.meta?.counterparty ?? null;
-    case "swap.exactIn":
-      // The router is allowlisted, but the swap's output recipient is not
-      // implied by that — read it off the meta the intent builder recorded.
-      return intent.meta?.recipient ?? null;
-    case "contract.write":
-      // Decoded from calldata: an allowlisted token contract must not become a
-      // laundering route for a transfer to an unlisted address.
-      return decodedCounterparty(intent.data) ?? null;
-    default:
-      return null;
+async function resolveTokenDestination(
+  move: Extract<DecodedMove, { kind: "token.transfer" }>,
+  claimedOwner: string | undefined,
+): Promise<string> {
+  if (!claimedOwner) return move.destination;
+  try {
+    const [ata] = await findAssociatedTokenPda({
+      owner: claimedOwner as never,
+      mint: move.mint as never,
+      tokenProgram: move.program as never,
+    });
+    return ata === move.destination ? claimedOwner : move.destination;
+  } catch {
+    return move.destination;
   }
 }
 
@@ -360,12 +490,12 @@ export class PolicyEngine {
   // Deno, Bun) with no build step, and those reject parameter properties.
   readonly policy: WalletPolicy;
   readonly spendTracker: SpendTracker;
-  private readonly options: { rwaApprovedAssets?: Address[] };
+  private readonly options: { rwaApprovedAssets?: string[] };
 
   constructor(
     policy: WalletPolicy,
     spendTracker: SpendTracker = new MemorySpendTracker(),
-    options: { rwaApprovedAssets?: Address[] } = {},
+    options: { rwaApprovedAssets?: string[] } = {},
   ) {
     // Refuse a nonsensical threshold rather than silently behaving as if no
     // human gate were configured. Failing loudly at construction is the only
@@ -392,18 +522,39 @@ export class PolicyEngine {
       };
     }
 
+    // Read what the transaction will execute. Instructions nobody can price
+    // are refused outright; opaque programs are tolerated only where the
+    // intent kind exists to call them, and only if allowlisted below.
+    const analysis = analyzeInstructions(intent.instructions);
+    const invokes = intent.kind === "program.invoke";
+    const swaps = intent.kind === "swap.exactIn";
+    if (swaps) {
+      const violation = await swapPlumbingViolation(intent);
+      if (violation) return { verdict: "deny", rule: "instructions.recognized", reason: violation };
+    } else {
+      const unpriced = analysis.unpriced[0];
+      if (unpriced) {
+        return { verdict: "deny", rule: "instructions.recognized", reason: `${unpriced.program}: ${unpriced.reason}` };
+      }
+      if (!invokes && analysis.opaque.length > 0) {
+        return {
+          verdict: "deny",
+          rule: "instructions.recognized",
+          reason: `a ${intent.kind} intent carries instructions to ${analysis.opaque.join(", ")}, which it has no reason to call`,
+        };
+      }
+    }
+
     // Counterparty allowlist. "Counterparty" is whoever ends up able to move
-    // value: a transfer's recipient, an approval's SPENDER, an RWA action's
-    // other side. Checking only transfers would let `erc20.approve` hand an
-    // arbitrary address a standing claim on the operator's balance.
-    // A PRESENT list is authoritative — an empty one means "no counterparty is
-    // allowed", not "no restriction". Reading [] as unrestricted would turn the
-    // most restrictive-looking config into the most permissive.
+    // value: a transfer's recipient, an approval's DELEGATE, a swap's output
+    // owner. A PRESENT list is authoritative — an empty one means "no
+    // counterparty is allowed", not "no restriction". Reading [] as
+    // unrestricted would turn the most restrictive-looking config into the
+    // most permissive.
     if (policy.allowedRecipients !== undefined) {
-      const counterparty = counterpartyOf(intent);
-      if (counterparty) {
-        const allowed = policy.allowedRecipients.some((addr) => sameAddress(addr, counterparty));
-        if (!allowed) {
+      const allowed = new Set(policy.allowedRecipients);
+      for (const counterparty of await counterpartiesOf(intent)) {
+        if (!allowed.has(counterparty)) {
           return {
             verdict: "deny",
             rule: "recipients.allowlist",
@@ -413,74 +564,58 @@ export class PolicyEngine {
       }
     }
 
-    // Contract allowlist for any call that hands calldata to a contract —
-    // including the token contract in an approval.
-    if (
-      intent.kind === "contract.write" ||
-      intent.kind === "swap.exactIn" ||
-      intent.kind === "erc20.approve" ||
-      intent.kind === "transfer.erc20"
-    ) {
-      const allowed = this.policy.allowedContracts.some((addr) => sameAddress(addr, intent.to));
-      if (!allowed) {
-        return { verdict: "deny", rule: "contracts.allowlist", reason: `contract ${intent.to} is not on the allowlist` };
+    // Program allowlist for anything that hands instructions to a program the
+    // policy cannot read. For a swap, the chain's own plumbing around the
+    // router (wrap, account creation, close) is expected; the router is not.
+    if (invokes || swaps) {
+      const allowed = new Set(policy.allowedPrograms);
+      const mustBeListed = swaps
+        ? analysis.programs.filter((program) => !SWAP_PLUMBING.has(program))
+        : analysis.programs.filter((program) => !INERT_PROGRAMS.has(program));
+      if (mustBeListed.length === 0) {
+        if (swaps) return { verdict: "deny", rule: "programs.allowlist", reason: "a swap with no router instruction is not a swap" };
       }
-    }
-
-    // RWA gating keys on the TARGET ADDRESS as well as the intent kind, so a
-    // value-moving contract.write to a registry asset cannot walk past the
-    // gate that rwa.interact would have hit.
-    //
-    // Boundary, stated plainly: the registry lists APPROVED assets, so an
-    // asset nobody has told us about cannot be recognised as an RWA at all.
-    // For those, the contract allowlist is the control — allowlisting a
-    // contract IS the act of trusting it.
-    const rwaAssets = this.options.rwaApprovedAssets ?? [];
-    const touchesKnownRwa = rwaAssets.some((addr) => sameAddress(addr, intent.to));
-    const claimsRwa = intent.kind === "rwa.interact";
-
-    if (claimsRwa || touchesKnownRwa) {
-      if (policy.rwaApprovedOnly === false) {
-        // Even when a developer opts out, the target must be an allowed contract.
-        const allowed = this.policy.allowedContracts.some((addr) => sameAddress(addr, intent.to));
-        if (!allowed) {
-          return { verdict: "deny", rule: "rwa.contracts", reason: "RWA target not on contract allowlist" };
+      for (const program of mustBeListed) {
+        if (!allowed.has(program)) {
+          return { verdict: "deny", rule: "programs.allowlist", reason: `program ${program} is not on the allowlist` };
         }
-      } else if (!touchesKnownRwa) {
-        return { verdict: "deny", rule: "rwa.approved", reason: "asset is not on the approved RWA registry" };
       }
     }
 
-    // Allowance accounting. A raw contract.write carrying ERC20 value is
-    // repriced here in the token it actually moves — otherwise it would be
-    // scored as a zero-value native call and skip every cap below.
-    // A contract.write can move value on two legs at once: ETH attached as
-    // `value`, and tokens moved by the calldata. Repricing used to REPLACE the
-    // native leg with the decoded token leg, so attached ETH escaped every cap.
-    // Both are now checked, each against its own allowance.
-    const legs = spendLegs(intent);
+    // RWA gating keys on the MINTS the instructions touch as well as the
+    // intent kind, so a transfer_spl of a registry asset is still an RWA
+    // action. Boundary, stated plainly: the registry lists APPROVED assets, so
+    // an asset nobody has told us about cannot be recognised as an RWA at all.
+    if (intent.kind === "rwa.interact" && policy.rwaApprovedOnly !== false) {
+      const registry = new Set(this.options.rwaApprovedAssets ?? []);
+      const mints = analysis.moves.filter((move) => move.kind !== "sol.transfer").map((move) => (move as { mint: string }).mint);
+      const targets = mints.length > 0 ? mints : [intent.to];
+      const outside = targets.find((mint) => !registry.has(mint));
+      if (outside) {
+        return { verdict: "deny", rule: "rwa.approved", reason: `mint ${outside} is not on the approved RWA registry` };
+      }
+    }
 
-    for (const leg of legs) {
-      const spendAsset = leg.asset;
-      const spendAmount = leg.amount;
-      const allowance = policy.allowances.find((entry) => sameAddress(entry.asset, spendAsset));
+    // Allowance accounting, per asset, over everything the instructions move.
+    for (const leg of spendLegs(intent)) {
+      const allowance = policy.allowances.find((entry) => entry.asset === leg.asset);
       if (!allowance) {
         return {
           verdict: "deny",
           rule: "allowance.missing",
-          reason: `no allowance configured for asset ${spendAsset}`,
+          reason: `no allowance configured for asset ${leg.asset}`,
         };
       }
       const perTx = allowance.perTx ?? allowance.perDay;
-      if (spendAmount > perTx) {
+      if (leg.amount > perTx) {
         return {
           verdict: "deny",
           rule: "allowance.perTx",
-          reason: `spend ${spendAmount} exceeds per-transaction cap ${perTx}`,
+          reason: `spend ${leg.amount} exceeds per-transaction cap ${perTx}`,
         };
       }
-      const spent = await this.spendTracker.spentInWindow(spendAsset, DAY_MS);
-      if (spent + spendAmount > allowance.perDay) {
+      const spent = await this.spendTracker.spentInWindow(leg.asset, DAY_MS);
+      if (spent + leg.amount > allowance.perDay) {
         return {
           verdict: "deny",
           rule: "allowance.daily",
@@ -492,7 +627,7 @@ export class PolicyEngine {
       const threshold = policy.approvalThreshold;
       if (threshold !== undefined) {
         const thresholdAmount = (allowance.perDay * BigInt(Math.round(threshold * 10_000))) / 10_000n;
-        if (spendAmount > thresholdAmount) {
+        if (leg.amount > thresholdAmount) {
           return {
             verdict: "needs_approval",
             rule: "allowance.approvalThreshold",
@@ -520,7 +655,7 @@ export class PolicyEngine {
       return null;
     }
     for (const leg of spendLegs(intent)) {
-      const allowance = this.policy.allowances.find((entry) => sameAddress(entry.asset, leg.asset));
+      const allowance = this.policy.allowances.find((entry) => entry.asset === leg.asset);
       if (!allowance) {
         return { rule: "allowance.missing", reason: `no allowance configured for asset ${leg.asset}` };
       }

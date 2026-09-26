@@ -1,4 +1,4 @@
-import { getFlightpathTarget, getNetworkStatus, getPonsConfig } from "@finch/flightpath";
+import { getFinchTokenMint, getFlightpathTarget, getNetworkStatus, getRegistryConfig } from "@finch/flightpath";
 import { getDb, isDbConfigured } from "@finch/db";
 import { probeProviders, providerStatus, resolveProviderFromEnv } from "@finch/providers";
 import { json, safeErrorMessage } from "@/lib/server/http";
@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 /** GET /api/status — infrastructure connectivity, honestly reported. */
 export async function GET(): Promise<Response> {
   const target = getFlightpathTarget();
-  const pons = getPonsConfig();
+  const registry = getRegistryConfig(target);
 
   const [network, db] = await Promise.all([
     getNetworkStatus(target),
@@ -49,19 +49,22 @@ export async function GET(): Promise<Response> {
     invalidKeys: probes.filter((candidate) => candidate.status === "invalid").map((candidate) => candidate.id),
   };
 
+  const mint = getFinchTokenMint();
   return json({
     db,
     chain: {
-      robinhoodConfigured: target.robinhoodConfigured,
+      cluster: target.cluster,
+      chain: target.chain,
       label: target.label,
-      chainId: target.chain.id,
       reachable: network.reachable,
-      blockNumber: network.blockNumber,
-      gasPriceGwei: network.gasPriceGwei,
+      slot: network.slot,
+      feePerSignatureLamports: network.feePerSignatureLamports,
       latencyMs: network.latencyMs,
       error: network.error,
     },
-    pons: { configured: pons.configured },
+    // The $FINCH mint Finch reads. Whether anything exists there is /api/token's job.
+    token: { configured: mint !== null, mint },
+    registry: { configured: registry.configured, authority: registry.authority ?? null },
     compute,
     at: new Date().toISOString(),
   });

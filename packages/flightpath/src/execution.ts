@@ -1,43 +1,44 @@
-import type { Account, Address, Chain, PublicClient, WalletClient } from "viem";
+import type { TransactionSigner } from "@solana/kit";
+import type { FlightpathTarget } from "./chain.ts";
+import { describeRpcError } from "./network.ts";
 import type { PolicyEngine } from "./policy.ts";
+import { computeUnitLimitFor, readReceipt, signAndSend, simulate, waitForSignature } from "./transaction.ts";
 import type { ExecutionIntent, ExecutionRecord, ExecutionSink } from "./types.ts";
 
 const now = (): string => new Date().toISOString();
 
 export interface ExecutionContext {
-  publicClient: PublicClient;
-  walletClient?: WalletClient;
-  account?: Account;
-  chain: Chain;
+  target: FlightpathTarget;
+  /** The operator keypair, when this process signs. Server-side only. */
+  signer?: TransactionSigner;
   policy: PolicyEngine;
   sink: ExecutionSink;
   agentId?: string;
-  confirmations?: number;
   confirmationTimeoutMs?: number;
   /**
-   * Who signs. "server" is the operator wallet on this context. "external" is
+   * Who signs. "server" is the operator keypair on this context. "external" is
    * a wallet this process never holds — a visitor's browser — so execution
-   * stops after simulation with the exact transaction prepared, and resumes
-   * only when a signed hash that matches it is presented.
+   * stops after simulation with the exact instructions prepared, and resumes
+   * only when a landed transaction that matches them is presented.
    */
   signing?: "server" | "external";
   /** The address the transaction is prepared for when signing is external. */
-  externalSigner?: Address;
+  externalSigner?: string;
 }
 
 function baseRecord(context: ExecutionContext, id: string, intent: ExecutionIntent): ExecutionRecord {
   return {
     id,
     agentId: context.agentId,
-    chainId: context.chain.id,
+    chain: context.target.chain,
     createdAt: now(),
     state: "created",
     intent: {
       kind: intent.kind,
       summary: intent.summary,
       to: intent.to,
-      value: intent.value.toString(),
-      data: intent.data,
+      instructions: intent.instructions,
+      addressLookupTables: intent.addressLookupTables,
       spendAsset: intent.spendAsset,
       spendAmount: intent.spendAmount.toString(),
       meta: intent.meta,
@@ -48,6 +49,11 @@ function baseRecord(context: ExecutionContext, id: string, intent: ExecutionInte
 
 function push(record: ExecutionRecord, event: string, detail?: string): void {
   record.log.push({ at: now(), event, detail });
+}
+
+/** Who would pay for and sign this transaction, if anyone. */
+function feePayerOf(context: ExecutionContext): string | undefined {
+  return context.signing === "external" ? context.externalSigner : context.signer?.address;
 }
 
 /**
@@ -157,61 +163,71 @@ export async function executeIntent(
   }
   push(record, "policy.passed", decision.rule);
 
-  // 2. Simulation — mandatory before anything is signed.
+  // Nothing can be simulated, let alone signed, without a fee payer.
+  const feePayer = feePayerOf(context);
+  if (!feePayer || effectiveIntent.instructions.length === 0) {
+    record.state = "failed";
+    record.error = { stage: "submission", message: "no signer attached (observer mode) — there is no wallet to simulate or sign as" };
+    push(record, "submission.failed", "no signer");
+    await context.sink.save(record);
+    return record;
+  }
+
+  // 2. Simulation — mandatory before anything is signed. Simulated as whoever
+  // will actually sign: an external signer's balance is what the chain will
+  // check, not the server's.
+  let units: bigint | null = null;
   try {
-    // Simulate as whoever will actually sign: an external signer's balance
-    // and nonce are what the chain will check, not the server's.
-    const simulateAs = context.signing === "external" ? context.externalSigner : context.account?.address;
-    const gas = await context.publicClient.estimateGas({
-      account: simulateAs ?? undefined,
-      to: effectiveIntent.to,
-      value: effectiveIntent.value,
-      data: effectiveIntent.data,
+    const outcome = await simulate({
+      rpc: context.target.rpc,
+      feePayer,
+      instructions: effectiveIntent.instructions,
+      addressLookupTables: effectiveIntent.addressLookupTables,
     });
-    if (effectiveIntent.data) {
-      // eth_call surfaces reverts with reasons that estimateGas can miss.
-      await context.publicClient.call({
-        account: simulateAs ?? undefined,
-        to: effectiveIntent.to,
-        value: effectiveIntent.value,
-        data: effectiveIntent.data,
-      });
-    }
-    record.simulation = { ok: true, gasEstimate: gas.toString(), simulatedAt: now() };
-    push(record, "simulated", `gas ≈ ${gas.toString()}`);
+    units = outcome.unitsConsumed;
+    record.simulation = {
+      ok: outcome.ok,
+      computeUnits: outcome.unitsConsumed?.toString(),
+      feeLamports: outcome.feeLamports?.toString(),
+      logs: outcome.logs,
+      error: outcome.error,
+      simulatedAt: now(),
+    };
+    if (!outcome.ok) throw new Error(outcome.error ?? "simulation failed");
+    push(record, "simulated", `compute units ≈ ${outcome.unitsConsumed?.toString() ?? "unknown"}`);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = describeRpcError(error, context.target.rpcUrls);
     record.state = "simulation_failed";
-    record.simulation = { ok: false, error: message, simulatedAt: now() };
+    record.simulation = { ...(record.simulation ?? {}), ok: false, error: message, simulatedAt: now() };
     record.error = { stage: "simulation", message };
     push(record, "simulation.failed", message.slice(0, 300));
     await context.sink.save(record);
     return record;
   }
+  const computeUnitLimit = computeUnitLimitFor(units);
 
   // 3a. External signing: stop here with the transaction prepared.
   //
   // Nothing past this point can run without a signer this process does not
-  // have. The record parks with the exact to/value/data/gas, and the policy
+  // have. The record parks with the exact instructions, and the policy
   // verdict — including needs_approval — travels with it: when the visitor's
   // own wallet is the signer, the visitor is the approver, and signing is the
-  // approval. Spend is accounted when a matching signed hash arrives, never
-  // for a transaction that was only proposed.
+  // approval. Spend is accounted when a matching landed transaction arrives,
+  // never for one that was only proposed.
   if (context.signing === "external") {
     record.state = "awaiting_signature";
     record.prepared = {
-      from: context.externalSigner,
-      to: effectiveIntent.to,
-      value: effectiveIntent.value.toString(),
-      data: effectiveIntent.data,
-      gas: record.simulation?.gasEstimate ?? "0",
+      feePayer,
+      instructions: effectiveIntent.instructions,
+      addressLookupTables: effectiveIntent.addressLookupTables,
+      computeUnits: String(computeUnitLimit ?? 0),
     };
     push(
       record,
       "awaiting_signature",
       decision.verdict === "needs_approval"
-        ? `prepared for ${context.externalSigner ?? "external signer"} — policy flagged a large spend; the signer is the approver`
-        : `prepared for ${context.externalSigner ?? "external signer"}`,
+        ? `prepared for ${feePayer} — policy flagged a large spend; the signer is the approver`
+        : `prepared for ${feePayer}`,
     );
     await context.sink.save(record);
     return record;
@@ -242,27 +258,27 @@ export async function executeIntent(
   }
 
   // 5. Submission.
-  let submittedHash: `0x${string}`;
-  if (!context.walletClient || !context.account) {
+  if (!context.signer) {
     record.state = "failed";
     record.error = { stage: "submission", message: "no operator wallet attached (observer mode)" };
-    push(record, "submission.failed", "no wallet client");
+    push(record, "submission.failed", "no signer");
     await context.sink.save(record);
     return record;
   }
 
+  let sent: Awaited<ReturnType<typeof signAndSend>>;
   try {
-    const hash = await context.walletClient.sendTransaction({
-      account: context.account,
-      chain: context.chain,
-      to: effectiveIntent.to,
-      value: effectiveIntent.value,
-      data: effectiveIntent.data,
+    sent = await signAndSend({
+      rpc: context.target.rpc,
+      feePayer: context.signer,
+      instructions: effectiveIntent.instructions,
+      addressLookupTables: effectiveIntent.addressLookupTables,
+      computeUnitLimit,
+      rpcUrls: context.target.rpcUrls,
     });
-    submittedHash = hash;
   } catch (error) {
-    // Nothing was broadcast: this is the only place "failed" is honest.
-    const message = error instanceof Error ? error.message : String(error);
+    // Failed while building or signing: nothing reached the network.
+    const message = describeRpcError(error, context.target.rpcUrls);
     record.state = "failed";
     record.error = { stage: "submission", message };
     push(record, "submission.failed", message.slice(0, 300));
@@ -270,14 +286,30 @@ export async function executeIntent(
     return record;
   }
 
+  if (sent.sendError) {
+    // The node refused the bytes (preflight) or the connection dropped. The
+    // signature is known either way, so ask the chain instead of guessing: a
+    // transaction that landed despite the error is live and must be tracked.
+    const seen = await waitForSignature(context.target.rpc, sent.signature, {
+      lastValidBlockHeight: sent.lastValidBlockHeight,
+      timeoutMs: 8_000,
+    }).catch(() => ({ status: "timeout" as const }));
+    if (seen.status !== "confirmed") {
+      record.state = "failed";
+      record.error = { stage: "submission", message: sent.sendError };
+      push(record, "submission.failed", sent.sendError.slice(0, 300));
+      await context.sink.save(record);
+      return record;
+    }
+  }
+
   // ── Past this line a transaction is LIVE on chain. ───────────────────────
-  // Nothing that follows may mark the record "failed": bookkeeping that throws
-  // after a successful broadcast used to do exactly that, reporting a real
-  // transaction as failed AND skipping the allowance debit, which freed the
-  // agent to spend the same budget again.
-  record.tx = { hash: submittedHash, submittedAt: now() };
+  // Nothing that follows may mark the record "failed" for bookkeeping
+  // reasons: reporting a real transaction as failed would also skip the
+  // allowance debit and free the agent to spend the same budget again.
+  record.tx = { signature: sent.signature, submittedAt: now() };
   record.state = "submitted";
-  push(record, "submitted", submittedHash);
+  push(record, "submitted", sent.signature);
 
   // The allowance was already debited by the reservation above, so there is
   // nothing to record here — and nothing that can fail and leave a live
@@ -292,32 +324,44 @@ export async function executeIntent(
 
   // 6. Confirmation + reconciliation.
   try {
-    const receipt = await context.publicClient.waitForTransactionReceipt({
-      hash: record.tx.hash,
-      confirmations: context.confirmations ?? 1,
-      timeout: context.confirmationTimeoutMs ?? 120_000,
+    const outcome = await waitForSignature(context.target.rpc, sent.signature, {
+      lastValidBlockHeight: sent.lastValidBlockHeight,
+      timeoutMs: context.confirmationTimeoutMs ?? 90_000,
     });
-    record.receipt = {
-      status: receipt.status === "success" ? "success" : "reverted",
-      blockNumber: receipt.blockNumber.toString(),
-      gasUsed: receipt.gasUsed.toString(),
-      effectiveGasPrice: receipt.effectiveGasPrice?.toString(),
-      confirmedAt: now(),
-    };
-    if (receipt.status === "success") {
-      record.state = "confirmed";
-      push(record, "confirmed", `block ${receipt.blockNumber}`);
+    if (outcome.status === "expired") {
+      // The blockhash aged out and the signature never landed: definitively
+      // nothing happened on chain.
+      record.state = "failed";
+      record.error = { stage: "confirmation", message: "blockhash expired before the transaction landed — nothing was executed" };
+      push(record, "confirmation.expired", "blockhash expired; transaction never landed");
+    } else if (outcome.status === "timeout") {
+      // It may still land — the record keeps the signature so a
+      // reconciliation pass can settle final state.
+      record.state = "failed";
+      record.error = { stage: "confirmation", message: "confirmation timed out; the transaction may still land" };
+      push(record, "confirmation.failed", "timed out");
     } else {
-      record.state = "reverted";
-      record.error = { stage: "confirmation", message: "transaction reverted onchain" };
-      push(record, "reverted", `block ${receipt.blockNumber}`);
+      const receipt = await readReceipt(context.target.rpc, sent.signature).catch(() => null);
+      record.receipt = {
+        status: outcome.err ? "failed" : "success",
+        slot: (receipt?.slot ?? outcome.slot.toString()),
+        feeLamports: receipt?.feeLamports ?? "0",
+        computeUnits: receipt?.computeUnits,
+        confirmedAt: now(),
+      };
+      if (!outcome.err) {
+        record.state = "confirmed";
+        push(record, "confirmed", `slot ${record.receipt.slot}`);
+      } else {
+        record.state = "reverted";
+        record.error = { stage: "confirmation", message: `transaction landed with an error: ${receipt?.error ?? JSON.stringify(outcome.err)}` };
+        push(record, "reverted", `slot ${record.receipt.slot}`);
+      }
     }
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    // The tx may still land later — the record keeps the hash so a
-    // reconciliation job can settle final state.
+    const message = describeRpcError(error, context.target.rpcUrls);
     record.state = "failed";
-    record.error = { stage: "confirmation", message: `confirmation timed out or failed: ${message}` };
+    record.error = { stage: "confirmation", message: `confirmation failed: ${message}` };
     push(record, "confirmation.failed", message.slice(0, 300));
   }
 
@@ -325,8 +369,8 @@ export async function executeIntent(
     await context.sink.save(record);
   } catch (error) {
     // Same rule as above: the transaction is real whether or not we managed to
-    // write it down. Throwing here would lose the record — and its hash — in
-    // the caller, which is strictly worse than returning it unpersisted.
+    // write it down. Throwing here would lose the record — and its signature —
+    // in the caller, which is strictly worse than returning it unpersisted.
     const message = error instanceof Error ? error.message : String(error);
     push(record, "sink.save_failed", message.slice(0, 200));
   }
@@ -334,13 +378,13 @@ export async function executeIntent(
 }
 
 /** Rebuild the exact intent a human saw when they approved it. */
-function intentFromRecord(record: ExecutionRecord): ExecutionIntent {
+export function intentFromRecord(record: ExecutionRecord): ExecutionIntent {
   return {
     kind: record.intent.kind,
     summary: record.intent.summary,
     to: record.intent.to,
-    value: BigInt(record.intent.value),
-    data: record.intent.data,
+    instructions: record.intent.instructions,
+    addressLookupTables: record.intent.addressLookupTables,
     spendAsset: record.intent.spendAsset,
     spendAmount: BigInt(record.intent.spendAmount),
     meta: record.intent.meta,
@@ -388,4 +432,3 @@ export async function resumeApprovedIntent(
   await context.sink.save(record);
   return executeIntent(context, id, intentFromRecord(record));
 }
-

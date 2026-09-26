@@ -24,12 +24,12 @@ const STEPS = [
   {
     n: "03",
     term: "Flightpath",
-    line: "How a nest touches Robinhood Chain. Every write is simulated, checked against your limits, and only called confirmed once a receipt exists.",
+    line: "How a nest touches Solana. Every write is simulated, checked against your limits, and only called confirmed once the signed transaction has landed.",
   },
   {
     n: "04",
     term: "Network",
-    line: "Nests expose their capabilities to other nests. Publish to the Aviary, register onchain, and the swarm compounds.",
+    line: "Nests expose their capabilities to other nests. Publish to the Aviary, and the swarm compounds.",
   },
 ];
 

@@ -25,7 +25,7 @@ interface ActivityResponse {
 /**
  * Work, not plumbing.
  *
- * The header used to carry four status dots — database, compute, chain, pons.
+ * The header used to carry four status dots — database, compute, chain, token.
  * That answers "are the lights on", which nobody visiting an agent network is
  * asking. This answers "what has it done": real row counts, polled. If the
  * protocol has run nothing, it shows zero rather than a reassuring green dot.

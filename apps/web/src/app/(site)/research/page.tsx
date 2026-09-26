@@ -56,7 +56,7 @@ export default function ResearchPage() {
           index="02"
           kicker="Benchmarks"
           title="Methodology first, numbers second."
-          lede="Suites are defined and versioned before any results are published — pre-registration for agents. First public runs land with the Flightpath testnet release."
+          lede="Suites are defined and versioned before any results are published — pre-registration for agents. First public runs land with the Flightpath devnet release."
         />
         <div className="overflow-x-auto rounded-xs border border-line">
           <table className="w-full min-w-[720px] border-collapse bg-bone text-left">

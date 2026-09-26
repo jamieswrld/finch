@@ -3,12 +3,12 @@ import { Badge } from "@/components/ui/Badge";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 
 const LIFECYCLE = [
-  { step: "policy", note: "allowances · allowlists · modes" },
-  { step: "simulate", note: "estimateGas + eth_call, always" },
+  { step: "policy", note: "allowances · program allowlists · modes" },
+  { step: "simulate", note: "simulateTransaction, always" },
   { step: "approve", note: "human gate above thresholds" },
-  { step: "submit", note: "one intent, one transaction" },
-  { step: "confirm", note: "receipts, reverts, reconciliation" },
-  { step: "log", note: "auditable execution record" },
+  { step: "sign", note: "your wallet, or a bounded operator key" },
+  { step: "confirm", note: "landed, matched, or reverted — never assumed" },
+  { step: "prove", note: "execution record + Proof of Flight" },
 ];
 
 export function FlightpathSection() {
@@ -19,7 +19,7 @@ export function FlightpathSection() {
           index="07"
           kicker="Flightpath — execution layer"
           title="Every agent action flies the same route."
-          lede="Flightpath is Finch's Robinhood Chain adapter. It is EVM-native — no bundling exotica — and it refuses shortcuts: no write reaches the chain without simulation, policy, confirmation and a log entry."
+          lede="Flightpath is Finch's Solana execution layer. Every write flies the same route: a policy check, a simulation, a signature from your wallet or a bounded operator key, confirmation onchain, and a logged Proof of Flight. Nothing reaches Solana any other way."
         />
 
         <ol className="grid grid-cols-2 gap-px overflow-hidden rounded-xs border border-line bg-line sm:grid-cols-3 lg:grid-cols-6">
@@ -62,7 +62,7 @@ export function FlightpathSection() {
           </table>
         </div>
         <p className="mt-3 font-mono text-[10.5px] text-grey-faint">
-          write-mode tools require an operator wallet and pass the policy engine on every call
+          write-mode tools need a signer — the visitor&apos;s wallet or an operator key — and pass the policy engine on every call
         </p>
       </div>
     </section>

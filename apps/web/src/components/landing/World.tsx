@@ -172,7 +172,7 @@ export function World() {
           build one nest. coordinate millions.
         </p>
         <p className="reveal reveal-3 mt-3 text-balance font-mono text-[9.5px] text-grey sm:text-[10.5px]">
-          permissionless agents · interoperable nests · robinhood native
+          permissionless agents · interoperable nests · solana native
         </p>
 
         <div className="reveal reveal-3 mt-8 w-full">

@@ -6,13 +6,13 @@ import { SectionHeading } from "@/components/ui/SectionHeading";
 /** Scroll narrative: ONE → SPECIALIZE → COORDINATE → NEST → CONNECT → NETWORK */
 
 const SPECIALISTS = [
-  { key: "MARKET", note: "Robinhood assets, prices, movement." },
+  { key: "MARKET", note: "Solana tokens, markets, movement." },
   { key: "NEWS", note: "Filings and headlines → structured events." },
-  { key: "PONS", note: "Launches, holders, liquidity, activity." },
+  { key: "LAUNCH", note: "New mints, holders, liquidity, activity." },
   { key: "RWA", note: "Tokenized equities and RWA structure." },
   { key: "WALLET", note: "Balances, flows, watchlists." },
-  { key: "SECURITY", note: "Contracts, permissions, anomalies." },
-  { key: "DEV", note: "Repos, ABIs, technical systems." },
+  { key: "SECURITY", note: "Programs, authorities, anomalies." },
+  { key: "DEV", note: "Repos, IDLs, technical systems." },
   { key: "EXECUTION", note: "Policied, simulated onchain action." },
 ];
 
@@ -43,14 +43,12 @@ export function OneFinchSection() {
   );
 }
 
-const PONS_NEST = [
-  { name: "Pons Scout", out: "launches" },
-  { name: "Holder Analyst", out: "holder.map" },
-  { name: "Liquidity Analyst", out: "liq.profile" },
-  { name: "Market Finch", out: "market.view" },
+// The members and channels of the launch-intelligence preset, as it runs.
+const LAUNCH_NEST = [
+  { name: "Launch Scout", out: "launch.target" },
+  { name: "Structure Analyst", out: "launch.structure" },
+  { name: "Liquidity Analyst", out: "liquidity.profile" },
   { name: "Risk Finch", out: "risk.score" },
-  { name: "Validator", out: "verdict" },
-  { name: "Alert Finch", out: "alert" },
 ];
 
 export function NestSection() {
@@ -65,12 +63,13 @@ export function NestSection() {
         />
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.15fr_0.85fr]">
           <figure className="grid-paper overflow-x-auto rounded-xs border border-line bg-bone p-5">
-            <p className="label-mono">pons intelligence nest</p>
+            <p className="label-mono">launch intelligence nest</p>
             <p className="mt-1 max-w-md text-[12px] leading-snug text-grey">
-              objective: monitor new Pons launches, analyze structure, liquidity and activity — alert on criteria match.
+              objective: analyze a Solana token launch — supply and authorities, holders, markets and liquidity,
+              activity — then give a risk verdict.
             </p>
-            <div className="mt-5 flex min-w-[680px] items-stretch gap-0">
-              {PONS_NEST.map((finch, index) => (
+            <div className="mt-5 flex min-w-[600px] items-stretch gap-0">
+              {LAUNCH_NEST.map((finch, index) => (
                 <div key={finch.name} className="flex items-center">
                   <div className="rounded-xs border border-line bg-bone-raised px-3 py-2.5">
                     <p className="flex items-center gap-1.5 whitespace-nowrap font-mono text-[11px] font-medium text-ink">
@@ -79,7 +78,7 @@ export function NestSection() {
                     </p>
                     <p className="mt-1 font-mono text-[9px] text-sage-deep">→ {finch.out}</p>
                   </div>
-                  {index < PONS_NEST.length - 1 && <span className="mx-1.5 font-mono text-[11px] text-sage-deep">→</span>}
+                  {index < LAUNCH_NEST.length - 1 && <span className="mx-1.5 font-mono text-[11px] text-sage-deep">→</span>}
                 </div>
               ))}
             </div>
@@ -99,7 +98,7 @@ export function NestSection() {
               )}
             </ul>
             <div className="mt-6 flex flex-wrap gap-3">
-              <ButtonLink href="/app/nests?preset=pons-intelligence">Try this nest</ButtonLink>
+              <ButtonLink href="/app/nests?preset=launch-intelligence">Try this nest</ButtonLink>
               <ButtonLink href="/app/nests" variant="secondary">
                 View flow
               </ButtonLink>

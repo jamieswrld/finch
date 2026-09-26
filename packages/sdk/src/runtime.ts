@@ -4,6 +4,7 @@ import {
   createFlightpathTools,
   MemoryExecutionSink,
   narrowPolicy,
+  parseUnits,
   type Allowance,
   type ExecutableTool,
   type ExecutionRecord,
@@ -11,7 +12,6 @@ import {
   type Flightpath,
   type WalletPolicy,
 } from "@finch/flightpath";
-import { parseUnits, type Address } from "viem";
 import type { FinchManifest } from "./manifest.ts";
 import { ephemeralMemory, formatRecall, nullMemory, type MemoryAdapter } from "./memory.ts";
 
@@ -56,8 +56,8 @@ export async function resolveWalletPolicy(manifest: FinchManifest, fp: Flightpat
   for (const entry of wallet.allowances) {
     const decimals =
       entry.asset === "native"
-        ? fp.target.chain.nativeCurrency.decimals
-        : (await fp.tokenData(entry.asset as Address)).decimals;
+        ? fp.target.nativeCurrency.decimals
+        : (await fp.tokenData(entry.asset)).decimals;
     allowances.push({
       asset: entry.asset as Allowance["asset"],
       perDay: parseUnits(entry.perDay, decimals),
@@ -67,8 +67,8 @@ export async function resolveWalletPolicy(manifest: FinchManifest, fp: Flightpat
   return {
     mode: wallet.mode,
     allowances,
-    allowedContracts: wallet.allowedContracts as Address[],
-    allowedRecipients: wallet.allowedRecipients as Address[] | undefined,
+    allowedPrograms: wallet.allowedPrograms,
+    allowedRecipients: wallet.allowedRecipients,
     approvalThreshold: manifest.permissions.approvalThreshold,
     rwaApprovedOnly: manifest.permissions.rwaApprovedOnly,
   };
@@ -76,7 +76,7 @@ export async function resolveWalletPolicy(manifest: FinchManifest, fp: Flightpat
 
 function buildSystemPrompt(manifest: FinchManifest): string {
   const lines = [
-    `You are ${manifest.identity.name} ("${manifest.identity.handle}"), a Finch — an autonomous agent on Robinhood Chain.`,
+    `You are ${manifest.identity.name} ("${manifest.identity.handle}"), a Finch — an autonomous agent on Solana.`,
     manifest.identity.description && `Purpose: ${manifest.identity.description}`,
     manifest.identity.instructions,
     "",

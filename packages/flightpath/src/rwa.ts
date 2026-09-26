@@ -1,17 +1,17 @@
-import type { Address } from "viem";
-
 /**
  * Approved RWA interactions.
  *
- * Real-world-asset tokens on Robinhood Chain sit behind issuer permissioning.
- * Agents may only touch assets on this explicit approved registry, and the
- * PolicyEngine enforces it as a hard deny — an agent cannot opt itself out.
+ * Tokenized real-world assets on Solana are SPL mints, usually behind issuer
+ * controls (freeze authority, Token-2022 extensions, allowlists). Agents may
+ * only touch assets on this explicit approved registry, and the PolicyEngine
+ * enforces it as a hard deny — an agent cannot opt itself out.
  */
 
 export type RwaKind = "tokenized-equity" | "treasury-bill" | "money-market" | "private-credit" | "other";
 
 export interface ApprovedRwaAsset {
-  address: Address;
+  /** The SPL mint address. */
+  address: string;
   symbol: string;
   name: string;
   kind: RwaKind;
@@ -43,6 +43,6 @@ export function loadApprovedRwaAssets(): ApprovedRwaAsset[] {
   }
 }
 
-export function approvedRwaAddresses(): Address[] {
+export function approvedRwaAddresses(): string[] {
   return loadApprovedRwaAssets().map((asset) => asset.address);
 }

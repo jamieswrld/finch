@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/chain — live Robinhood Chain telemetry.
+ * GET /api/chain — live Solana telemetry.
  *
  * Every field is a real RPC read. Because this endpoint is public and polled
  * by every visitor, results are shared behind a short TTL cache: one upstream

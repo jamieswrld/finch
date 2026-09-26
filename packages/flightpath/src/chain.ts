@@ -1,47 +1,74 @@
-import { defineChain, fallback, http, type Chain, type Transport } from "viem";
-import { arbitrumSepolia } from "viem/chains";
+import {
+  createDefaultRpcTransport,
+  createSolanaRpcFromTransport,
+  type Rpc,
+  type RpcTransport,
+  type SolanaRpcApi,
+} from "@solana/kit";
 
 /**
- * Robinhood Chain — Finch's native execution environment.
+ * Solana — Finch's execution environment. Agents work here and nowhere else.
  *
- * Verified mainnet parameters (probed live: eth_chainId → 0x1237,
- * web3_clientVersion → nitro/v3.11.3):
- *   chain id  4663
- *   stack     Arbitrum Nitro L2
- *   rpc       https://rpc.mainnet.chain.robinhood.com
- *   explorer  https://explorer.mainnet.chain.robinhood.com (Blockscout)
- *   currency  ETH
+ *   cluster   mainnet-beta (default) · devnet · testnet
+ *   rpc       https://api.mainnet-beta.solana.com (public, heavily rate
+ *             limited — production sets SOLANA_RPC_URLS)
+ *   explorer  https://solscan.io
+ *   currency  SOL (9 decimals; 1 SOL = 1,000,000,000 lamports)
  *
- * Production deployments should set ROBINHOOD_RPC_URLS to a comma-separated
- * list; the transport then fails over in order rather than depending on a
- * single public endpoint. FLIGHTPATH_FORCE_DEV=1 targets the dev chain.
+ * SOLANA_RPC_URLS takes a comma-separated list; requests then fail over in
+ * order rather than depending on a single endpoint. FLIGHTPATH_FORCE_DEV=1
+ * targets devnet.
  */
 
-export const ROBINHOOD_CHAIN_ID = 4663;
-export const DEFAULT_ROBINHOOD_RPC_URL = "https://rpc.mainnet.chain.robinhood.com";
-export const DEFAULT_ROBINHOOD_EXPLORER_URL = "https://explorer.mainnet.chain.robinhood.com";
-/**
- * The explorer's JSON API lives on a different host from its UI. The UI host
- * 301-redirects every /api path to the bare root of this one, dropping the
- * path, so pointing API reads at the UI host silently returns HTML.
- */
-export const DEFAULT_ROBINHOOD_EXPLORER_API_URL = "https://robinhoodchain.blockscout.com";
+export type SolanaCluster = "mainnet-beta" | "devnet" | "testnet";
 
-/** Arbitrum Nitro: sequencer-confirmed blocks land fast, L1 finality lags. */
-export const ROBINHOOD_STACK = "Arbitrum Nitro";
+export interface ClusterInfo {
+  /** Wallet-standard chain id — what wallets and execution records name the cluster by. */
+  chain: `solana:${string}`;
+  defaultRpcUrl: string;
+  /** Hash of the cluster's genesis block: the one fact that proves which cluster an RPC serves. */
+  genesisHash: string;
+}
+
+export const SOLANA_CLUSTERS: Record<SolanaCluster, ClusterInfo> = {
+  "mainnet-beta": {
+    chain: "solana:mainnet",
+    defaultRpcUrl: "https://api.mainnet-beta.solana.com",
+    genesisHash: "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d",
+  },
+  devnet: {
+    chain: "solana:devnet",
+    defaultRpcUrl: "https://api.devnet.solana.com",
+    genesisHash: "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG",
+  },
+  testnet: {
+    chain: "solana:testnet",
+    defaultRpcUrl: "https://api.testnet.solana.com",
+    genesisHash: "4uhcVJyU9pJkvQyS88uRDiswHXSCkY3zQawwpjk2NsNY",
+  },
+};
+
+export const DEFAULT_SOLANA_CLUSTER: SolanaCluster = "mainnet-beta";
+export const DEFAULT_SOLANA_RPC_URL = SOLANA_CLUSTERS["mainnet-beta"].defaultRpcUrl;
+export const DEFAULT_SOLANA_EXPLORER_URL = "https://solscan.io";
+
+export const NATIVE_CURRENCY = { name: "Solana", symbol: "SOL", decimals: 9 } as const;
 
 export interface FlightpathTarget {
-  chain: Chain;
-  /** Primary RPC (first in the list) — shown in UIs. */
+  cluster: SolanaCluster;
+  /** Wallet-standard chain id, e.g. "solana:mainnet". Stamped on every execution record. */
+  chain: `solana:${string}`;
+  name: string;
+  /** Primary RPC (first in the list) — shown in UIs, credentials redacted. */
   rpcUrl: string;
   /** Every configured endpoint, in failover order. */
   rpcUrls: string[];
-  /** viem transport with automatic failover + request batching. */
-  transport: Transport;
-  robinhoodConfigured: boolean;
-  explorerUrl?: string;
-  /** Blockscout JSON API base (no trailing slash). Distinct from explorerUrl. */
-  explorerApiUrl?: string;
+  /** RPC client over a failover transport. */
+  rpc: Rpc<SolanaRpcApi>;
+  explorerUrl: string;
+  nativeCurrency: typeof NATIVE_CURRENCY;
+  /** True when FLIGHTPATH_FORCE_DEV pointed this at devnet. */
+  devTarget: boolean;
   label: string;
 }
 
@@ -58,102 +85,122 @@ function splitList(value: string | undefined): string[] {
     .filter((entry) => entry.length > 0);
 }
 
-export function getRobinhoodChainConfig(): {
-  chainId: number;
+export function parseCluster(value: string | undefined): SolanaCluster {
+  if (value === "devnet" || value === "testnet" || value === "mainnet-beta") return value;
+  if (value === "mainnet") return "mainnet-beta";
+  return DEFAULT_SOLANA_CLUSTER;
+}
+
+export function getSolanaConfig(): {
+  cluster: SolanaCluster;
   rpcUrls: string[];
   explorerUrl: string;
-  explorerApiUrl: string;
   name: string;
 } {
-  const chainId = readEnv("ROBINHOOD_CHAIN_ID") ?? readEnv("NEXT_PUBLIC_ROBINHOOD_CHAIN_ID");
-  const rpcList = splitList(readEnv("ROBINHOOD_RPC_URLS"));
-  const single = readEnv("ROBINHOOD_RPC_URL") ?? readEnv("NEXT_PUBLIC_ROBINHOOD_RPC_URL");
-  const rpcUrls = rpcList.length > 0 ? rpcList : single ? [single] : [DEFAULT_ROBINHOOD_RPC_URL];
+  const cluster = parseCluster(readEnv("SOLANA_CLUSTER") ?? readEnv("NEXT_PUBLIC_SOLANA_CLUSTER"));
+  const rpcList = splitList(readEnv("SOLANA_RPC_URLS"));
+  const single = readEnv("SOLANA_RPC_URL") ?? readEnv("NEXT_PUBLIC_SOLANA_RPC_URL");
+  const rpcUrls = rpcList.length > 0 ? rpcList : single ? [single] : [SOLANA_CLUSTERS[cluster].defaultRpcUrl];
   return {
-    chainId: chainId ? Number(chainId) : ROBINHOOD_CHAIN_ID,
+    cluster,
     rpcUrls,
-    explorerUrl:
-      readEnv("ROBINHOOD_EXPLORER_URL") ??
-      readEnv("NEXT_PUBLIC_ROBINHOOD_EXPLORER_URL") ??
-      DEFAULT_ROBINHOOD_EXPLORER_URL,
-    explorerApiUrl: readEnv("ROBINHOOD_EXPLORER_API_URL") ?? DEFAULT_ROBINHOOD_EXPLORER_API_URL,
-    name: readEnv("NEXT_PUBLIC_ROBINHOOD_CHAIN_NAME") ?? "Robinhood Chain",
+    explorerUrl: readEnv("SOLANA_EXPLORER_URL") ?? readEnv("NEXT_PUBLIC_SOLANA_EXPLORER_URL") ?? DEFAULT_SOLANA_EXPLORER_URL,
+    name: "Solana",
   };
 }
 
-export function buildRobinhoodChain(config = getRobinhoodChainConfig()): Chain {
-  return defineChain({
-    id: config.chainId,
-    name: config.name,
-    nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
-    rpcUrls: { default: { http: config.rpcUrls } },
-    blockExplorers: { default: { name: "Robinhood Chain Blockscout", url: config.explorerUrl } },
-  });
+/**
+ * Failover transport: each endpoint in order, each attempt with its own
+ * timeout. A caller's abort stops the walk instead of trying the next one.
+ */
+function failoverTransport(rpcUrls: string[], timeoutMs = 15_000): RpcTransport {
+  const transports = rpcUrls.map((url) => createDefaultRpcTransport({ url: url as `https://${string}` }));
+  const transport = async (config: Parameters<RpcTransport>[0]) => {
+    let lastError: unknown = new Error("no rpc endpoints configured");
+    for (const next of transports) {
+      const timeout = AbortSignal.timeout(timeoutMs);
+      const signal = config.signal ? AbortSignal.any([config.signal, timeout]) : timeout;
+      try {
+        return await next({ ...config, signal });
+      } catch (error) {
+        if (config.signal?.aborted) throw error;
+        lastError = error;
+      }
+    }
+    throw lastError;
+  };
+  return transport as RpcTransport;
 }
 
-/**
- * Failover transport. Nitro chains produce blocks quickly, so polling is tight
- * (1s) and calls are batched to keep a single round trip per render.
- */
-function buildTransport(rpcUrls: string[]): Transport {
-  const transports = rpcUrls.map((url) =>
-    http(url, { batch: { wait: 16 }, timeout: 15_000, retryCount: 2, retryDelay: 250 }),
-  );
-  return transports.length > 1 ? fallback(transports, { rank: false }) : transports[0]!;
+const rpcCache = new Map<string, Rpc<SolanaRpcApi>>();
+
+export function createRpc(rpcUrls: string[]): Rpc<SolanaRpcApi> {
+  const key = rpcUrls.join(",");
+  let rpc = rpcCache.get(key);
+  if (!rpc) {
+    rpc = createSolanaRpcFromTransport(failoverTransport(rpcUrls)) as unknown as Rpc<SolanaRpcApi>;
+    rpcCache.set(key, rpc);
+  }
+  return rpc;
 }
 
 export function getFlightpathTarget(): FlightpathTarget {
   if (readEnv("FLIGHTPATH_FORCE_DEV")) {
-    const devRpc = readEnv("FLIGHTPATH_DEV_RPC_URL") ?? arbitrumSepolia.rpcUrls.default.http[0]!;
+    const devRpc = readEnv("FLIGHTPATH_DEV_RPC_URL") ?? SOLANA_CLUSTERS.devnet.defaultRpcUrl;
     return {
-      chain: arbitrumSepolia,
+      cluster: "devnet",
+      chain: SOLANA_CLUSTERS.devnet.chain,
+      name: "Solana",
       rpcUrl: devRpc,
       rpcUrls: [devRpc],
-      transport: buildTransport([devRpc]),
-      robinhoodConfigured: false,
-      explorerUrl: arbitrumSepolia.blockExplorers?.default.url,
-      explorerApiUrl: undefined,
-      label: "dev target · arbitrum sepolia (FLIGHTPATH_FORCE_DEV)",
+      rpc: createRpc([devRpc]),
+      explorerUrl: readEnv("SOLANA_EXPLORER_URL") ?? DEFAULT_SOLANA_EXPLORER_URL,
+      nativeCurrency: NATIVE_CURRENCY,
+      devTarget: true,
+      label: "dev target · solana devnet (FLIGHTPATH_FORCE_DEV)",
     };
   }
 
-  const config = getRobinhoodChainConfig();
+  const config = getSolanaConfig();
   return {
-    chain: buildRobinhoodChain(config),
+    cluster: config.cluster,
+    chain: SOLANA_CLUSTERS[config.cluster].chain,
+    name: config.name,
     rpcUrl: config.rpcUrls[0]!,
     rpcUrls: config.rpcUrls,
-    transport: buildTransport(config.rpcUrls),
-    robinhoodConfigured: true,
+    rpc: createRpc(config.rpcUrls),
     explorerUrl: config.explorerUrl,
-    explorerApiUrl: config.explorerApiUrl,
-    label: `${config.name} · ${config.chainId}`,
+    nativeCurrency: NATIVE_CURRENCY,
+    devTarget: false,
+    label: `${config.name} · ${config.cluster}`,
   };
 }
 
 // ── Explorer links ────────────────────────────────────────────────────────
-// One helper per entity so no component hand-builds an explorer URL.
+// One helper per entity so no component hand-builds an explorer URL. Paths
+// follow Solscan; explorer.solana.com accepts the same shapes except tokens,
+// which it serves under /address.
 
-export function explorerBase(target: FlightpathTarget = getFlightpathTarget()): string | null {
-  const url = target.explorerUrl ?? target.chain.blockExplorers?.default.url;
-  return url ? url.replace(/\/$/, "") : null;
+export function explorerBase(target: FlightpathTarget = getFlightpathTarget()): string {
+  return target.explorerUrl.replace(/\/$/, "");
 }
 
-export function explorerTxUrl(hash: string, target?: FlightpathTarget): string | null {
-  const base = explorerBase(target);
-  return base ? `${base}/tx/${hash}` : null;
+function withCluster(url: string, target: FlightpathTarget): string {
+  return target.cluster === "mainnet-beta" ? url : `${url}?cluster=${target.cluster}`;
 }
 
-export function explorerAddressUrl(address: string, target?: FlightpathTarget): string | null {
-  const base = explorerBase(target);
-  return base ? `${base}/address/${address}` : null;
+export function explorerTxUrl(signature: string, target: FlightpathTarget = getFlightpathTarget()): string {
+  return withCluster(`${explorerBase(target)}/tx/${signature}`, target);
 }
 
-export function explorerBlockUrl(block: string | number | bigint, target?: FlightpathTarget): string | null {
-  const base = explorerBase(target);
-  return base ? `${base}/block/${block.toString()}` : null;
+export function explorerAddressUrl(address: string, target: FlightpathTarget = getFlightpathTarget()): string {
+  return withCluster(`${explorerBase(target)}/account/${address}`, target);
 }
 
-export function explorerTokenUrl(address: string, target?: FlightpathTarget): string | null {
-  const base = explorerBase(target);
-  return base ? `${base}/token/${address}` : null;
+export function explorerBlockUrl(slot: string | number | bigint, target: FlightpathTarget = getFlightpathTarget()): string {
+  return withCluster(`${explorerBase(target)}/block/${slot.toString()}`, target);
+}
+
+export function explorerTokenUrl(mint: string, target: FlightpathTarget = getFlightpathTarget()): string {
+  return withCluster(`${explorerBase(target)}/token/${mint}`, target);
 }

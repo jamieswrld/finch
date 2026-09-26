@@ -1,6 +1,5 @@
 import { hatchFromManifest } from "@finch/sdk";
-import { createFlightpath, type ExecutionSink, type WalletPolicy } from "@finch/flightpath";
-import { isAddress, parseUnits } from "viem";
+import { createFlightpath, isSolanaAddress, parseUnits, SOL_DECIMALS, type ExecutionSink, type WalletPolicy } from "@finch/flightpath";
 import { resolveLiveChain, withFailover } from "@finch/providers";
 import { createMongoExecutionSink, createMongoSpendTracker, isDbConfigured, recordRun } from "@finch/db";
 import { errorJson, json, rateLimit, readJsonBody, safeErrorMessage } from "@/lib/server/http";
@@ -26,7 +25,7 @@ export async function POST(request: Request): Promise<Response> {
   if (!body.ok) return body.response;
 
   const { preset: presetSlug, input, signer } = body.body as { preset?: string; input?: string; signer?: string };
-  if (signer !== undefined && !isAddress(signer)) return errorJson(400, "signer must be an address");
+  if (signer !== undefined && !isSolanaAddress(signer)) return errorJson(400, "signer must be a Solana address");
   if (!presetSlug || typeof input !== "string") {
     return errorJson(400, "expected { preset, input }");
   }
@@ -59,21 +58,21 @@ export async function POST(request: Request): Promise<Response> {
     // this request, so it needs the durable store; without one, the route
     // stays read-only and says so rather than preparing something that
     // would vanish.
-    const externalSigner = signer && isDbConfigured() && preset.manifest.permissions.allowWrites ? (signer as `0x${string}`) : undefined;
+    const externalSigner = signer && isDbConfigured() && preset.manifest.permissions.allowWrites ? signer : undefined;
     const mode = externalSigner ? "live" : "preview";
     // The caps here are the product's, mirrored from the preset's manifest;
     // hatch intersects the two, and a manifest can only ever narrow them.
     const basePolicy: WalletPolicy = {
       mode: "operator",
-      allowances: [{ asset: "native", perDay: parseUnits("0.05", 18), perTx: parseUnits("0.01", 18) }],
-      allowedContracts: [],
+      allowances: [{ asset: "native", perDay: parseUnits("0.5", SOL_DECIMALS), perTx: parseUnits("0.1", SOL_DECIMALS) }],
+      allowedPrograms: [],
       rwaApprovedOnly: true,
     };
     // ONE sink instance, handed to both the Flightpath and hatch(). hatch()
     // derives the member's Flightpath with `options.sink ?? new memory sink`,
     // overriding whatever the passed Flightpath carried — so a sink given only
     // to the Flightpath was silently replaced, the prepared record landed in
-    // process memory, and /submitted found nothing while the visitor's ETH had
+    // process memory, and /submitted found nothing while the visitor's SOL had
     // already moved on chain. Structurally an ExecutionSink; zod's record type
     // for `intent` is wider than the SDK's, which is all the cast covers.
     const sink = externalSigner ? (createMongoExecutionSink() as unknown as ExecutionSink) : undefined;

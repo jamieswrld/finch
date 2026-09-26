@@ -7,16 +7,16 @@ import type { ExecutionRecord } from "./types.ts";
  * The problem it solves: an agent operator can claim anything about what their
  * agent did. A Proof of Flight is the minimum set of facts that lets a third
  * party check the claim themselves — which finch, under which policy, in which
- * transaction, in which block — plus a hash over those facts so the receipt
+ * transaction, in which slot — plus a hash over those facts so the receipt
  * cannot be edited after the fact.
  *
  * Deliberately small. Model traces and tool logs stay offchain in the
  * execution record; only the hash needs anchoring. A proof is issued ONLY for
- * an execution that actually reached a receipt — there is no such thing as a
- * proof for a pending, denied or reverted action.
+ * an execution that actually landed successfully — there is no such thing as
+ * a proof for a pending, denied or failed action.
  */
 
-export const PROOF_VERSION = "proof-of-flight/0.1" as const;
+export const PROOF_VERSION = "proof-of-flight/0.2" as const;
 
 export interface ProofOfFlight {
   version: typeof PROOF_VERSION;
@@ -28,16 +28,17 @@ export interface ProofOfFlight {
   /** What it did. */
   action: string;
   summary: string;
-  /** Where it happened. */
-  chainId: number;
-  txHash: string;
-  blockNumber: string;
-  gasUsed: string;
+  /** Where it happened: wallet-standard chain id, e.g. "solana:mainnet". */
+  chain: string;
+  signature: string;
+  slot: string;
+  feeLamports: string;
+  computeUnits?: string;
   /** Under what authority. */
   policy: { verdict: string; rule: string };
   /** Whether a human released it, and who. */
   approval?: { approvedBy: string; at: string };
-  simulation: { ok: boolean; gasEstimate?: string };
+  simulation: { ok: boolean; computeUnits?: string };
   /** When the chain confirmed it. */
   confirmedAt: string;
   /** sha256 over the canonical form of every field above. */
@@ -58,7 +59,8 @@ export class ProofUnavailableError extends Error {
 /**
  * Deterministic serialization. Key order is fixed by construction rather than
  * by object insertion order, so the same execution always hashes identically —
- * across machines, languages and JSON implementations.
+ * across machines, languages and JSON implementations. Signatures are base58
+ * and case-sensitive, so they are hashed exactly as given.
  */
 export function canonicalizeProof(proof: Omit<ProofOfFlight, "executionHash" | "explorerUrl">): string {
   const ordered: Array<[string, unknown]> = [
@@ -68,16 +70,17 @@ export function canonicalizeProof(proof: Omit<ProofOfFlight, "executionHash" | "
     ["taskId", proof.taskId ?? null],
     ["action", proof.action],
     ["summary", proof.summary],
-    ["chainId", proof.chainId],
-    ["txHash", proof.txHash.toLowerCase()],
-    ["blockNumber", proof.blockNumber],
-    ["gasUsed", proof.gasUsed],
+    ["chain", proof.chain],
+    ["signature", proof.signature],
+    ["slot", proof.slot],
+    ["feeLamports", proof.feeLamports],
+    ["computeUnits", proof.computeUnits ?? null],
     ["policyVerdict", proof.policy.verdict],
     ["policyRule", proof.policy.rule],
     ["approvedBy", proof.approval?.approvedBy ?? null],
     ["approvedAt", proof.approval?.at ?? null],
     ["simulationOk", proof.simulation.ok],
-    ["simulationGas", proof.simulation.gasEstimate ?? null],
+    ["simulationComputeUnits", proof.simulation.computeUnits ?? null],
     ["confirmedAt", proof.confirmedAt],
   ];
   return JSON.stringify(ordered);
@@ -92,8 +95,8 @@ async function sha256Hex(input: string): Promise<string> {
 /**
  * Issue a proof for a confirmed execution.
  *
- * Throws for anything that did not reach a successful receipt. That refusal is
- * the point: a proof of flight means the flight happened.
+ * Throws for anything that did not land successfully. That refusal is the
+ * point: a proof of flight means the flight happened.
  */
 export async function buildProofOfFlight(
   record: ExecutionRecord,
@@ -102,7 +105,7 @@ export async function buildProofOfFlight(
   if (record.state !== "confirmed") {
     throw new ProofUnavailableError(`execution is "${record.state}", not confirmed`);
   }
-  if (!record.tx?.hash) throw new ProofUnavailableError("execution has no transaction hash");
+  if (!record.tx?.signature) throw new ProofUnavailableError("execution has no transaction signature");
   if (!record.receipt) throw new ProofUnavailableError("execution has no receipt");
   if (record.receipt.status !== "success") {
     throw new ProofUnavailableError(`transaction ${record.receipt.status}, not success`);
@@ -116,13 +119,14 @@ export async function buildProofOfFlight(
     taskId: context.taskId,
     action: record.intent.kind,
     summary: record.intent.summary,
-    chainId: record.chainId,
-    txHash: record.tx.hash,
-    blockNumber: record.receipt.blockNumber,
-    gasUsed: record.receipt.gasUsed,
+    chain: record.chain,
+    signature: record.tx.signature,
+    slot: record.receipt.slot,
+    feeLamports: record.receipt.feeLamports,
+    computeUnits: record.receipt.computeUnits,
     policy: { verdict: record.policy?.verdict ?? "unknown", rule: record.policy?.rule ?? "unknown" },
     approval: record.approval,
-    simulation: { ok: record.simulation.ok, gasEstimate: record.simulation.gasEstimate },
+    simulation: { ok: record.simulation.ok, computeUnits: record.simulation.computeUnits },
     confirmedAt: record.receipt.confirmedAt,
   };
 
@@ -130,7 +134,7 @@ export async function buildProofOfFlight(
   return {
     ...body,
     executionHash: await sha256Hex(canonicalizeProof(body)),
-    explorerUrl: explorerTxUrl(record.tx.hash, target),
+    explorerUrl: explorerTxUrl(record.tx.signature, target),
   };
 }
 

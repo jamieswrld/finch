@@ -1,4 +1,4 @@
-import { getFlightpathTarget, getRegistryConfig, isRegistered, registryId } from "@finch/flightpath";
+import { getFlightpathTarget, getRegistryConfig, indexRegistrations, registryId } from "@finch/flightpath";
 import { REGISTRY_FINCHES, REGISTRY_NESTS } from "@/lib/registry";
 import { json } from "@/lib/server/http";
 
@@ -6,11 +6,12 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/registry — onchain registration status.
+ * GET /api/registry — what is anchored on Solana.
  *
- * Reports what FinchRegistry actually holds. Until FINCH_REGISTRY_ADDRESS is
- * set the answer is "not deployed", and every listing is reported as
- * unregistered rather than being quietly presented as verified.
+ * The registry is the authority's signed memo history (see registry.ts in
+ * @finch/flightpath). Until FINCH_REGISTRY_AUTHORITY is set the answer is
+ * "not configured", and every listing is reported as unanchored rather than
+ * being quietly presented as verified.
  */
 export async function GET(): Promise<Response> {
   const target = getFlightpathTarget();
@@ -19,39 +20,41 @@ export async function GET(): Promise<Response> {
   if (!config.configured) {
     return json({
       configured: false,
-      chainId: target.chain.id,
-      note: "FinchRegistry is not deployed yet. Set FINCH_REGISTRY_ADDRESS once it is, and these records become independently verifiable from chain state alone.",
+      chain: target.chain,
+      authority: null,
+      note: "No registry authority is configured. Set FINCH_REGISTRY_AUTHORITY, anchor listings with scripts/registry-anchor.mjs, and these records become independently verifiable from Solana alone.",
       registrations: [],
+      registeredCount: 0,
     });
   }
 
-  // The registry id is namespaced by kind — keccak("finch:handle") is a
-  // different id from keccak("nest:handle"), which is the whole point of the
-  // namespace. Checking every listing as a FINCH reported all four nests as
-  // unregistered while they were registered under their own ids.
+  // Ids are namespaced by kind — "finch:x" and "nest:x" are different ids —
+  // so each listing is checked under its own kind.
+  const index = await indexRegistrations(target);
   const subjects = [
     ...REGISTRY_FINCHES.map((listing) => ({ kind: "FINCH" as const, slug: listing.slug })),
     ...REGISTRY_NESTS.map((listing) => ({ kind: "NEST" as const, slug: listing.slug })),
   ];
-
-  const checks = await Promise.all(
-    subjects.slice(0, 24).map(async (subject) => {
-      const id = registryId(subject.kind, subject.slug);
-      return {
-        slug: subject.slug,
-        kind: subject.kind.toLowerCase(),
-        id,
-        registered: await isRegistered(id, target),
-      };
-    }),
-  );
+  const registrations = subjects.map((subject) => {
+    const id = registryId(subject.kind, subject.slug);
+    // Signature history is newest first: the first anchor is the current one.
+    const latest = index.events.find((event) => event.id === id);
+    return {
+      slug: subject.slug,
+      kind: subject.kind.toLowerCase(),
+      id,
+      registered: Boolean(latest),
+      ...(latest ? { signature: latest.signature, manifestHash: latest.manifestHash } : {}),
+    };
+  });
 
   return json({
     configured: true,
-    chainId: target.chain.id,
-    address: config.address,
+    chain: target.chain,
+    authority: config.authority,
     explorerUrl: config.explorerUrl,
-    registrations: checks,
-    registeredCount: checks.filter((check) => check.registered).length,
+    registrations,
+    registeredCount: registrations.filter((entry) => entry.registered).length,
+    ...(index.error ? { note: `the registry could not be read: ${index.error}` } : {}),
   });
 }

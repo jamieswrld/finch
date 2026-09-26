@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 
 /**
  * Murmuration — a boids simulation rendered as a field-study plot: small ink
- * darts on bone, with three "tracked" individuals in Robinhood green wearing
+ * darts on bone, with three "tracked" individuals in the green accent wearing
  * study tags. Pauses offscreen; renders a single static frame under
  * prefers-reduced-motion.
  */

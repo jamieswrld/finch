@@ -6,6 +6,7 @@ import { Badge, DataBadge } from "@/components/ui/Badge";
 import { ButtonLink } from "@/components/ui/Button";
 import { CodeBlock } from "@/components/ui/CodeBlock";
 import { ErrorBlock, LoadingBlock } from "@/components/ui/StateBlocks";
+import { explorerTxUrl } from "@/lib/chain";
 import { formatCompact, formatDate, truncateAddress } from "@/lib/format";
 import { useFetch } from "@/lib/use-fetch";
 
@@ -23,7 +24,11 @@ interface ListingResponse {
   listing: AviaryListing;
   capabilities: Capability[];
   permissions: { requiresWrites: boolean; walletMode: string; note: string };
-  registry: { onchain: boolean; note: string; id?: string; contract?: string; explorerUrl?: string | null };
+  /**
+   * `onchain` is true only when the registry authority's signed memo for this
+   * listing was found on Solana; `signature` is that memo transaction.
+   */
+  registry: { onchain: boolean; note: string; id?: string; authority?: string | null; signature?: string | null; explorerUrl?: string | null };
 }
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
@@ -194,12 +199,23 @@ const nest = await createFinch("my-finch")
 
           <section className="rounded-xs border border-dashed border-line-strong p-4">
             <p className="flex items-center gap-2">
-              <span className="label-mono">onchain registration</span>
+              <span className="label-mono">solana anchor</span>
               <Badge tone={registry.onchain ? "green" : "grey"}>
-                {registry.onchain ? "registered" : "not registered"}
+                {registry.onchain ? "anchored" : "not anchored"}
               </Badge>
             </p>
             <p className="mt-2 text-[12.5px] leading-relaxed text-grey">{registry.note}</p>
+            {registry.onchain && registry.signature && (
+              <a
+                href={explorerTxUrl(registry.signature)}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={registry.signature}
+                className="mt-2 inline-block font-mono text-[11px] text-ink-soft underline decoration-line-strong underline-offset-2 hover:text-green-deep"
+              >
+                memo {truncateAddress(registry.signature, 6)} ↗
+              </a>
+            )}
           </section>
         </aside>
       </div>

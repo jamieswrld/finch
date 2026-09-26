@@ -9,18 +9,24 @@ import { describeAge, formatRecall, subjectOf, type MemoryItem } from "../src/me
  * fresh fact — its wording is part of the honesty contract.
  */
 
+const USDC = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+const JUP = "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN";
+
 test("subjectOf finds the first address in an objective and preserves its case", () => {
-  assert.equal(
-    subjectOf("Full due diligence on token 0x39dBED3a2bd333467115dE45665cC57F813C4571 (PONS) on Robinhood Chain."),
-    "0x39dBED3a2bd333467115dE45665cC57F813C4571",
-  );
-  assert.equal(subjectOf("compare 0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA and 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"), "0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+  assert.equal(subjectOf(`Full due diligence on token ${USDC} (USDC) on Solana.`), USDC);
+  assert.equal(subjectOf(`compare ${JUP} and ${USDC}`), JUP);
 });
 
 test("subjectOf returns null when there is nothing to key on — never a guess", () => {
   assert.equal(subjectOf("How busy is the chain right now?"), null);
-  assert.equal(subjectOf("0x1234 is too short"), null);
+  assert.equal(subjectOf("EPjFWdd5 is too short"), null);
   assert.equal(subjectOf(""), null);
+});
+
+test("subjectOf does not mistake a slice of a transaction signature for an address", () => {
+  const signature = "5VERv8NMvzbJMEkV8xnrLkEaWRtSz9CosKDYjCJjBRnbJLgp8uirBgmQpjKhoR4tjF3ZpRzrFmBV6UjKdiSZkQUW";
+  assert.equal(subjectOf(`what happened in ${signature}?`), null);
+  assert.equal(subjectOf(`what happened in ${signature} to ${USDC}?`), USDC);
 });
 
 test("describeAge is coarse and honest", () => {
@@ -39,7 +45,7 @@ test("formatRecall labels every item as a prior, unverified finding with its pro
       role: "observation",
       content: "Top-10 holders control 38.21% of supply.",
       at: "2026-09-03T11:00:00.000Z",
-      subject: "0x39dB",
+      subject: "EPjF",
       runId: "run_abc123def456",
       nestId: "network-dd",
       finch: "token-inspector",

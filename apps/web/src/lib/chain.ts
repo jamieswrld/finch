@@ -1,35 +1,53 @@
-import { defineChain, type Chain } from "viem";
-
 /**
- * Robinhood Chain — client-safe config with the official mainnet parameters
- * baked in (verified live: eth_chainId → 0x1237 = 4663). NEXT_PUBLIC_* env
- * vars override at build time; they are inlined by Next.js.
+ * Solana — client-safe config. Nothing here talks to an RPC: the server
+ * builds every transaction and the visitor's wallet sends it, so the browser
+ * only needs to know which cluster it is on and where the explorer lives.
+ * NEXT_PUBLIC_* env vars are inlined by Next.js at build time.
  *
- *   chain id  4663
- *   rpc       https://rpc.mainnet.chain.robinhood.com
- *   explorer  https://explorer.mainnet.chain.robinhood.com (Blockscout)
+ *   cluster   mainnet-beta (or devnet / testnet)
+ *   explorer  https://solscan.io
  */
 
-export const ROBINHOOD_CHAIN_ID = 4663;
+export type SolanaCluster = "mainnet-beta" | "devnet" | "testnet";
 
-const chainId = process.env.NEXT_PUBLIC_ROBINHOOD_CHAIN_ID
-  ? Number(process.env.NEXT_PUBLIC_ROBINHOOD_CHAIN_ID)
-  : ROBINHOOD_CHAIN_ID;
-const rpcUrl = process.env.NEXT_PUBLIC_ROBINHOOD_RPC_URL ?? "https://rpc.mainnet.chain.robinhood.com";
-const explorerUrl =
-  process.env.NEXT_PUBLIC_ROBINHOOD_EXPLORER_URL ?? "https://explorer.mainnet.chain.robinhood.com";
-const chainName = process.env.NEXT_PUBLIC_ROBINHOOD_CHAIN_NAME ?? "Robinhood Chain";
+function parseCluster(value: string | undefined): SolanaCluster {
+  const normalized = (value ?? "").trim().toLowerCase();
+  if (normalized === "devnet" || normalized === "testnet") return normalized;
+  // "mainnet" is how people say it; "mainnet-beta" is what the cluster is called.
+  return "mainnet-beta";
+}
 
-export const robinhoodConfigured = true;
+export const solanaCluster: SolanaCluster = parseCluster(process.env.NEXT_PUBLIC_SOLANA_CLUSTER);
 
-export const appChain: Chain = defineChain({
-  id: chainId,
-  name: chainName,
-  nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
-  rpcUrls: { default: { http: [rpcUrl] } },
-  blockExplorers: { default: { name: "Robinhood Chain Blockscout", url: explorerUrl } },
-});
+/**
+ * The Wallet Standard chain id a wallet is asked to sign for. It rides on
+ * every signing call, so a wallet on another cluster cannot quietly send the
+ * transaction somewhere else.
+ */
+export const walletChain = (
+  solanaCluster === "mainnet-beta" ? "solana:mainnet" : `solana:${solanaCluster}`
+) as "solana:mainnet" | "solana:devnet" | "solana:testnet";
 
-export const chainLabel = `${chainName} · ${chainId}`;
+export const chainName = "Solana";
 
-export const chainStatusNote = `Connected surface targets ${chainName} (chain ${chainId}) via ${rpcUrl}.`;
+export const chainLabel = `${chainName} · ${solanaCluster}`;
+
+export const NATIVE_SYMBOL = "SOL";
+
+export const explorerBaseUrl = (process.env.NEXT_PUBLIC_SOLANA_EXPLORER_URL ?? "https://solscan.io").replace(/\/+$/, "");
+
+// Solscan reads mainnet unless told otherwise; a devnet link without the
+// cluster query would show "not found" for a transaction that exists.
+const clusterQuery = solanaCluster === "mainnet-beta" ? "" : `?cluster=${solanaCluster}`;
+
+export function explorerTxUrl(signature: string): string {
+  return `${explorerBaseUrl}/tx/${signature}${clusterQuery}`;
+}
+
+export function explorerAddressUrl(address: string): string {
+  return `${explorerBaseUrl}/account/${address}${clusterQuery}`;
+}
+
+export function explorerTokenUrl(mint: string): string {
+  return `${explorerBaseUrl}/token/${mint}${clusterQuery}`;
+}

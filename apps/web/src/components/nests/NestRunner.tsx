@@ -7,8 +7,8 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { CodeBlock } from "@/components/ui/CodeBlock";
 import { ConnectNest } from "./ConnectNest";
-import { useAccount } from "wagmi";
 import { SignPanel, type PreparedExecution } from "@/components/school/SignPanel";
+import { useWallet } from "@/lib/wallet";
 
 /**
  * The nest console. A run is a DAG of tasks streamed over SSE — each task card
@@ -164,7 +164,9 @@ interface RunConfig {
 }
 
 export function NestRunner({ manifest }: { manifest: NestManifest }) {
-  const { address } = useAccount();
+  // A connected Solana wallet is sent as the run's signer, so any write a
+  // finch proposes is prepared for that address alone to sign.
+  const { address } = useWallet();
   // Whatever host the visitor is on — so a copied command targets the site
   // they are looking at, not a hardcoded domain that may not be theirs.
   const origin = typeof window === "undefined" ? "https://finch.fun" : window.location.origin;
@@ -366,7 +368,7 @@ export function NestRunner({ manifest }: { manifest: NestManifest }) {
             <p className="label-mono">nest idle</p>
             <p className="mx-auto mt-2 max-w-md text-[13px] leading-relaxed text-grey">
               Press <span className="font-mono text-ink">run nest</span> to watch {manifest.finches.length} finches
-              coordinate through {manifest.tasks.length} tasks. Read-only: real chain reads, no wallet, no writes.
+              coordinate through {manifest.tasks.length} tasks. Read-only: live Solana reads, no wallet, no writes.
             </p>
           </div>
         )}

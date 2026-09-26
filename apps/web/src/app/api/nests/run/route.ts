@@ -1,7 +1,6 @@
-import { isAddress as isSignerAddress, parseUnits as signerUnits, type Address as SignerAddress } from "viem";
 import { effectiveParallelism, resolveLiveChain, withFailover } from "@finch/providers";
 import { runNest, subjectOf, validateTaskGraph, type NestEvent } from "@finch/sdk";
-import { createFlightpath, type ExecutionSink, type WalletPolicy } from "@finch/flightpath";
+import { createFlightpath, isSolanaAddress, parseUnits, SOL_DECIMALS, type ExecutionSink, type WalletPolicy } from "@finch/flightpath";
 import { appendHiveFindings, createHiveMemory, createMongoExecutionSink, createMongoSpendTracker, isDbConfigured, recordRun } from "@finch/db";
 import { errorJson, rateLimit, readJsonBody, safeErrorMessage } from "@/lib/server/http";
 import { getNestPreset } from "@/lib/nest-presets";
@@ -129,19 +128,19 @@ export async function POST(request: Request): Promise<Response> {
   // With a signer, a nest whose policy is not read-only gets a Flightpath
   // that prepares writes for that wallet — same path as the school: the
   // record parks at awaiting_signature in the durable sink, the wallet signs,
-  // /submitted verifies the hash field by field. The spend allowance is the
+  // /submitted verifies the landed transaction instruction by instruction. The spend allowance is the
   // signer's own, kept durably. Without a signer nothing changes: preview.
-  if (signer !== undefined && !isSignerAddress(signer)) return errorJson(400, "signer must be an EVM address when supplied");
+  if (signer !== undefined && !isSolanaAddress(signer)) return errorJson(400, "signer must be a Solana address when supplied");
   const signing = Boolean(signer) && isDbConfigured() && manifest.executionPolicy.mode !== "preview";
   const sink = signing ? (createMongoExecutionSink() as unknown as ExecutionSink) : undefined;
   const signerPolicy: WalletPolicy = {
     mode: "operator",
-    allowances: [{ asset: "native", perDay: signerUnits("0.05", 18), perTx: signerUnits("0.01", 18) }],
-    allowedContracts: [],
+    allowances: [{ asset: "native", perDay: parseUnits("0.5", SOL_DECIMALS), perTx: parseUnits("0.1", SOL_DECIMALS) }],
+    allowedPrograms: [],
     rwaApprovedOnly: true,
   };
   const flightpath = signing && sink && signer
-    ? createFlightpath({ agentId: `nest:${manifest.identity.id}`, externalSigner: signer as SignerAddress, policy: signerPolicy, sink, spendTracker: createMongoSpendTracker({ owner: signer }) })
+    ? createFlightpath({ agentId: `nest:${manifest.identity.id}`, externalSigner: signer, policy: signerPolicy, sink, spendTracker: createMongoSpendTracker({ owner: signer }) })
     : createFlightpath({ agentId: `nest:${manifest.identity.id}` });
 
   // Hoisted so cancel() can reach it: without this, a client that closes the

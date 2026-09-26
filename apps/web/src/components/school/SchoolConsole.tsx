@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { useAccount } from "wagmi";
 import { SignPanel, type PreparedExecution } from "./SignPanel";
 import { DartGlyph, FinchGlyph } from "@/components/birds/FinchGlyph";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { CodeBlock } from "@/components/ui/CodeBlock";
 import { SCHOOL_PRESETS, type SchoolPreset } from "@/lib/school-presets";
+import { useWallet } from "@/lib/wallet";
 
 interface TraceStep {
   type: string;
@@ -38,7 +38,7 @@ function PresetGrid({ onSelect }: { onSelect: (preset: SchoolPreset) => void }) 
         >
           <div className="flex items-center justify-between">
             <span className="font-mono text-[12.5px] font-medium text-ink">{preset.title}</span>
-            <Badge tone="sage">read-only</Badge>
+            {preset.manifest.permissions.allowWrites ? <Badge tone="gold">you sign</Badge> : <Badge tone="sage">read-only</Badge>}
           </div>
           <p className="mt-2 text-[13px] leading-snug text-ink-soft">{preset.blurb}</p>
           <p className="mt-4 font-mono text-[10.5px] text-green-deep opacity-0 transition-opacity group-hover:opacity-100">
@@ -61,7 +61,9 @@ function PresetGrid({ onSelect }: { onSelect: (preset: SchoolPreset) => void }) 
 function Console({ preset, onBack }: { preset: SchoolPreset; onBack: () => void }) {
   const [input, setInput] = useState("");
   const [state, setState] = useState<RunState>({ phase: "idle" });
-  const { address } = useAccount();
+  // A connected Solana wallet becomes the run's signer: a write the finch
+  // proposes is prepared for that address to sign, and for nobody else.
+  const { address } = useWallet();
   const [showManifest, setShowManifest] = useState(false);
 
   async function run(prompt?: string): Promise<void> {
@@ -109,7 +111,11 @@ function Console({ preset, onBack }: { preset: SchoolPreset; onBack: () => void 
         <span className="font-mono text-[12.5px] font-medium text-ink">
           {preset.title}
         </span>
-        <Badge tone="sage">read only</Badge>
+        {preset.manifest.permissions.allowWrites ? (
+          <Badge tone="gold">prepares · you sign</Badge>
+        ) : (
+          <Badge tone="sage">read only</Badge>
+        )}
         <button
           type="button"
           onClick={() => setShowManifest((value) => !value)}
@@ -175,6 +181,12 @@ function Console({ preset, onBack }: { preset: SchoolPreset; onBack: () => void 
             {state.phase === "running" ? "flying…" : "run"}
           </Button>
         </form>
+        {preset.manifest.permissions.allowWrites && !address && (
+          <p className="mt-2 font-mono text-[10.5px] text-grey">
+            connect a Solana wallet to be the signer — what this finch prepares is for that wallet, and only that
+            wallet, to sign
+          </p>
+        )}
 
         <div className="mt-4" aria-live="polite">
           {state.phase === "running" && (
@@ -214,6 +226,13 @@ function Console({ preset, onBack }: { preset: SchoolPreset; onBack: () => void 
                   {state.error && <p className="mt-1.5 font-mono text-[11.5px] text-ink-soft">{state.error}</p>}
                 </div>
               )}
+              {/* Outside the collapsed audit trail: a transaction waiting on the
+                  visitor's wallet is the one thing on screen they must act on. */}
+              {state.executions
+                .filter((execution) => execution.state === "awaiting_signature")
+                .map((execution) => (
+                  <SignPanel key={execution.id} execution={execution} />
+                ))}
               <details className="rounded-xs border border-line bg-bone">
                 <summary className="cursor-pointer px-3 py-2 font-mono text-[10px] text-grey">
                   audit trail — {state.steps.filter((step) => step.type === "tool").length} tool call
@@ -223,13 +242,6 @@ function Console({ preset, onBack }: { preset: SchoolPreset; onBack: () => void 
                   </span>
                 </summary>
                 <ol className="divide-y divide-line/60 border-t border-line">
-                  {state.executions
-                    .filter((execution) => execution.state === "awaiting_signature")
-                    .map((execution) => (
-                      <div key={execution.id} className="mb-4">
-                        <SignPanel execution={execution} />
-                      </div>
-                    ))}
                   {state.steps.map((step, index) => (
                     <li key={index} className="px-3 py-2.5">
                       <p className="flex items-center gap-2 font-mono text-[11px]">
@@ -269,7 +281,8 @@ export function SchoolConsole() {
       )}
       <p className="mt-4 flex items-center gap-2 font-mono text-[10px] text-grey-faint">
         <FinchGlyph size={13} className="text-grey-faint" />
-        no wallet required — previews are read-only and run on the same runtime developers use
+        no wallet required to run — finches here run on the same runtime developers use; a finch that prepares a
+        transfer asks your wallet to sign it
       </p>
     </div>
   );

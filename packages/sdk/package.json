@@ -2,7 +2,7 @@
   "name": "@finch/sdk",
   "version": "0.1.0",
   "private": true,
-  "description": "Finch SDK \u2014 create, compose and hatch autonomous agents on Robinhood Chain.",
+  "description": "Finch SDK — create, compose and hatch autonomous agents on Solana.",
   "type": "module",
   "main": "src/index.ts",
   "types": "src/index.ts",

@@ -1,19 +1,20 @@
 "use client";
 
+import { getBase58Decoder } from "@solana/kit";
 import { useState } from "react";
-import { useAccount, useSignMessage } from "wagmi";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { keyMessage } from "@/lib/key-message";
 import { useFetch } from "@/lib/use-fetch";
+import { useWallet } from "@/lib/wallet";
 
 /**
  * Publish to the registry.
  *
  * Everything about the gate is rendered from /api/publish/status, so the
  * panel can only ever show the state that is true. Right now that state is
- * open and free: a wallet signs a plain message, gets a publisher key, and
- * lists a finch or nest. If a $FINCH gate is ever switched on, this same
+ * open and free: a Solana wallet signs a plain message, gets a publisher key,
+ * and lists a finch or nest. If a $FINCH gate is ever switched on, this same
  * panel says so and shows the hold requirement — nothing here pretends to
  * cost something it does not, or to work when it does not. The submit
  * control says why it is disabled.
@@ -37,8 +38,7 @@ function nonce(): string {
 
 export function PublishPanel() {
   const gate = useFetch<GateStatus>("/api/publish/status", { refreshMs: 60_000 });
-  const { address } = useAccount();
-  const { signMessageAsync } = useSignMessage();
+  const { address, signMessage } = useWallet();
 
   const [slug, setSlug] = useState("");
   const [name, setName] = useState("");
@@ -64,13 +64,17 @@ export function PublishPanel() {
     setKeyNote(null);
     try {
       const n = nonce();
-      const signature = await signMessageAsync({ message: keyMessage(address, n) });
+      // The wallet signs the message's UTF-8 bytes; the route verifies the
+      // ed25519 signature over the same bytes, sent base58 like every Solana
+      // signature.
+      const signed = await signMessage(new TextEncoder().encode(keyMessage(address, n)));
+      const signature = getBase58Decoder().decode(signed);
       const res = await fetch("/api/keys", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ address, nonce: n, signature }),
       });
-      const body = (await res.json()) as { key?: string; error?: string };
+      const body = (await res.json().catch(() => ({}))) as { key?: string; error?: string };
       if (!res.ok || !body.key) {
         setKeyNote(body.error ?? `key request failed (${res.status})`);
         return;
@@ -100,7 +104,7 @@ export function PublishPanel() {
           creator: { name: address, address },
           publisher: address,
           pricing: { model: "free" },
-          chains: ["robinhood"],
+          chains: ["solana"],
           toolNames: [],
           version: "0.1.0",
         }),
@@ -169,6 +173,9 @@ export function PublishPanel() {
             <p className="text-ink">
               A publisher key ties listings to your wallet. Signing for one is a plain message — not a transaction; it
               costs nothing and cannot move funds.
+            </p>
+            <p className="text-grey">
+              No key is needed to create or run a finch or nest. A key is what lets you own a listing and edit it later.
             </p>
             <div className="flex flex-wrap items-center gap-3">
               <Button variant="secondary" onClick={issueKey} disabled={!address || issuing || !open} title={address ? undefined : "connect a wallet first"}>

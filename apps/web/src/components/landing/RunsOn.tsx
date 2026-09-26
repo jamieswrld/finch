@@ -4,12 +4,12 @@ import { BrandMark } from "@/components/brand/BrandMark";
  * Infrastructure Finch runs on.
  *
  * Deliberately short. An exhaustive rail of every provider in the catalog read
- * as noise at the bottom of the hero; five names that matter reads as a fact.
+ * as noise at the bottom of the hero; a few names that matter reads as a fact.
  *
- * The heading is "infrastructure", not "partners" — and that word is doing the
- * work. Every name here is software or a network Finch actually uses, which is
- * a checkable claim. Calling any of them a partner would assert a relationship
- * none of them agreed to, so the heading must never drift to that.
+ * The heading is "infrastructure" — and that word is doing the work. Every
+ * name here is software or a network Finch actually uses, which is a
+ * checkable claim. A word that implies a relationship would assert one none of
+ * them agreed to, so the heading must never drift from "infrastructure".
  */
 
 interface Entry {
@@ -23,11 +23,10 @@ interface Entry {
 }
 
 const INFRASTRUCTURE: Entry[] = [
-  { name: "Robinhood Chain", role: "network · 4663", slug: "robinhood", href: "https://robinhood.com" },
+  { name: "Solana", role: "network", slug: "solana", href: "https://solana.com" },
   { name: "MongoDB", role: "registry", slug: "mongodb", href: "https://www.mongodb.com" },
   { name: "Groq", role: "compute", wordmark: "groq", href: "https://groq.com" },
   { name: "OpenRouter", role: "compute", slug: "openrouter", href: "https://openrouter.ai" },
-  { name: "Pons", role: "launch", wordmark: "PONS", href: null },
 ];
 
 function Entry({ entry }: { entry: Entry }) {

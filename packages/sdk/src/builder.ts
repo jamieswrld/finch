@@ -28,7 +28,7 @@ export interface WalletInput {
   mode: FinchWalletConfig["mode"];
   /** e.g. [{ asset: "native", perDay: "0.25" }] in human units. */
   allowances?: FinchAllowance[];
-  allowedContracts?: string[];
+  allowedPrograms?: string[];
   allowedRecipients?: string[];
   approvalThreshold?: number;
 }
@@ -48,7 +48,7 @@ export class FinchBuilder {
       identity: { name, handle: handle || "finch", description: "", instructions: "", glyph: "finch-01" },
       tools: { flightpath: [], services: [] },
       permissions: { allowWrites: false, rwaApprovedOnly: true },
-      wallet: { mode: "none", allowances: [], allowedContracts: [] },
+      wallet: { mode: "none", allowances: [], allowedPrograms: [] },
       triggers: [{ kind: "manual" }],
     };
   }
@@ -103,12 +103,12 @@ export class FinchBuilder {
     return this;
   }
 
-  /** Configure Robinhood wallet permissions — mode, allowances, allowlists. */
+  /** Configure Solana wallet permissions — mode, allowances, allowlists. */
   wallet(input: WalletInput): this {
     this.draft.wallet = {
       mode: input.mode,
       allowances: input.allowances ?? [],
-      allowedContracts: input.allowedContracts ?? [],
+      allowedPrograms: input.allowedPrograms ?? [],
       allowedRecipients: input.allowedRecipients,
     };
     const permissions = this.draft.permissions as Record<string, unknown>;

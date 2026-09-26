@@ -119,8 +119,9 @@ function SchoolPanel() {
       <div className="flex flex-1 flex-col p-4">
         <p className="serif-note text-[19px] leading-snug !text-bone/90">what should your first finch learn?</p>
         <p className="mt-2 text-[12.5px] leading-relaxed text-bone/60">
-          Five read-only presets on the real runtime — Market Scout, Pons Scout, RWA Researcher, Watchtower, Developer
-          Finch. Try one, view its manifest, fork it into the builder.
+          Presets on the real runtime — Market Scout, Wallet Analyst, Token Inspector, Launch Scout and more read
+          Solana; Courier Finch prepares a SOL transfer for your own wallet to sign. Try one, view its manifest, fork
+          it into the builder.
         </p>
         <div className="mt-auto pt-4">
           <Link

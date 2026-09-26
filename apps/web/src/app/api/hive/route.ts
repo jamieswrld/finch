@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/hive?subject=0x… — what the network has already found about a
+ * GET /api/hive?subject=<address> — what the network has already found about a
  * subject, with provenance.
  *
  * The hive is the shared memory every completed builtin nest writes into and
@@ -19,7 +19,7 @@ export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const raw = url.searchParams.get("subject") ?? "";
   const subject = subjectOf(raw);
-  if (!subject) return errorJson(400, "subject must contain an EVM address");
+  if (!subject) return errorJson(400, "subject must contain a Solana address");
 
   const limit = Math.min(Math.max(Number(url.searchParams.get("limit") ?? 20) || 20, 1), 100);
 

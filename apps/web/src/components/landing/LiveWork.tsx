@@ -6,7 +6,7 @@ import { useFetch } from "@/lib/use-fetch";
 /**
  * The hero readout.
  *
- * It used to say "network robinhood / chain 4663 / status online". That is
+ * It used to print the network name, a cluster label and "status online". That is
  * plumbing — it proves a server answered a ping, which is true of every
  * website. This says what the protocol has executed instead: nests defined,
  * finches published, tasks run, proofs signed, and the last thing a nest was

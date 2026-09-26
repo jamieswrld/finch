@@ -362,7 +362,7 @@ export function PermissionsSection({ draft, update }: { draft: FinchDraft; updat
       <div className="flex items-start justify-between gap-4 rounded-xs border border-line bg-bone p-3">
         <div>
           <p className="font-mono text-[12px] text-ink">simulation before submission</p>
-          <p className="mt-0.5 text-[12px] text-grey">Every write is simulated (estimateGas + eth_call) before signing. Not optional.</p>
+          <p className="mt-0.5 text-[12px] text-grey">Every write is simulated (simulateTransaction) before signing. Not optional.</p>
         </div>
         <Badge tone="green">always on</Badge>
       </div>
@@ -390,14 +390,14 @@ export function WalletSection({ draft, update }: { draft: FinchDraft; update: Up
           checked={draft.wallet.mode === "operator"}
           onSelect={() => update((d) => ({ ...d, wallet: { ...d.wallet, mode: "operator" } }))}
           title="Operator"
-          description="Bounded writes via a restricted operator wallet."
+          description="Bounded writes, signed by your wallet or a restricted operator key."
         />
       </div>
 
       {draft.wallet.mode === "operator" && (
         <>
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-            <Field label="native allowance / day — ETH" htmlFor="nb-perday" hint="Rolling 24h cap enforced by the policy engine and mirrored by OperatorBudget onchain.">
+            <Field label="SOL allowance / day" htmlFor="nb-perday" hint="Rolling 24h cap in SOL, enforced by the policy engine on every write.">
               <TextInput
                 id="nb-perday"
                 inputMode="decimal"
@@ -405,7 +405,7 @@ export function WalletSection({ draft, update }: { draft: FinchDraft; update: Up
                 onChange={(event) => update((d) => ({ ...d, wallet: { ...d.wallet, nativePerDay: event.target.value.replace(/[^0-9.]/g, "") } }))}
               />
             </Field>
-            <Field label="per-transaction cap — ETH" htmlFor="nb-pertx" hint="Optional; defaults to the daily cap.">
+            <Field label="per-transaction cap — SOL" htmlFor="nb-pertx" hint="Optional; defaults to the daily cap.">
               <TextInput
                 id="nb-pertx"
                 inputMode="decimal"
@@ -415,30 +415,30 @@ export function WalletSection({ draft, update }: { draft: FinchDraft; update: Up
             </Field>
           </div>
           <Field
-            label="contract allowlist"
-            htmlFor="nb-contracts"
-            hint="One address per line. contract_write and swaps may only target these."
+            label="allowed programs"
+            htmlFor="nb-programs"
+            hint="One program address per line. program_invoke and swaps may only target these — swap_exact_in needs the Jupiter program here."
           >
             <TextArea
-              id="nb-contracts"
+              id="nb-programs"
               rows={3}
               spellCheck={false}
-              value={draft.wallet.allowedContracts}
-              placeholder={"0x…router\n0x…vault"}
-              onChange={(event) => update((d) => ({ ...d, wallet: { ...d.wallet, allowedContracts: event.target.value } }))}
+              value={draft.wallet.allowedPrograms}
+              placeholder={"JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4\n<program address>"}
+              onChange={(event) => update((d) => ({ ...d, wallet: { ...d.wallet, allowedPrograms: event.target.value } }))}
             />
           </Field>
           <Field
             label="recipient allowlist — optional"
             htmlFor="nb-recipients"
-            hint="If set, transfers can only go to these addresses."
+            hint="One Solana address per line. If set, transfers can only go to these addresses."
           >
             <TextArea
               id="nb-recipients"
               rows={2}
               spellCheck={false}
               value={draft.wallet.allowedRecipients}
-              placeholder="0x…"
+              placeholder="<address>"
               onChange={(event) => update((d) => ({ ...d, wallet: { ...d.wallet, allowedRecipients: event.target.value } }))}
             />
           </Field>
@@ -524,7 +524,7 @@ export function BudgetSection({ draft, update }: { draft: FinchDraft; update: Up
           onChange={(event) => update((d) => ({ ...d, budget: { ...d.budget, maxActionsPerDay: Number(event.target.value) } }))}
         />
       </Field>
-      <Field label="compute credits / day" htmlFor="nb-credits" hint="Metered against the credits ledger; $FINCH settlement activates post-launch.">
+      <Field label="compute credits / day" htmlFor="nb-credits" hint="Daily compute ceiling for this finch. Nothing is paid in $FINCH.">
         <NumberInput
           id="nb-credits"
           min={1}

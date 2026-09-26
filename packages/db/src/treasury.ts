@@ -55,7 +55,7 @@ export function summarizeLedger(entries: TreasuryLedgerEntry[]): TreasurySummary
     weeklyFees: [...weekly.entries()]
       .map(([weekStart, amount]) => ({ weekStart, amount: round6(amount) }))
       .sort((a, b) => a.weekStart.localeCompare(b.weekStart)),
-    asset: "ETH",
+    asset: "SOL",
   };
 }
 

@@ -26,7 +26,7 @@ import { SCHOOL_PRESETS } from "./school-presets";
 /** Category assignments reflect what each finch's tools actually touch. */
 const FINCH_CATEGORY: Record<string, AviaryListing["category"]> = {
   "market-scout": "trading",
-  "pons-scout": "research",
+  "launch-scout": "research",
   "rwa-researcher": "rwa",
   watchtower: "data",
   "developer-finch": "tools",
@@ -45,7 +45,7 @@ function listingFromFinch(preset: (typeof SCHOOL_PRESETS)[number]): AviaryListin
     // Read-only finches cost the operator inference and nothing else, so they
     // are free to run. Saying "free" is a fact about this deployment.
     pricing: { model: "free" },
-    chains: ["robinhood"],
+    chains: ["solana"],
     toolNames: preset.manifest.tools.flightpath,
     verified: false,
     version: "0.1.0",
@@ -64,7 +64,7 @@ function listingFromNest(preset: (typeof NEST_PRESETS)[number]): AviaryListing {
     creator: { name: "Finch" },
     stats: { calls30d: 0, uptime90d: null },
     pricing: { model: "free" },
-    chains: ["robinhood"],
+    chains: ["solana"],
     // A nest's "tools" are the finches it coordinates.
     toolNames: members,
     verified: false,

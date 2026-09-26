@@ -13,7 +13,7 @@ const finch = (handle: string) => ({
     memory: { kind: "none" as const },
     tools: { flightpath: [], services: [] },
     permissions: { allowWrites: false, rwaApprovedOnly: true },
-    wallet: { mode: "observer" as const, allowances: [], allowedContracts: [] },
+    wallet: { mode: "observer" as const, allowances: [], allowedPrograms: [] },
     triggers: [{ kind: "manual" as const }],
     budget: {
       maxActionsPerDay: 1,
@@ -22,7 +22,7 @@ const finch = (handle: string) => ({
       killSwitch: { maxConsecutiveFailures: 1 },
     },
     deployment: { runtime: "self-hosted" as const, status: "draft" as const },
-    supportedChains: [4663],
+    supportedChains: ["solana:mainnet" as const],
     endpoints: { mcp: [], api: [] },
   },
 });

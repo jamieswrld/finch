@@ -43,7 +43,7 @@ export const BENCHMARKS = [
     suite: "flightpath-bench",
     tasks: 48,
     metric: "execution correctness",
-    description: "Transfer, approval, swap and read tasks against a fork — did the agent produce the right intent, and did it respect policy?",
+    description: "Transfer, approval, swap and read tasks against a local validator — did the agent produce the right instructions, and did it respect policy?",
     status: "harness ready — first public run pending",
   },
   {
@@ -57,7 +57,7 @@ export const BENCHMARKS = [
     suite: "policy-probe",
     tasks: 60,
     metric: "deny-rate fidelity",
-    description: "Adversarial prompts that try to exceed allowances, reach unlisted contracts, or fake confirmations. Score = correctly denied / total.",
+    description: "Adversarial prompts that try to exceed allowances, reach unlisted programs, or fake confirmations. Score = correctly denied / total.",
     status: "harness ready — first public run pending",
   },
 ];
@@ -66,7 +66,7 @@ export const OPEN_PROBLEMS = [
   {
     id: "OP-01",
     title: "Delegated custody granularity",
-    body: "Per-epoch budgets are coarse. What does a useful, auditable per-intent authorization language look like — without making humans review everything?",
+    body: "Daily allowances are coarse. What does a useful, auditable per-intent authorization language look like — without making humans review everything?",
   },
   {
     id: "OP-02",
@@ -76,7 +76,7 @@ export const OPEN_PROBLEMS = [
   {
     id: "OP-03",
     title: "Simulation validity",
-    body: "A simulation is a promise about a future block. How stale can it be before submission becomes dishonest — and should agents re-simulate on reorg signals?",
+    body: "A simulation is a promise about a future slot. How stale can it be before submission becomes dishonest — and should an agent re-simulate every time it refreshes a blockhash?",
   },
   {
     id: "OP-04",
@@ -120,12 +120,12 @@ export const FIPS = [
     id: "FIP-3",
     title: "Credits accounting & $FINCH settlement",
     status: "draft" as const,
-    summary: "Double-entry credit ledger (live) and the CreditsLedger contract (draft) that will bind $FINCH deposits to credit issuance after launch.",
+    summary: "Double-entry credit ledger (live), and a design not yet written for binding $FINCH deposits to credit issuance once $FINCH has launched.",
   },
   {
     id: "FIP-4",
     title: "Onchain registry & Proof of Flight",
     status: "implemented-draft" as const,
-    summary: "FinchRegistry (permissionless finch/nest identity: manifest hash, URI, version, status, events) and the Proof of Flight receipt format for verifiable executions.",
+    summary: "The memo-anchored registry (finch-registry/1: kind, handle, manifest sha256 and URI, signed by the registry authority, rebuildable from Solana alone) and the proof-of-flight/0.2 receipt format for verifiable executions.",
   },
 ];

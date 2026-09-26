@@ -111,7 +111,9 @@ export interface HiveItem {
  */
 export function createHiveMemory(options: { subject: string; namespace?: string }) {
   const namespace = options.namespace ?? HIVE_NAMESPACE;
-  const subject = options.subject.toLowerCase();
+  // Subjects are Solana addresses: base58 is case-sensitive, so folding case
+  // would merge two different accounts' histories.
+  const subject = options.subject;
 
   return {
     async append(item: Omit<HiveItem, "at">): Promise<void> {

@@ -31,7 +31,10 @@ function toolsFor(permissions: string[]): string[] {
       tools.add("network_status");
       tools.add("balance_native");
     }
-    if (permission.startsWith("read:pons")) tools.add("pons_status");
+    if (permission.startsWith("read:launches")) {
+      tools.add("pump_curve");
+      tools.add("token_markets");
+    }
     if (permission.startsWith("read:rwa")) tools.add("rwa_registry");
   }
   return [...tools];
@@ -77,7 +80,7 @@ export function liftComposedNest(nest: NestDoc): LiftResult {
         memory: { kind: "none" as const },
         tools: { flightpath: tools, services: [] },
         permissions: { allowWrites: false, rwaApprovedOnly: true },
-        wallet: { mode: "observer" as const, allowances: [], allowedContracts: [] },
+        wallet: { mode: "observer" as const, allowances: [], allowedPrograms: [] },
         triggers: [{ kind: "manual" as const }],
         budget: {
           maxActionsPerDay: 500,
@@ -86,7 +89,7 @@ export function liftComposedNest(nest: NestDoc): LiftResult {
           killSwitch: { maxConsecutiveFailures: 3 },
         },
         deployment: { runtime: "self-hosted" as const, status: "draft" as const },
-        supportedChains: [4663],
+        supportedChains: ["solana:mainnet" as const],
         endpoints: { mcp: [], api: [] },
       },
     };

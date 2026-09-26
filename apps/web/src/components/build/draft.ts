@@ -39,7 +39,7 @@ export interface FinchDraft {
     mode: "none" | "observer" | "operator";
     nativePerDay: string;
     nativePerTx: string;
-    allowedContracts: string;
+    allowedPrograms: string;
     allowedRecipients: string;
   };
   triggers: {
@@ -72,7 +72,7 @@ export function defaultDraft(): FinchDraft {
     memory: { kind: "ephemeral", namespace: "", retentionDays: 90 },
     tools: { flightpath: ["balance_native", "token_data", "portfolio_snapshot"], services: [] },
     permissions: { approvalThreshold: 50, useApprovalThreshold: true },
-    wallet: { mode: "observer", nativePerDay: "0.25", nativePerTx: "0.1", allowedContracts: "", allowedRecipients: "" },
+    wallet: { mode: "observer", nativePerDay: "0.25", nativePerTx: "0.1", allowedPrograms: "", allowedRecipients: "" },
     triggers: { cronEnabled: false, cronSchedule: "*/15 * * * *", webhookEnabled: false, webhookSlug: "" },
     budget: { maxActionsPerDay: 96, maxComputeCreditsPerDay: 500, maxToolStepsPerRun: 8, maxConsecutiveFailures: 5 },
     deployment: { runtime: "self-hosted" },
@@ -139,7 +139,7 @@ export function toManifestCandidate(draft: FinchDraft): Record<string, unknown> 
         draft.wallet.mode === "operator"
           ? [{ asset: "native", perDay: draft.wallet.nativePerDay, perTx: draft.wallet.nativePerTx || undefined }]
           : [],
-      allowedContracts: draft.wallet.mode === "operator" ? parseAddressLines(draft.wallet.allowedContracts) : [],
+      allowedPrograms: draft.wallet.mode === "operator" ? parseAddressLines(draft.wallet.allowedPrograms) : [],
       allowedRecipients: draft.wallet.mode === "operator" && recipients.length > 0 ? recipients : undefined,
     },
     triggers,

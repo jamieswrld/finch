@@ -1,3 +1,4 @@
+import { isSolanaAddress } from "@finch/flightpath";
 import { z } from "zod";
 
 /**
@@ -12,9 +13,10 @@ import { z } from "zod";
  * manifest can widen its own permissions at hatch time.
  */
 
+/** A Solana address: base58, 32 bytes. Case-sensitive — never normalised. */
 export const addressSchema = z
   .string()
-  .regex(/^0x[a-fA-F0-9]{40}$/, "must be a 0x-prefixed EVM address");
+  .refine((value) => isSolanaAddress(value), "must be a Solana address (base58, 32 bytes)");
 
 const decimalString = z.string().regex(/^[0-9]+(\.[0-9]+)?$/, "must be a decimal amount string");
 
@@ -78,7 +80,8 @@ export const allowanceSchema = z.object({
 export const walletConfigSchema = z.object({
   mode: z.enum(["none", "observer", "operator"]).default("none"),
   allowances: z.array(allowanceSchema).default([]),
-  allowedContracts: z.array(addressSchema).default([]),
+  /** Programs the finch may invoke with arbitrary instructions (program_invoke, swap routers). */
+  allowedPrograms: z.array(addressSchema).default([]),
   allowedRecipients: z.array(addressSchema).optional(),
 });
 
@@ -119,10 +122,13 @@ export const finchManifestSchema = z.object({
   schema: z.literal("finch.manifest/0.1").default("finch.manifest/0.1"),
   identity: identitySchema,
   model: modelRefSchema,
-  /** Publisher wallet — the identity that registers this finch onchain. */
+  /** Publisher wallet — the identity that owns this finch in the registry. */
   publisher: addressSchema.optional(),
-  /** Chains this finch understands. Robinhood (4663) first. */
-  supportedChains: z.array(z.number().int().positive()).default([4663]),
+  /** Clusters this finch runs on, as wallet-standard chain ids. Finch runs on Solana only. */
+  supportedChains: z
+    .array(z.enum(["solana:mainnet", "solana:devnet", "solana:testnet"]))
+    .min(1)
+    .default(["solana:mainnet"]),
   endpoints: endpointsSchema.default({ mcp: [], api: [] }),
   /** JSON Schemas for structured composition (finch→finch, nest→nest). */
   io: z
@@ -136,7 +142,7 @@ export const finchManifestSchema = z.object({
   memory: memoryConfigSchema.default({ kind: "none" }),
   tools: toolsConfigSchema.default({ flightpath: [], services: [] }),
   permissions: permissionsSchema.default({ allowWrites: false, rwaApprovedOnly: true }),
-  wallet: walletConfigSchema.default({ mode: "none", allowances: [], allowedContracts: [] }),
+  wallet: walletConfigSchema.default({ mode: "none", allowances: [], allowedPrograms: [] }),
   triggers: z.array(triggerSchema).default([{ kind: "manual" }]),
   budget: budgetSchema.default({}),
   deployment: deploymentSchema.default({}),

@@ -5,7 +5,7 @@ import { PublishPanel } from "@/components/aviary/PublishPanel";
 export const metadata: Metadata = {
   title: "Aviary",
   description:
-    "The permissionless network directory — discover finches, nests, tools, APIs and datasets on Robinhood Chain.",
+    "The permissionless network directory — discover finches, nests, tools, APIs and datasets built for Solana.",
 };
 
 export default function AviaryPage() {
@@ -20,7 +20,8 @@ export default function AviaryPage() {
         <p className="mt-4 text-[14.5px] leading-relaxed text-ink-soft">
           Finches, nests, tools, APIs and datasets published to the network. Registration is ultimately
           permissionless; trust labels — registered, verified, audited, official — describe provenance checks, never
-          financial quality. Robinhood Chain is the canonical registry; this directory indexes it.
+          financial quality. Once a registry authority is configured, a listing can be anchored on Solana by a memo
+          that authority signs, which anyone can check; until then every listing reads as not anchored.
         </p>
       </header>
       <div className="mt-8">

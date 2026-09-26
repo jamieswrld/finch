@@ -2,7 +2,8 @@ import { z } from "zod";
 
 /** Document schemas for every Finch collection. Writes are validated with these. */
 
-export const addressString = z.string().regex(/^0x[a-fA-F0-9]{40}$/);
+/** A Solana address: base58, 32–44 characters. Case-sensitive — never normalised. */
+export const addressString = z.string().regex(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/);
 
 // ── finches ───────────────────────────────────────────────────────────────
 export const finchDocSchema = z.object({
@@ -85,7 +86,7 @@ export const aviaryListingSchema = z.object({
     /** Price in Finch compute credits ($FINCH settlement activates post-launch). */
     credits: z.number().nonnegative().optional(),
   }),
-  chains: z.array(z.string()).default(["robinhood"]),
+  chains: z.array(z.string()).default(["solana"]),
   toolNames: z.array(z.string()).default([]),
   verified: z.boolean().default(false),
   version: z.string().default("0.1.0"),
@@ -101,10 +102,20 @@ export const aviaryListingSchema = z.object({
 export type AviaryListing = z.infer<typeof aviaryListingSchema>;
 
 // ── executions (Flightpath ExecutionRecord documents) ─────────────────────
+const serializedInstructionSchema = z.object({
+  programAddress: addressString,
+  accounts: z.array(
+    z.object({ address: addressString, role: z.enum(["readonly", "writable", "readonly_signer", "writable_signer"]) }),
+  ),
+  /** base64 */
+  data: z.string(),
+});
+
 export const executionDocSchema = z.object({
   id: z.string(),
   agentId: z.string().optional(),
-  chainId: z.number(),
+  /** Wallet-standard chain id, e.g. "solana:mainnet". */
+  chain: z.string(),
   createdAt: z.string(),
   state: z.enum([
     "created",
@@ -132,15 +143,13 @@ export const executionDocSchema = z.object({
    * execution would never open the gate again.
    */
   approval: z.object({ approvedBy: z.string(), at: z.string() }).optional(),
-  /** The transaction handed to an external signer; see ExecutionRecord.prepared. */
+  /** The instructions handed to an external signer; see ExecutionRecord.prepared. */
   prepared: z
     .object({
-      // nullish, not optional: rows written before ignoreUndefined carry null.
-      from: addressString.nullish(),
-      to: addressString,
-      value: z.string(),
-      data: z.string().nullish(),
-      gas: z.string(),
+      feePayer: addressString,
+      instructions: z.array(serializedInstructionSchema),
+      addressLookupTables: z.array(addressString).nullish(),
+      computeUnits: z.string(),
     })
     .optional(),
   log: z.array(z.object({ at: z.string(), event: z.string(), detail: z.string().optional() })),
@@ -166,20 +175,6 @@ export const memoryItemDocSchema = z.object({
 });
 export type MemoryItemDoc = z.infer<typeof memoryItemDocSchema>;
 
-// ── fee_events (Pons creator-tax indexer) ─────────────────────────────────
-export const feeEventDocSchema = z.object({
-  token: addressString,
-  creator: addressString,
-  recipient: addressString,
-  /** Amount in wei of the fee asset. */
-  amount: z.string().regex(/^[0-9]+$/),
-  txHash: z.string(),
-  blockNumber: z.string(),
-  logIndex: z.number().int().nonnegative(),
-  indexedAt: z.string(),
-});
-export type FeeEventDoc = z.infer<typeof feeEventDocSchema>;
-
 // ── treasury_ledger ───────────────────────────────────────────────────────
 export const treasuryCategorySchema = z.enum([
   "creator-fees",
@@ -200,11 +195,12 @@ export const treasuryLedgerEntrySchema = z.object({
   at: z.string(),
   direction: z.enum(["in", "out"]),
   category: treasuryCategorySchema,
-  /** Decimal string in `asset` units (not wei) for legibility in the public ledger. */
+  /** Decimal string in `asset` units (not lamports) for legibility in the public ledger. */
   amount: z.string().regex(/^[0-9]+(\.[0-9]+)?$/),
-  asset: z.enum(["ETH", "FINCH", "USDC", "USD"]),
+  asset: z.enum(["SOL", "FINCH", "USDC", "USD"]),
   memo: z.string().max(240),
-  txHash: z.string().optional(),
+  /** Transaction signature, when the entry is backed by one. */
+  signature: z.string().optional(),
   source: z.enum(["seed", "onchain", "manual"]),
 });
 export type TreasuryLedgerEntry = z.infer<typeof treasuryLedgerEntrySchema>;
@@ -255,7 +251,6 @@ export const COLLECTIONS = {
   aviaryListings: "aviary_listings",
   executions: "executions",
   memoryItems: "memory_items",
-  feeEvents: "fee_events",
   treasuryLedger: "treasury_ledger",
   creditEntries: "credit_entries",
   serviceCalls: "service_calls",

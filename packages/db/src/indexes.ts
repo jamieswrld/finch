@@ -3,8 +3,8 @@ import { COLLECTIONS } from "./schemas.ts";
 
 /**
  * Index definitions. Uniqueness indexes double as idempotency guarantees:
- * executions on `id`, credit entries on `idempotencyKey`, fee events on
- * `(txHash, logIndex)` — replays become no-op duplicate-key errors.
+ * executions on `id`, credit entries on `idempotencyKey` — replays become
+ * no-op duplicate-key errors.
  */
 export async function ensureIndexes(db: Db): Promise<string[]> {
   const created: string[] = [];
@@ -29,9 +29,6 @@ export async function ensureIndexes(db: Db): Promise<string[]> {
 
   await add(COLLECTIONS.memoryItems, { namespace: 1, at: -1 });
   await add(COLLECTIONS.memoryItems, { namespace: 1, subject: 1, at: -1 });
-
-  await add(COLLECTIONS.feeEvents, { txHash: 1, logIndex: 1 }, { unique: true });
-  await add(COLLECTIONS.feeEvents, { blockNumber: -1 });
 
   await add(COLLECTIONS.treasuryLedger, { at: -1 });
   await add(COLLECTIONS.treasuryLedger, { category: 1, at: -1 });

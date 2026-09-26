@@ -1,3 +1,4 @@
+import { isSolanaAddress } from "@finch/flightpath";
 /**
  * Agent memory abstraction. The SDK owns the interface; adapters live where
  * their infrastructure lives (`@finch/db` provides the MongoDB vector adapter).
@@ -53,14 +54,26 @@ export const nullMemory: MemoryAdapter = {
 
 // ── Hive helpers (pure) ───────────────────────────────────────────────────
 
+const BASE58 = /[1-9A-HJ-NP-Za-km-z]/;
+const BASE58_RUN = /[1-9A-HJ-NP-Za-km-z]{32,44}/g;
+
 /**
- * The subject an objective is about: its first EVM address. Recall is keyed
- * on this, so a finch inspecting a token reads only that token's history.
+ * The subject an objective is about: its first Solana address. Recall is
+ * keyed on this, so a finch inspecting a token reads only that token's
+ * history. Only a whole base58 run that decodes to 32 bytes counts — a slice
+ * of a longer string, such as a transaction signature, is not an address.
  * No address means no subject — never a guess.
  */
 export function subjectOf(text: string): string | null {
-  const match = /0x[a-fA-F0-9]{40}/.exec(text ?? "");
-  return match ? match[0] : null;
+  const source = text ?? "";
+  for (const match of source.matchAll(BASE58_RUN)) {
+    const start = match.index ?? 0;
+    const before = start > 0 ? source[start - 1]! : "";
+    const after = source[start + match[0].length] ?? "";
+    if (BASE58.test(before) || BASE58.test(after)) continue;
+    if (isSolanaAddress(match[0])) return match[0];
+  }
+  return null;
 }
 
 /** Coarse, honest age for a label. */

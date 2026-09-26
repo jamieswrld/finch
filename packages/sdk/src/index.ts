@@ -1,8 +1,8 @@
 /**
- * @finch/sdk — hatch autonomous agents on Robinhood Chain.
+ * @finch/sdk — hatch autonomous agents on Solana.
  *
  *   create Finch → add model → add memory → add tools →
- *   add Robinhood wallet permissions → hatch
+ *   add Solana wallet permissions → hatch
  */
 
 export { createFinch, hatchFromManifest, FinchBuilder, type WalletInput } from "./builder.ts";

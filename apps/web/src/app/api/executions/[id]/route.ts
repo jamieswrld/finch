@@ -1,6 +1,5 @@
 import { createMongoExecutionSink, isDbConfigured } from "@finch/db";
-import { buildProofOfFlight, buildRobinhoodChain, getFlightpathTarget } from "@finch/flightpath";
-import { createPublicClient, http } from "viem";
+import { buildProofOfFlight, getFlightpathTarget, readReceipt, type ExecutionRecord } from "@finch/flightpath";
 import { errorJson, json } from "@/lib/server/http";
 
 export const runtime = "nodejs";
@@ -21,35 +20,34 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
   let record = await sink.get(id);
   if (!record) return errorJson(404, `no execution "${id}"`);
 
-  // Reconciliation. A record can be left at "submitted" with a real hash if
-  // the request that recorded it died before the receipt arrived — which is
-  // exactly what happened once. The chain has the answer; reading it here
-  // means a stuck record heals on the next look instead of lying forever.
-  if (record.state === "submitted" && record.tx && typeof record.tx.hash === "string") {
+  // Reconciliation. A record can be left at "submitted" with a real signature
+  // if the request that recorded it died before settling. The chain has the
+  // answer; reading it here means a stuck record heals on the next look
+  // instead of lying forever.
+  const tx = record.tx as { signature?: unknown } | undefined;
+  if (record.state === "submitted" && typeof tx?.signature === "string") {
     try {
-      const target = getFlightpathTarget();
-      const client = createPublicClient({ chain: buildRobinhoodChain(), transport: http(target.rpcUrl, { timeout: 10_000 }) });
-      const receipt = await client.getTransactionReceipt({ hash: record.tx.hash as `0x${string}` });
+      const receipt = await readReceipt(getFlightpathTarget().rpc, tx.signature);
       if (receipt) {
         const state = receipt.status === "success" ? "confirmed" : "reverted";
         const confirmedAt = new Date().toISOString();
         await sink.settle(
           id,
           state,
-          { status: state === "confirmed" ? "success" : "reverted", blockNumber: receipt.blockNumber.toString(), gasUsed: receipt.gasUsed.toString(), effectiveGasPrice: receipt.effectiveGasPrice?.toString(), confirmedAt },
-          { at: confirmedAt, event: state, detail: `block ${receipt.blockNumber} (reconciled)` },
+          { status: receipt.status, slot: receipt.slot, feeLamports: receipt.feeLamports, computeUnits: receipt.computeUnits, confirmedAt },
+          { at: confirmedAt, event: state, detail: `slot ${receipt.slot} (reconciled)` },
         );
         record = (await sink.get(id)) ?? record;
       }
     } catch {
-      // Not mined yet, or the RPC did not answer: the record stays exactly as stored.
+      // Not confirmed yet, or the RPC did not answer: the record stays exactly as stored.
     }
   }
 
   let proof = null;
   if (record.state === "confirmed") {
     try {
-      proof = await buildProofOfFlight(record as never, { target: getFlightpathTarget() });
+      proof = await buildProofOfFlight(record as unknown as ExecutionRecord, { target: getFlightpathTarget() });
     } catch {
       proof = null;
     }

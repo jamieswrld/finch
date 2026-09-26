@@ -14,7 +14,7 @@ import { CodeBlock } from "@/components/ui/CodeBlock";
 export const metadata: Metadata = {
   title: "How it works",
   description:
-    "The actual mechanism: what a finch is, how a nest coordinates a task graph, how Flightpath reaches Robinhood Chain, and what an agent is allowed to touch.",
+    "The actual mechanism: what a finch is, how a nest coordinates a task graph, how Flightpath reaches Solana, and what an agent is allowed to touch.",
 };
 
 const SECTIONS = [
@@ -84,23 +84,23 @@ const FINCH_JSON = `{
   "memory":   { "kind": "none" },
   "tools":    { "flightpath": ["network_status"], "services": [] },
   "permissions": { "allowWrites": false, "rwaApprovedOnly": true },
-  "wallet":   { "mode": "observer", "allowances": [], "allowedContracts": [] },
-  "budget":   { "maxToolStepsPerRun": 5, "killSwitch": { "maxConsecutiveFailures": 3 } },
-  "supportedChains": [4663]
+  "wallet":   { "mode": "observer", "allowances": [], "allowedPrograms": [] },
+  "budget":   { "maxToolStepsPerRun": 6, "killSwitch": { "maxConsecutiveFailures": 3 } },
+  "supportedChains": ["solana:mainnet"]
 }`;
 
 const NEST_JSON = `{
   "schema": "nest.manifest/0.1",
   "identity": { "id": "chain-intelligence",
-                "objective": "Assess the state of Robinhood Chain for agents executing there." },
+                "objective": "Assess the current state and health of Solana, and explain what it means for agents executing there." },
   "coordinator": { "model": {…}, "synthesize": true },
   "finches": [ { "handle": "network-scout", "manifest": { …a full finch.json… } }, … ],
   "tasks": [
     { "id": "t1", "finch": "network-scout", "dependsOn": [],
-      "instruction": "Report the current live status of Robinhood Chain.",
+      "instruction": "Report the current live status of Solana.",
       "outputChannel": "chain.status" },
     { "id": "t4", "finch": "risk-finch", "dependsOn": ["t2", "t3"],
-      "instruction": "Chain status:\\n{{chain.status}}\\n\\nBlock profile:\\n{{block.profile}}…",
+      "instruction": "Network status:\\n{{chain.status}}\\n\\nBlock profile:\\n{{block.profile}}…",
       "outputChannel": "risk.assessment" }
   ],
   "executionPolicy": { "mode": "preview", "maxParallel": 3, "maxTaskFailures": 2 }
@@ -140,7 +140,7 @@ export default function HowItWorksPage() {
           </h1>
           <p className="mt-4 text-[15px] leading-relaxed text-ink-soft">
             Finch makes one claim: you can build a small specialized agent, compose it with others into a coordinated
-            swarm, and let that swarm act on Robinhood Chain under limits you set. This page shows how each of those
+            swarm, and let that swarm act on Solana under limits you set. This page shows how each of those
             steps actually works — the data structures, the control flow, and the places where the system deliberately
             refuses to do something.
           </p>
@@ -207,90 +207,101 @@ export default function HowItWorksPage() {
 
           <Section id="execution" index="03" kicker="execution" title="Flightpath is the only road to the chain.">
             <P>
-              Reading Robinhood Chain is unremarkable — balances, tokens, contracts, blocks. Writing is where agent
-              systems usually get dishonest, so Finch has exactly one write path and no way around it. An intent is
-              constructed, checked against policy, <strong className="font-semibold text-ink">simulated</strong>,
-              optionally gated on a human, submitted, and only then — after a receipt — reported as confirmed.
+              Reading Solana is unremarkable — balances, tokens, accounts, blocks. Writing is where agent systems
+              usually get dishonest, so Finch has exactly one write path and no way around it. An intent is built with
+              the exact instructions it will run, checked against policy,{" "}
+              <strong className="font-semibold text-ink">simulated</strong>, optionally gated on a human, signed,
+              submitted, and only then — once the network confirms it — reported as confirmed.
             </P>
             <ExecutionLifecycleDiagram />
             <Facts
               rows={[
-                ["three modes, always stated", "PREVIEW: no wallet, read-only. SIMULATE: build the real transaction and simulate it against current state, no broadcast. LIVE: broadcast, receipt-gated."],
-                ["simulation is not optional", "estimateGas plus an eth_call, before signing. A revert surfaces its reason and the intent stops there."],
+                ["three modes, always stated", "PREVIEW: no wallet, read-only. SIMULATE: build the real transaction and simulate it against current state, no broadcast. LIVE: signed and sent, confirmation-gated."],
+                ["simulation is not optional", "simulateTransaction runs before anyone signs. A failure surfaces the program logs that explain it, and the intent stops there."],
                 ["idempotent", "Every execution carries an id with a unique index behind it. Replaying returns the stored record instead of sending a second transaction."],
-                ["EVM-native", "Robinhood Chain is an Arbitrum Nitro L2 (id 4663). One intent, one transaction — no bundling exotica borrowed from other ecosystems."],
+                ["instructions, not summaries", "Solana: one intent, one transaction. The policy engine reads the instructions themselves — programs, accounts, amounts — so an intent's description cannot disguise what it does."],
               ]}
             />
             <p className="rounded-xs border border-line bg-bone-raised p-4 text-[13px] leading-relaxed text-ink-soft">
               <strong className="font-semibold text-ink">What is live today:</strong> chain reads run against
-              Robinhood mainnet right now — that is where the block height on the home page comes from. Write modes
-              (simulate, live) are implemented in the execution layer but stay closed in the product until the
-              audit checklist is signed off; nests run read-only, and the UI says so rather than showing a button
-              that would lie.
+              Solana mainnet right now — that is where the slot on the home page comes from. Writes take the same
+              path: Courier Finch prepares SOL transfers that the visitor&apos;s own wallet signs, capped at 0.1 SOL
+              per transfer and 0.5 SOL per day, and nothing is reported as done until the network confirms it. No
+              operator key exists in this deployment, so nothing here signs on its own; nests run read-only unless
+              their policy says otherwise, and the UI says so rather than showing a button that would lie.
             </p>
           </Section>
 
           <Section id="authority" index="04" kicker="authority" title="An agent never holds unbounded custody.">
             <P>
               The uncomfortable question about autonomous agents is what happens when one is wrong. Finch answers it
-              structurally: an agent's authority is a bounded float, not a wallet. A human owner funds{" "}
-              <Mono>OperatorBudget.sol</Mono> with a small amount and sets per-operator, per-token, per-epoch caps
-              onchain. The agent operates a restricted wallet that can only spend inside those caps, and the owner can
-              pause, revoke or sweep at any moment.
+              structurally: an agent's authority is a bounded float, not a wallet. The agent operates a restricted
+              operator keypair that a human funds with a small amount — the most it can ever lose is what it holds —
+              and the owner tops it up, sweeps it, or simply stops funding it. A visitor never hands over authority at
+              all: their own wallet signs each transaction.
             </P>
             <PermissionDiagram />
             <P>
-              Offchain, the PolicyEngine mirrors the same limits and adds the ones a contract can't express: recipient
-              and contract allowlists, per-transaction caps, and an approval threshold above which a spend pauses at{" "}
-              <Mono>awaiting_approval</Mono> until a human signs off. Approvals count against allowances, because an
-              approval is spendable authority. RWA interactions are hard-limited to an explicitly approved registry,
-              and that gate cannot be waived from a manifest.
+              Below that ceiling the PolicyEngine sets the limits: per-asset daily allowances and per-transaction caps,
+              recipient and program allowlists, and an approval threshold above which a spend pauses at{" "}
+              <Mono>awaiting_approval</Mono> until a human signs off. It decodes the instructions themselves, so
+              anything it cannot price is denied, and approvals count against allowances, because an approval is
+              spendable authority. RWA interactions are hard-limited to an explicitly approved registry, and that gate
+              cannot be waived from a manifest.
             </P>
             <div className="flex flex-wrap gap-2">
               <Badge tone="green">deny by default</Badge>
               <Badge tone="green">simulation mandatory</Badge>
               <Badge tone="green">rwa registry-gated</Badge>
-              <Badge tone="gold">writes gated on audit</Badge>
+              <Badge tone="gold">operator writes gated on audit</Badge>
             </div>
           </Section>
 
           <Section id="identity" index="05" kicker="identity" title="The chain is the record. The index is a convenience.">
             <P>
-              A finch or a nest registers on Robinhood Chain through <Mono>FinchRegistry.sol</Mono>: an id, an owner,
-              a manifest hash, a manifest URI, a version and a status — all event-emitting, all permissionless. The
-              manifest body lives offchain where large data belongs; the hash onchain is what makes it verifiable.
+              A finch or a nest is registered on Solana by a memo. The registry authority signs a Memo-program
+              transaction that reads{" "}
+              <Mono>finch-registry/1 register &lt;kind&gt;:&lt;handle&gt; sha256:&lt;manifest hash&gt; [&lt;uri&gt;]</Mono>.
+              The manifest body lives offchain where large data belongs; the hash in the memo is what makes it
+              verifiable, and the authority&apos;s signature is what makes it a registration — anyone can mention an
+              address in a memo, only the key holder can sign one.
             </P>
             <RegistryDiagram />
             <P>
-              MongoDB indexes those events so the Aviary can search quickly. It is a cache, not an authority: if this
-              site disappeared, another developer could rebuild the registry from chain 4663 events alone. That is the
-              difference between a network and a database with a website in front of it.
+              MongoDB indexes those memos so the Aviary can search quickly. It is a cache, not an authority: if this
+              site disappeared, another developer could rebuild the registry from the authority&apos;s signature
+              history on Solana alone. That is the difference between a network and a database with a website in
+              front of it. Until the authority is configured, every listing says it is not anchored.
             </P>
             <P>
               <strong className="font-semibold text-ink">Proof of Flight</strong> extends the same idea to actions: a
               meaningful live execution produces a receipt binding the finch id, nest id, task id, action, chain,
-              transaction, block, status and execution policy — so what an agent did is checkable by someone who
-              doesn&apos;t trust the operator.
+              transaction signature, slot, fee and execution policy — so what an agent did is checkable by someone
+              who doesn&apos;t trust the operator.
             </P>
           </Section>
 
-          <Section id="economics" index="06" kicker="economics" title="Open infrastructure, one revenue stream.">
+          <Section id="economics" index="06" kicker="economics" title="Open infrastructure, and a token that gates nothing.">
             <P>
-              $FINCH launches through Pons on Robinhood Chain with a <strong className="font-semibold text-ink">3%
-              creator tax</strong> to the Finch fee wallet. That single stream funds infrastructure, compute, hosting,
-              RPC, indexing and development. Pons&apos; own protocol fees are separate and are never counted as Finch
-              revenue.
+              $FINCH launches on pump.fun, at mint address{" "}
+              <code className="font-mono text-[13px] break-all text-green-deep">63GtvVxFKgXCcSAXXkrPtp7vk8oWyEfqwwdB8gNYpump</code>.
+              Until a mint account exists there, Finch reports $FINCH as not launched. Once live it trades on
+              pump.fun&apos;s bonding curve and, after graduation, on pump.fun&apos;s AMM, and its supply, launch phase,
+              holders, price and markets are read live — from the mint account, the bonding-curve account, Jupiter and
+              DexScreener — like any other SPL token, with every figure carrying its source.
             </P>
             <P>
-              The token is deliberately not a tollbooth. The SDK, manifests, self-hosting, Aviary browsing, Flight
-              School previews and public chain reads stay free — a network nobody can use without paying first is not
-              a network. Metered consumption (hosted finches, sustained nest workloads, premium data) and publisher
-              earnings are designed, accounted for in the data layer, and switched off until the contracts exist.
+              The token is deliberately not a tollbooth. The SDK, manifests, self-hosting, Aviary browsing,
+              publishing, Flight School previews and public chain reads stay free — a network nobody can use without
+              paying first is not a network. Metered consumption (hosted finches, sustained nest workloads, premium
+              data) and publisher earnings are designed and accounted for in the data layer, and switched off.
+              Publishing could only ever require holding $FINCH through an explicit switch,{" "}
+              <Mono>PUBLISH_GATE=hold</Mono>, which is off by default.
             </P>
-            <p className="rounded-xs border border-gold/40 bg-gold/10 p-4 text-[13px] leading-relaxed text-gold-deep">
-              Launch signing is currently <strong className="font-semibold">blocked by a guard</strong>: it will not
-              sign until it can verify onchain that the deployed Pons version permits 300 bps to our fee recipient.
-              If it can&apos;t verify, it refuses and shows why — it never silently falls back to a different rate.
+            <p className="rounded-xs border border-line bg-bone-raised p-4 text-[13px] leading-relaxed text-ink-soft">
+              <strong className="font-semibold text-ink">Nothing moves fees on its own.</strong> There is no fee
+              contract, no splitter and no treasury UI. The fee wallet&apos;s key is held by the operator outside
+              this deployment, and any movement of funds from it is a deliberate, signed act — never automatic.
             </p>
           </Section>
 
@@ -300,7 +311,7 @@ export default function HowItWorksPage() {
             </P>
             <Facts
               rows={[
-                ["never fake a confirmation", "An HTTP 200 is not a transaction receipt. Confirmed state renders only from a receipt with a block number."],
+                ["never fake a confirmation", "An HTTP 200 is not a transaction receipt. Confirmed state renders only from a transaction the network has confirmed, with its slot."],
                 ["never invent metrics", "The network page shows the registry's real counts. If the network holds sixteen finches, it says sixteen."],
                 ["never hide provenance", "Seed and demo data carry a badge everywhere they appear, and every task in a nest run shows exactly what its finch was given."],
                 ["never a dead button", "A control works, is visibly disabled, or states that it is not available yet — with the reason."],

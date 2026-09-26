@@ -25,7 +25,7 @@ export const nestTaskSchema = z.object({
    */
   instruction: z.string().min(1).max(4000),
   dependsOn: z.array(z.string()).default([]),
-  /** Typed channel this task publishes on, e.g. "pons.launches". */
+  /** Typed channel this task publishes on, e.g. "launch.structure". */
   outputChannel: z.string().min(1).max(80),
 });
 

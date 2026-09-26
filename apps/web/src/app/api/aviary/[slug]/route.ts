@@ -1,6 +1,6 @@
-import { FLIGHTPATH_TOOLS, getRegistryConfig, isRegistered, registryId } from "@finch/flightpath";
+import { FLIGHTPATH_TOOLS, getRegistryConfig, readRegistryRecord, registryId } from "@finch/flightpath";
 import { getCollections, isDbConfigured } from "@finch/db";
-import { REGISTRY_LISTINGS, getRegistryListing, withRunCounts } from "@/lib/registry";
+import { REGISTRY_LISTINGS, REGISTRY_NESTS, getRegistryListing, withRunCounts } from "@/lib/registry";
 import { errorJson, json } from "@/lib/server/http";
 
 export const runtime = "nodejs";
@@ -44,23 +44,37 @@ export async function GET(_request: Request, context: { params: Promise<{ slug: 
 
   const requiresWrites = capabilities.some((capability) => capability.mode === "write");
 
-  // Real onchain status — never an assumption. Until the registry is deployed
-  // this says so; once it is, an unregistered listing is reported unregistered.
+  // Real onchain status — never an assumption. Until a registry authority is
+  // configured this says so; once it is, an unanchored listing is reported
+  // as exactly that. Nests and finches live in separate namespaces.
+  const kind = REGISTRY_NESTS.some((entry) => entry.slug === listing!.slug) ? "NEST" : "FINCH";
   const registryConfig = getRegistryConfig();
-  const id = registryId("FINCH", listing.slug);
-  const registry = registryConfig.configured
+  const id = registryId(kind, listing.slug);
+  const record = registryConfig.configured ? await readRegistryRecord(kind, listing.slug) : null;
+  const registry = !registryConfig.configured
     ? {
-        onchain: await isRegistered(id),
-        id,
-        contract: registryConfig.address,
-        explorerUrl: registryConfig.explorerUrl,
-        note: "Registration binds an id, owner, manifest hash, URI and version to chain 4663 — checkable without trusting this index.",
-      }
-    : {
         onchain: false,
         id,
-        note: "FinchRegistry is not deployed on Robinhood Chain yet, so nothing here is onchain-verifiable. Registration (id, owner, manifest hash, URI, version) is what will make it so.",
-      };
+        note: "No registry authority is configured, so nothing here is anchored on Solana. An anchor is a memo transaction signed by the registry authority carrying the manifest's hash — that is what will make a listing independently checkable.",
+      }
+    : record
+      ? {
+          onchain: true,
+          id,
+          authority: registryConfig.authority,
+          signature: record.signature,
+          manifestHash: record.manifestHash,
+          version: record.version,
+          explorerUrl: registryConfig.explorerUrl,
+          note: "Anchored: a memo signed by the registry authority binds this id to a manifest hash on Solana — checkable without trusting this index.",
+        }
+      : {
+          onchain: false,
+          id,
+          authority: registryConfig.authority,
+          explorerUrl: registryConfig.explorerUrl,
+          note: "Not anchored: the registry authority has signed no memo for this id.",
+        };
 
   return json({
     source,

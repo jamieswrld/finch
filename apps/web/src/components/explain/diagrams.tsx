@@ -172,11 +172,11 @@ export function ExecutionLifecycleDiagram() {
   const stages = [
     { label: "construct", sub: "intent" },
     { label: "policy", sub: "allowances" },
-    { label: "simulate", sub: "gas + call" },
+    { label: "simulate", sub: "fee payer + CU" },
     { label: "authorize", sub: "human gate" },
-    { label: "submit", sub: "one tx" },
-    { label: "confirm", sub: "receipt" },
-    { label: "log", sub: "record" },
+    { label: "sign", sub: "wallet/operator" },
+    { label: "confirm", sub: "landed · matched" },
+    { label: "log", sub: "record + proof" },
   ];
   return (
     <Frame viewBox="0 0 720 190" caption="fig. 03 — the only path to a write (packages/flightpath/src/execution.ts)">
@@ -199,7 +199,7 @@ export function ExecutionLifecycleDiagram() {
         idempotent on execution id — replaying returns the stored record, never a second transaction
       </Label>
       <Label x={12} y={156} anchor="start" color={GREEN} size={8}>
-        success renders only from a receipt · an HTTP 200 is not a confirmation
+        success renders only from a landed, confirmed transaction · an HTTP 200 is not a confirmation
       </Label>
       <Label x={12} y={172} anchor="start" color={GREY} size={8}>
         preview mode never reaches this diagram at all — it has no signer
@@ -213,22 +213,22 @@ export function PermissionDiagram() {
   return (
     <Frame viewBox="0 0 720 220" caption="fig. 04 — layered authority: an agent never holds unbounded custody">
       <Box x={250} y={14} w={220} h={40} label="human owner" sub="holds the keys, sets the caps" />
-      <Arrow from={[360, 56]} to={[360, 80]} label="funds a float" />
-      <Box x={230} y={82} w={260} h={44} label="OperatorBudget.sol" sub="per-operator · per-token · per-epoch" accent />
+      <Arrow from={[360, 56]} to={[360, 80]} label="sets the caps" />
+      <Box x={230} y={82} w={260} h={44} label="PolicyEngine" sub="per-asset · per-tx · rolling 24h" accent />
       <Arrow from={[360, 128]} to={[360, 152]} label="bounded spend" />
-      <Box x={250} y={154} w={220} h={44} label="restricted operator wallet" sub="what automation actually holds" />
+      <Box x={250} y={154} w={220} h={44} label="restricted operator keypair" sub="a small SOL float, never the treasury" />
 
       <g stroke={FAINT} strokeWidth="1" strokeDasharray="2 3" fill="none">
         <path d="M 230 104 H 60 V 176 H 250" />
       </g>
       <Label x={62} y={98} anchor="start" color={GREY} size={7.5}>
-        offchain PolicyEngine mirrors the same limits
+        the float is the hard ceiling: the key holds nothing else
       </Label>
       <Label x={62} y={132} anchor="start" color={INK} size={8}>
         deny by default
       </Label>
       <Label x={62} y={146} anchor="start" color={GREY} size={7.5}>
-        allowlists · per-tx caps · approval threshold
+        program allowlists · per-tx caps · approval threshold
       </Label>
 
       <Label x={664} y={98} anchor="end" color={GREY} size={7.5}>
@@ -244,15 +244,15 @@ export function PermissionDiagram() {
 /** Identity and portability. */
 export function RegistryDiagram() {
   return (
-    <Frame viewBox="0 0 720 200" caption="fig. 05 — identity: the chain is the record, the index is a convenience">
+    <Frame viewBox="0 0 720 200" caption="fig. 05 — identity: Solana is the record, the index is a convenience">
       <Box x={16} y={78} w={110} h={46} label="finch.json" sub="portable manifest" />
-      <Arrow from={[130, 90]} to={[196, 66]} label="hash" />
+      <Arrow from={[130, 90]} to={[196, 66]} label="sha256" />
       <Arrow from={[130, 112]} to={[196, 140]} label="publish" />
 
-      <Box x={200} y={44} w={150} h={46} label="FinchRegistry.sol" sub="id · owner · hash · uri" accent />
+      <Box x={200} y={44} w={150} h={46} label="memo on Solana" sub="signed by registry authority" accent />
       <Box x={200} y={118} w={150} h={46} label="content store" sub="manifest body" />
 
-      <Arrow from={[354, 66]} to={[420, 96]} label="events" />
+      <Arrow from={[354, 66]} to={[420, 96]} label="signatures" />
       <Arrow from={[354, 140]} to={[420, 112]} />
 
       <Box x={424} y={82} w={130} h={44} label="indexer" sub="MongoDB" />
@@ -261,7 +261,7 @@ export function RegistryDiagram() {
 
       <line x1={16} y1={172} x2={704} y2={172} stroke={FAINT} strokeDasharray="2 4" />
       <Label x={16} y={190} anchor="start" color={INK} size={8}>
-        delete the index and the network survives — every record is reconstructable from chain 4663 events
+        delete the index and the record survives — each anchor is a memo the registry authority signed, checkable from Solana alone
       </Label>
     </Frame>
   );

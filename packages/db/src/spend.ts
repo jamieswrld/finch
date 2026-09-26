@@ -8,11 +8,11 @@ import { COLLECTIONS } from "./schemas.ts";
  * The in-memory spend tracker is exact for one process and meaningless on a
  * serverless deploy, where the instance that prepared an intent and the one
  * that hears it was signed are different processes with different memories.
- * "0.05 ETH per day" enforced per process is not enforced. This keeps the
+ * "0.5 SOL per day" enforced per process is not enforced. This keeps the
  * counter in MongoDB, keyed by the signer, so the next intent any instance
  * prepares for that wallet sees everything the wallet already spent today.
  *
- * Amounts are wei-scale bigints; Decimal128 holds them exactly and supports
+ * Amounts are lamport-scale bigints; Decimal128 holds them exactly and supports
  * atomic $inc. The reservation is a conditional update — it debits only if
  * the counter still fits under the cap — so two concurrent intents cannot
  * both pass a check against the same stale total.
@@ -34,16 +34,17 @@ export interface MongoSpendTrackerOptions {
   now?: () => Date;
 }
 
-type Asset = "native" | `0x${string}`;
+/** "native" (SOL) or an SPL mint. Base58 is case-sensitive, so neither is ever lowercased. */
+type Asset = "native" | string;
 
 export function createMongoSpendTracker(options: MongoSpendTrackerOptions) {
-  const owner = options.owner.toLowerCase();
+  const owner = options.owner;
   const now = options.now ?? (() => new Date());
 
   const collection = async () => (await getDb()).collection<SpendBucketDoc>(COLLECTIONS.spendBuckets);
   const keyFor = (asset: Asset, windowMs: number, at: Date) => {
     const bucket = Math.floor(at.getTime() / windowMs);
-    return { key: `${owner}:${asset.toLowerCase()}:${windowMs}:${bucket}`, bucket };
+    return { key: `${owner}:${asset}:${windowMs}:${bucket}`, bucket };
   };
   const dec = (value: bigint) => Decimal128.fromString(value.toString());
   const big = (value: Decimal128 | undefined) => (value ? BigInt(value.toString().split(".")[0] ?? "0") : 0n);
@@ -63,7 +64,7 @@ export function createMongoSpendTracker(options: MongoSpendTrackerOptions) {
     const { key, bucket } = keyFor(asset, windowMs, when);
     await (await collection()).updateOne(
       { key },
-      { $inc: { spent: dec(amount) }, $set: { updatedAt: when.toISOString() }, $setOnInsert: { key, owner, asset: asset.toLowerCase(), bucket, windowMs } },
+      { $inc: { spent: dec(amount) }, $set: { updatedAt: when.toISOString() }, $setOnInsert: { key, owner, asset, bucket, windowMs } },
       { upsert: true },
     );
   }
@@ -77,7 +78,7 @@ export function createMongoSpendTracker(options: MongoSpendTrackerOptions) {
     const update = {
       $inc: { spent: dec(amount) },
       $set: { updatedAt: when.toISOString() },
-      $setOnInsert: { key, owner, asset: asset.toLowerCase(), bucket, windowMs },
+      $setOnInsert: { key, owner, asset, bucket, windowMs },
     };
     // Debit only while it still fits. The filter cannot be evaluated against a
     // bucket that does not exist yet, so the first debit of a window upserts;

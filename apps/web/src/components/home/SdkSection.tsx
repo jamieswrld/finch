@@ -4,13 +4,14 @@ import { SectionHeading } from "@/components/ui/SectionHeading";
 const SDK_SAMPLE = `import { createFinch, hyperbolic } from "@finch/sdk";
 
 const nest = await createFinch("market-watcher")
-  .describe("Watches a token list; reports notable changes.")
+  .describe("Watches a few Solana mints; reports notable changes.")
   .model(hyperbolic("meta-llama/Llama-3.3-70B-Instruct"))
   .memory({ kind: "mongo-vector", namespace: "market-watcher" })
-  .tools("balance_erc20", "token_data", "portfolio_snapshot")
+  .tools("token_price", "token_markets", "balance_spl", "portfolio_snapshot")
   .wallet({
     mode: "operator",
-    allowances: [{ asset: "native", perDay: "0.25" }],
+    allowances: [{ asset: "native", perDay: "0.25" }], // SOL
+    allowedPrograms: [], // no raw program calls
     approvalThreshold: 0.5, // larger spends wait for a human
   })
   .hatch();
@@ -28,11 +29,11 @@ const CAPABILITIES = [
   },
   {
     title: "Tools",
-    body: "Flightpath onchain tools plus anything published in the Aviary. Typed schemas, permission-tagged.",
+    body: "Flightpath's Solana tools plus anything published in the Aviary. Typed schemas, permission-tagged.",
   },
   {
     title: "Wallet permissions",
-    body: "Observer or operator. Daily allowances, per-tx caps, contract allowlists, human-approval thresholds. Deny by default.",
+    body: "Observer or operator. Daily allowances in SOL or any SPL mint, per-tx caps, program allowlists, human-approval thresholds. Deny by default.",
   },
 ];
 
@@ -43,7 +44,7 @@ export function SdkSection() {
         index="06"
         kicker="Finch SDK"
         title="Create a finch the way you'd describe one."
-        lede="TypeScript-first, because Robinhood Chain is EVM. A finch is a portable finch.json manifest — the SDK and the visual Finch Builder emit the same document, so anything you build can be exported, forked and self-hosted."
+        lede="TypeScript-first. A finch is a portable finch.json manifest — the SDK and the visual Finch Builder emit the same document, so anything you build can be exported, forked and self-hosted."
       />
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.1fr_0.9fr]">
         <CodeBlock title="hatch.ts — the whole idea" code={SDK_SAMPLE} />

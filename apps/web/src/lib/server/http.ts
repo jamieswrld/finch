@@ -74,8 +74,9 @@ export function rateLimit(request: Request, cost = 1): NextResponse | null {
  * The ONLY way an error may reach an HTTP response.
  *
  * Driver and transport errors quote their connection target back in the
- * message: MongoParseError carries `user:password@host`, and viem's HTTP
- * errors carry the full RPC URL including a provider API key in the path. Every
+ * message: MongoParseError carries `user:password@host`, and RPC clients'
+ * HTTP errors carry the full RPC URL including a provider API key in the
+ * path or query. Every
  * API route here is unauthenticated, and several are CDN-cached, so pasting a
  * raw `error.message` into a response publishes whichever credential the failing
  * client happened to be holding.

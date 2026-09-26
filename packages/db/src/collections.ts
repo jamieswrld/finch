@@ -7,7 +7,6 @@ import {
   type AviaryListing,
   type CreditEntry,
   type ExecutionDoc,
-  type FeeEventDoc,
   type NestDoc,
   type MemoryItemDoc,
   type FinchDoc,
@@ -21,7 +20,6 @@ export interface FinchCollections {
   aviaryListings: Collection<AviaryListing>;
   executions: Collection<ExecutionDoc>;
   memoryItems: Collection<MemoryItemDoc>;
-  feeEvents: Collection<FeeEventDoc>;
   treasuryLedger: Collection<TreasuryLedgerEntry>;
   creditEntries: Collection<CreditEntry>;
   serviceCalls: Collection<ServiceCallDoc>;
@@ -36,7 +34,6 @@ export function collectionsOf(db: Db): FinchCollections {
     aviaryListings: db.collection<AviaryListing>(COLLECTIONS.aviaryListings),
     executions: db.collection<ExecutionDoc>(COLLECTIONS.executions),
     memoryItems: db.collection<MemoryItemDoc>(COLLECTIONS.memoryItems),
-    feeEvents: db.collection<FeeEventDoc>(COLLECTIONS.feeEvents),
     treasuryLedger: db.collection<TreasuryLedgerEntry>(COLLECTIONS.treasuryLedger),
     creditEntries: db.collection<CreditEntry>(COLLECTIONS.creditEntries),
     serviceCalls: db.collection<ServiceCallDoc>(COLLECTIONS.serviceCalls),

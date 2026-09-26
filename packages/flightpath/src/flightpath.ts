@@ -1,26 +1,27 @@
 import {
-  createPublicClient,
-  createWalletClient,
-  encodeFunctionData,
-  erc20Abi,
-  formatUnits,
-  http,
-  type Abi,
-  type Account,
+  createKeyPairSignerFromBytes,
+  createNoopSigner,
+  getBase58Encoder,
   type Address,
-  type Hex,
-  type PublicClient,
-  type WalletClient,
-} from "viem";
-import { privateKeyToAccount } from "viem/accounts";
+  type KeyPairSigner,
+} from "@solana/kit";
+import { getTransferSolInstruction } from "@solana-program/system";
+import { findAssociatedTokenPda, getApproveCheckedInstruction, getTransferCheckedInstruction } from "@solana-program/token";
+import { explorerAddressUrl, explorerTxUrl, getFlightpathTarget, type FlightpathTarget } from "./chain.ts";
 import {
-  explorerAddressUrl,
-  explorerTxUrl,
-  getFlightpathTarget,
-  type FlightpathTarget,
-} from "./chain.ts";
+  formatUnits,
+  isSignerRole,
+  isSolanaAddress,
+  serializeInstruction,
+  SOL_DECIMALS,
+  WSOL_MINT,
+  type SerializedAccountMeta,
+  type SerializedInstruction,
+} from "./codec.ts";
 import { executeIntent, resumeApprovedIntent, type ExecutionContext } from "./execution.ts";
-import { MemorySpendTracker, OBSERVER_POLICY, PolicyEngine, type SpendTracker, type WalletPolicy } from "./policy.ts";
+import { readMintInfo } from "./explorer.ts";
+import { fetchSwapInstructions, readSwapQuote } from "./market.ts";
+import { COMPUTE_BUDGET_PROGRAM, JUPITER_PROGRAM, MemorySpendTracker, OBSERVER_POLICY, PolicyEngine, type SpendTracker, type WalletPolicy } from "./policy.ts";
 import {
   MemoryExecutionSink,
   type ExecutionRecord,
@@ -37,30 +38,22 @@ export class FlightpathConfigError extends Error {
   }
 }
 
-export interface SwapVenueConfig {
-  /** Router contract address. Must also be present on the policy contract allowlist. */
-  router: Address;
-  kind: "uniswap-v2";
-  label: string;
-}
-
 export interface FlightpathOptions {
   target?: FlightpathTarget;
   /**
-   * Private key of the RESTRICTED OPERATOR WALLET only — funded from the
-   * treasury with a bounded float (see contracts/OperatorBudget.sol).
-   * NEVER the treasury key. Server-side environments only; typically
-   * process.env.FLIGHTPATH_OPERATOR_KEY.
+   * Secret key of the RESTRICTED OPERATOR WALLET only — funded from the
+   * treasury with a bounded float. NEVER the treasury key. Server-side
+   * environments only; typically process.env.FLIGHTPATH_OPERATOR_KEY, as a
+   * base58 64-byte secret key or a JSON array of 64 numbers.
    */
-  operatorKey?: Hex;
-  /** Pre-built operator account (alternative to operatorKey). Server-side only. */
-  account?: Account;
+  operatorKey?: string;
+  /** Pre-built operator signer (alternative to operatorKey). Server-side only. */
+  signer?: KeyPairSigner | Promise<KeyPairSigner>;
   policy?: WalletPolicy;
   sink?: ExecutionSink;
   agentId?: string;
-  swapVenue?: SwapVenueConfig;
-  rwaApprovedAssets?: Address[];
-  confirmations?: number;
+  rwaApprovedAssets?: string[];
+  confirmationTimeoutMs?: number;
   /**
    * Shared spend accounting. Pass a durable implementation in production so a
    * daily allowance survives process restarts and is not reset by re-hatching.
@@ -69,96 +62,79 @@ export interface FlightpathOptions {
   /**
    * Prepare transactions for this address to sign in its own wallet instead
    * of signing server-side. No key is involved; execution parks at
-   * awaiting_signature with the exact transaction.
+   * awaiting_signature with the exact instructions.
    */
-  externalSigner?: Address;
+  externalSigner?: string;
 }
 
 export interface TransferParams {
   id: string;
-  to: Address;
-  /** Amount in wei / smallest unit. */
+  to: string;
+  /** Amount in lamports / the mint's smallest unit. */
   amount: bigint;
 }
 
-export interface Erc20TransferParams extends TransferParams {
-  token: Address;
+export interface SplTransferParams extends TransferParams {
+  mint: string;
 }
 
 export interface ApproveParams {
   id: string;
-  token: Address;
-  spender: Address;
+  mint: string;
+  delegate: string;
   amount: bigint;
 }
 
-export interface ContractWriteParams {
+export interface ProgramInvokeParams {
   id: string;
-  address: Address;
-  abi: Abi;
-  functionName: string;
-  args?: readonly unknown[];
-  value?: bigint;
+  programAddress: string;
+  accounts: SerializedAccountMeta[];
+  /** Instruction data, base64. */
+  data: string;
   summary?: string;
 }
 
 export interface SwapExactInParams {
   id: string;
-  tokenIn: Address;
-  tokenOut: Address;
+  inputMint: string;
+  outputMint: string;
   amountIn: bigint;
-  /** Minimum acceptable output after slippage, in tokenOut smallest units. */
-  minAmountOut: bigint;
-  recipient?: Address;
-  deadlineSeconds?: number;
+  /** Maximum slippage in basis points; the quote's minimum output enforces it on chain. */
+  slippageBps: number;
 }
 
-const UNISWAP_V2_ROUTER_ABI = [
-  {
-    type: "function",
-    name: "swapExactTokensForTokens",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "amountIn", type: "uint256" },
-      { name: "amountOutMin", type: "uint256" },
-      { name: "path", type: "address[]" },
-      { name: "to", type: "address" },
-      { name: "deadline", type: "uint256" },
-    ],
-    outputs: [{ name: "amounts", type: "uint256[]" }],
-  },
-] as const satisfies Abi;
+/** Decode FLIGHTPATH_OPERATOR_KEY-style secrets: base58 or a JSON byte array. */
+export function secretKeyBytes(secret: string): Uint8Array {
+  const trimmed = secret.trim();
+  const bytes = trimmed.startsWith("[")
+    ? Uint8Array.from(JSON.parse(trimmed) as number[])
+    : new Uint8Array(getBase58Encoder().encode(trimmed));
+  if (bytes.length !== 64) throw new FlightpathConfigError("operator key must be a 64-byte Solana secret key");
+  return bytes;
+}
 
 export class Flightpath {
   readonly target: FlightpathTarget;
-  readonly publicClient: PublicClient;
-  readonly walletClient?: WalletClient;
-  readonly account?: Account;
   readonly policyEngine: PolicyEngine;
   readonly spendTracker: SpendTracker;
   readonly sink: ExecutionSink;
   private readonly options: FlightpathOptions;
+  private readonly signerPromise?: Promise<KeyPairSigner>;
   private readonly tokenMetaCache = new Map<string, TokenData>();
 
   constructor(options: FlightpathOptions = {}) {
     this.options = options;
     this.target = options.target ?? getFlightpathTarget();
-    // Failover transport from the target — never a bare single endpoint.
-    this.publicClient = createPublicClient({
-      chain: this.target.chain,
-      transport: this.target.transport,
-    }) as PublicClient;
 
-    if (options.operatorKey || options.account) {
+    if (options.operatorKey || options.signer) {
       if (typeof (globalThis as { window?: unknown }).window !== "undefined") {
         throw new FlightpathConfigError("operator keys must never be constructed in a browser environment");
       }
-      this.account = options.account ?? privateKeyToAccount(options.operatorKey!);
-      this.walletClient = createWalletClient({
-        chain: this.target.chain,
-        transport: this.target.transport,
-        account: this.account,
-      }) as WalletClient;
+      this.signerPromise = options.signer
+        ? Promise.resolve(options.signer)
+        : createKeyPairSignerFromBytes(secretKeyBytes(options.operatorKey!));
+      // A malformed key surfaces when a write needs it, not as an unhandled rejection.
+      this.signerPromise.catch(() => {});
     }
 
     // The spend tracker is SHARED, not per-instance: re-hatching a finch or
@@ -178,22 +154,23 @@ export class Flightpath {
     return this.options.policy ?? OBSERVER_POLICY;
   }
 
-  get operatorAddress(): Address | undefined {
-    return this.account?.address;
+  /** The operator's public address, when this process holds an operator key. */
+  async operatorAddress(): Promise<string | undefined> {
+    return (await this.signerPromise)?.address;
   }
 
   /**
-   * Create a sibling Flightpath on the same target and account, with different
+   * Create a sibling Flightpath on the same target and signer, with different
    * policy/sink/agent bindings. Used at hatch time to bind a host-owned signer
-   * to a manifest-derived policy — the private key never surfaces.
+   * to a manifest-derived policy — the secret key never surfaces.
    */
   derive(
-    overrides: Partial<Pick<FlightpathOptions, "policy" | "sink" | "agentId" | "swapVenue" | "rwaApprovedAssets" | "confirmations" | "externalSigner">>,
+    overrides: Partial<Pick<FlightpathOptions, "policy" | "sink" | "agentId" | "rwaApprovedAssets" | "confirmationTimeoutMs" | "externalSigner">>,
   ): Flightpath {
     return new Flightpath({
       ...this.options,
       operatorKey: undefined,
-      account: this.account,
+      signer: this.signerPromise,
       target: this.target,
       // Carry the tracker forward, or a derived finch starts its day fresh.
       spendTracker: this.spendTracker,
@@ -201,210 +178,340 @@ export class Flightpath {
     });
   }
 
-  private context(): ExecutionContext {
+  private async context(): Promise<ExecutionContext> {
+    const signer = this.options.externalSigner ? undefined : await this.signerPromise;
     return {
-      publicClient: this.publicClient,
-      walletClient: this.walletClient,
-      account: this.account,
-      chain: this.target.chain,
+      target: this.target,
+      signer,
       policy: this.policyEngine,
       sink: this.sink,
       agentId: this.options.agentId,
-      confirmations: this.options.confirmations,
-      signing: this.options.externalSigner ? "external" : this.walletClient ? "server" : undefined,
+      confirmationTimeoutMs: this.options.confirmationTimeoutMs,
+      signing: this.options.externalSigner ? "external" : signer ? "server" : undefined,
       externalSigner: this.options.externalSigner,
     };
   }
 
-  // ── Reads ────────────────────────────────────────────────────────────────
-
-  async nativeBalance(address: Address): Promise<TokenBalance> {
-    const raw = await this.publicClient.getBalance({ address });
-    return {
-      asset: "native",
-      symbol: this.target.chain.nativeCurrency.symbol,
-      decimals: this.target.chain.nativeCurrency.decimals,
-      raw: raw.toString(),
-      formatted: formatUnits(raw, this.target.chain.nativeCurrency.decimals),
-    };
+  /** Whoever will pay for and sign writes, or null in observer mode. */
+  private async payer(): Promise<string | null> {
+    if (this.options.externalSigner) return this.options.externalSigner;
+    return (await this.signerPromise)?.address ?? null;
   }
 
-  async tokenData(token: Address): Promise<TokenData> {
-    const cached = this.tokenMetaCache.get(token.toLowerCase());
+  // ── Reads ────────────────────────────────────────────────────────────────
+
+  async nativeBalance(address: string): Promise<TokenBalance> {
+    requireAddress(address, "address");
+    const { value } = await this.target.rpc.getBalance(address as Address, { commitment: "confirmed" }).send();
+    const raw = BigInt(value);
+    return { asset: "native", symbol: "SOL", decimals: SOL_DECIMALS, raw: raw.toString(), formatted: formatUnits(raw, SOL_DECIMALS) };
+  }
+
+  async tokenData(mint: string): Promise<TokenData> {
+    requireAddress(mint, "mint");
+    const cached = this.tokenMetaCache.get(mint);
     if (cached) return cached;
-    const [name, symbol, decimals, totalSupply] = await Promise.all([
-      this.publicClient.readContract({ address: token, abi: erc20Abi, functionName: "name" }),
-      this.publicClient.readContract({ address: token, abi: erc20Abi, functionName: "symbol" }),
-      this.publicClient.readContract({ address: token, abi: erc20Abi, functionName: "decimals" }),
-      this.publicClient.readContract({ address: token, abi: erc20Abi, functionName: "totalSupply" }),
-    ]);
+    const result = await readMintInfo(mint, this.target);
+    if (!result.reachable || !result.data) throw new Error(result.error ?? `could not read mint ${mint}`);
+    const info = result.data;
     const data: TokenData = {
-      address: token,
-      name: name as string,
-      symbol: symbol as string,
-      decimals: Number(decimals),
-      totalSupply: (totalSupply as bigint).toString(),
+      mint,
+      tokenProgram: info.tokenProgram,
+      name: info.name,
+      symbol: info.symbol,
+      decimals: info.decimals,
+      supply: info.supply,
+      mintAuthority: info.mintAuthority,
+      freezeAuthority: info.freezeAuthority,
     };
-    this.tokenMetaCache.set(token.toLowerCase(), data);
+    this.tokenMetaCache.set(mint, data);
     return data;
   }
 
-  async erc20Balance(token: Address, holder: Address): Promise<TokenBalance> {
-    const [meta, raw] = await Promise.all([
-      this.tokenData(token),
-      this.publicClient.readContract({ address: token, abi: erc20Abi, functionName: "balanceOf", args: [holder] }),
-    ]);
-    return {
-      asset: token,
-      symbol: meta.symbol,
-      decimals: meta.decimals,
-      raw: (raw as bigint).toString(),
-      formatted: formatUnits(raw as bigint, meta.decimals),
-    };
+  /** Total balance of one mint across every token account the holder owns. */
+  async splBalance(mint: string, holder: string): Promise<TokenBalance> {
+    requireAddress(holder, "holder");
+    const meta = await this.tokenData(mint);
+    const { value } = await this.target.rpc
+      .getTokenAccountsByOwner(holder as Address, { mint: mint as Address }, { encoding: "jsonParsed", commitment: "confirmed" })
+      .send();
+    let raw = 0n;
+    for (const entry of value) {
+      const parsed = (entry.account.data as unknown as { parsed?: { info?: { tokenAmount?: { amount?: string } } } }).parsed;
+      raw += BigInt(parsed?.info?.tokenAmount?.amount ?? "0");
+    }
+    return { asset: mint, symbol: meta.symbol, decimals: meta.decimals, raw: raw.toString(), formatted: formatUnits(raw, meta.decimals) };
   }
 
-  async portfolio(address: Address, tokens: Address[] = []): Promise<PortfolioSnapshot> {
+  async portfolio(address: string, mints: string[] = []): Promise<PortfolioSnapshot> {
     const native = await this.nativeBalance(address);
-    const erc20s = await Promise.all(tokens.map((token) => this.erc20Balance(token, address)));
+    const tokens = await Promise.all(mints.map((mint) => this.splBalance(mint, address)));
+    return { address, chain: this.target.chain, fetchedAt: new Date().toISOString(), balances: [native, ...tokens] };
+  }
+
+  /** Raw account read: owner, lamports, executable, size, and parsed data where the node can parse it. */
+  async accountRead(address: string): Promise<Record<string, unknown>> {
+    requireAddress(address, "address");
+    const { value } = await this.target.rpc
+      .getAccountInfo(address as Address, { encoding: "jsonParsed", commitment: "confirmed" })
+      .send();
+    if (!value) return { address, exists: false };
+    const data = value.data as unknown;
+    const parsed = typeof data === "object" && data !== null && !Array.isArray(data) ? (data as { parsed?: unknown; program?: string }) : null;
+    const raw = Array.isArray(data) ? (data as [string, string]) : null;
     return {
       address,
-      chainId: this.target.chain.id,
-      fetchedAt: new Date().toISOString(),
-      balances: [native, ...erc20s],
+      exists: true,
+      owner: value.owner,
+      lamports: value.lamports.toString(),
+      sol: formatUnits(BigInt(value.lamports), SOL_DECIMALS),
+      executable: value.executable,
+      dataLength: Number(value.space),
+      parsedBy: parsed?.program ?? null,
+      parsed: parsed?.parsed ?? null,
+      // Unparsed data is shown as a prefix: enough to recognise a layout,
+      // not a megabyte of base64 handed to a model.
+      dataBase64Prefix: raw ? raw[0].slice(0, 256) : null,
     };
-  }
-
-  async contractRead(params: { address: Address; abi: Abi; functionName: string; args?: readonly unknown[] }): Promise<unknown> {
-    return this.publicClient.readContract({
-      address: params.address,
-      abi: params.abi,
-      functionName: params.functionName,
-      args: params.args as readonly unknown[] | undefined,
-    });
   }
 
   // ── Writes — every one flows through executeIntent ───────────────────────
 
   async transferNative(params: TransferParams): Promise<ExecutionRecord> {
-    return executeIntent(this.context(), params.id, {
+    requireAddress(params.to, "to");
+    const payer = await this.payer();
+    const instructions = payer
+      ? [serializeInstruction(getTransferSolInstruction({ source: createNoopSigner(payer as Address), destination: params.to as Address, amount: params.amount }))]
+      : [];
+    const amount = formatUnits(params.amount, SOL_DECIMALS);
+    return executeIntent(await this.context(), params.id, {
       kind: "transfer.native",
-      summary: `transfer ${formatUnits(params.amount, 18)} ${this.target.chain.nativeCurrency.symbol} → ${params.to}`,
+      summary: `transfer ${amount} SOL → ${params.to}`,
       to: params.to,
-      value: params.amount,
+      instructions,
       spendAsset: "native",
       spendAmount: params.amount,
-      meta: { recipient: params.to },
+      meta: { recipient: params.to, amount, symbol: "SOL", decimals: String(SOL_DECIMALS) },
     });
   }
 
-  async transferErc20(params: Erc20TransferParams): Promise<ExecutionRecord> {
-    const meta = await this.tokenData(params.token);
-    return executeIntent(this.context(), params.id, {
-      kind: "transfer.erc20",
-      summary: `transfer ${formatUnits(params.amount, meta.decimals)} ${meta.symbol} → ${params.to}`,
-      to: params.token,
-      value: 0n,
-      data: encodeFunctionData({ abi: erc20Abi, functionName: "transfer", args: [params.to, params.amount] }),
-      spendAsset: params.token,
-      spendAmount: params.amount,
-      meta: { recipient: params.to, token: params.token },
-    });
+  /** The recipient's token account for a mint must exist; creating one would spend rent outside any allowance. */
+  private async tokenAccounts(owner: string, counterparty: string, meta: TokenData): Promise<{ source: Address; destination: Address }> {
+    const tokenProgram = meta.tokenProgram as Address;
+    const [[source], [destination]] = await Promise.all([
+      findAssociatedTokenPda({ owner: owner as Address, mint: meta.mint as Address, tokenProgram }),
+      findAssociatedTokenPda({ owner: counterparty as Address, mint: meta.mint as Address, tokenProgram }),
+    ]);
+    return { source, destination };
   }
 
-  async approveErc20(params: ApproveParams): Promise<ExecutionRecord> {
-    const meta = await this.tokenData(params.token);
-    return executeIntent(this.context(), params.id, {
-      kind: "erc20.approve",
-      summary: `approve ${formatUnits(params.amount, meta.decimals)} ${meta.symbol} for ${params.spender}`,
-      to: params.token,
-      value: 0n,
-      data: encodeFunctionData({ abi: erc20Abi, functionName: "approve", args: [params.spender, params.amount] }),
-      // Approvals are treated as spends against the allowance — an approval
-      // is spendable authority even before transferFrom happens.
-      spendAsset: params.token,
-      spendAmount: params.amount,
-      meta: { spender: params.spender, token: params.token },
-    });
-  }
-
-  async contractWrite(params: ContractWriteParams): Promise<ExecutionRecord> {
-    const data = encodeFunctionData({
-      abi: params.abi,
-      functionName: params.functionName,
-      args: params.args as readonly unknown[] | undefined,
-    });
-    return executeIntent(this.context(), params.id, {
-      kind: "contract.write",
-      summary: params.summary ?? `call ${params.functionName} on ${params.address}`,
-      to: params.address,
-      value: params.value ?? 0n,
-      data,
-      spendAsset: "native",
-      spendAmount: params.value ?? 0n,
-      meta: { functionName: params.functionName },
-    });
-  }
-
-  async swapExactIn(params: SwapExactInParams): Promise<ExecutionRecord> {
-    const venue = this.options.swapVenue;
-    if (!venue) {
+  private async requireTokenAccount(account: Address, owner: string, meta: TokenData): Promise<void> {
+    const { value } = await this.target.rpc.getAccountInfo(account, { encoding: "base64", commitment: "confirmed" }).send();
+    if (!value) {
       throw new FlightpathConfigError(
-        "no swap venue configured for this target — set swapVenue (router address + kind) once a Robinhood Chain venue is published",
+        `${owner} has no ${meta.symbol ?? meta.mint} token account yet. Flightpath does not create one on their behalf — that spends rent outside any allowance — so they need to create it (or receive the token once) first.`,
       );
     }
-    if (!this.account && !params.recipient) {
-      throw new FlightpathConfigError("swapExactIn requires an operator account or an explicit recipient");
+  }
+
+  async transferSpl(params: SplTransferParams): Promise<ExecutionRecord> {
+    requireAddress(params.to, "to");
+    const meta = await this.tokenData(params.mint);
+    const payer = await this.payer();
+    let instructions: SerializedInstruction[] = [];
+    if (payer) {
+      const { source, destination } = await this.tokenAccounts(payer, params.to, meta);
+      await this.requireTokenAccount(destination, params.to, meta);
+      instructions = [
+        serializeInstruction(
+          getTransferCheckedInstruction(
+            { source, mint: params.mint as Address, destination, authority: createNoopSigner(payer as Address), amount: params.amount, decimals: meta.decimals },
+            { programAddress: meta.tokenProgram as Address },
+          ),
+        ),
+      ];
     }
-    const [tokenInMeta, tokenOutMeta] = await Promise.all([this.tokenData(params.tokenIn), this.tokenData(params.tokenOut)]);
-    const recipient = params.recipient ?? this.account!.address;
-    const deadline = BigInt(Math.floor(Date.now() / 1000) + (params.deadlineSeconds ?? 600));
-    const data = encodeFunctionData({
-      abi: UNISWAP_V2_ROUTER_ABI,
-      functionName: "swapExactTokensForTokens",
-      args: [params.amountIn, params.minAmountOut, [params.tokenIn, params.tokenOut], recipient, deadline],
+    const amount = formatUnits(params.amount, meta.decimals);
+    const symbol = meta.symbol ?? params.mint;
+    return executeIntent(await this.context(), params.id, {
+      kind: "transfer.spl",
+      summary: `transfer ${amount} ${symbol} → ${params.to}`,
+      to: params.mint,
+      instructions,
+      spendAsset: params.mint === WSOL_MINT ? "native" : params.mint,
+      spendAmount: params.amount,
+      meta: { recipient: params.to, mint: params.mint, amount, symbol, decimals: String(meta.decimals) },
     });
-    return executeIntent(this.context(), params.id, {
-      kind: "swap.exactIn",
-      summary: `swap ${formatUnits(params.amountIn, tokenInMeta.decimals)} ${tokenInMeta.symbol} → ≥ ${formatUnits(
-        params.minAmountOut,
-        tokenOutMeta.decimals,
-      )} ${tokenOutMeta.symbol} via ${venue.label}`,
-      to: venue.router,
-      value: 0n,
-      data,
-      spendAsset: params.tokenIn,
-      spendAmount: params.amountIn,
-      meta: { venue: venue.label, tokenIn: params.tokenIn, tokenOut: params.tokenOut, recipient },
+  }
+
+  async approveSpl(params: ApproveParams): Promise<ExecutionRecord> {
+    requireAddress(params.delegate, "delegate");
+    const meta = await this.tokenData(params.mint);
+    const payer = await this.payer();
+    let instructions: SerializedInstruction[] = [];
+    if (payer) {
+      const { source } = await this.tokenAccounts(payer, payer, meta);
+      instructions = [
+        serializeInstruction(
+          getApproveCheckedInstruction(
+            { source, mint: params.mint as Address, delegate: params.delegate as Address, owner: createNoopSigner(payer as Address), amount: params.amount, decimals: meta.decimals },
+            { programAddress: meta.tokenProgram as Address },
+          ),
+        ),
+      ];
+    }
+    const amount = formatUnits(params.amount, meta.decimals);
+    const symbol = meta.symbol ?? params.mint;
+    return executeIntent(await this.context(), params.id, {
+      kind: "spl.approve",
+      summary: `approve ${amount} ${symbol} for ${params.delegate}`,
+      to: params.mint,
+      instructions,
+      // Approvals are treated as spends against the allowance — a delegation
+      // is spendable authority even before the delegate uses it.
+      spendAsset: params.mint === WSOL_MINT ? "native" : params.mint,
+      spendAmount: params.amount,
+      meta: { delegate: params.delegate, mint: params.mint, amount, symbol, decimals: String(meta.decimals) },
     });
   }
 
   /**
-   * Interact with an approved RWA token. Uses intent kind "rwa.interact" so the
+   * One raw instruction to a program. The program must be allowlisted, and
+   * the only account that may be marked as a signer is the payer — Flightpath
+   * cannot sign for anyone else, and will not pretend to.
+   */
+  async programInvoke(params: ProgramInvokeParams): Promise<ExecutionRecord> {
+    requireAddress(params.programAddress, "programAddress");
+    const payer = await this.payer();
+    for (const meta of params.accounts) {
+      requireAddress(meta.address, "account");
+      if (isSignerRole(meta.role) && meta.address !== payer) {
+        throw new FlightpathConfigError(`account ${meta.address} is marked as a signer, but only the payer (${payer ?? "none"}) can sign`);
+      }
+    }
+    const instruction: SerializedInstruction = { programAddress: params.programAddress, accounts: params.accounts, data: params.data };
+    return executeIntent(await this.context(), params.id, {
+      kind: "program.invoke",
+      summary: params.summary ?? `invoke ${params.programAddress} (${params.accounts.length} accounts)`,
+      to: params.programAddress,
+      instructions: payer ? [instruction] : [],
+      spendAsset: "native",
+      spendAmount: 0n,
+      meta: { program: params.programAddress },
+    });
+  }
+
+  /** Swap through Jupiter. The Jupiter program must be on allowedPrograms. */
+  async swapExactIn(params: SwapExactInParams): Promise<ExecutionRecord> {
+    requireAddress(params.inputMint, "inputMint");
+    requireAddress(params.outputMint, "outputMint");
+    if (!Number.isInteger(params.slippageBps) || params.slippageBps < 1 || params.slippageBps > 1_000) {
+      throw new FlightpathConfigError("slippageBps must be an integer between 1 and 1000");
+    }
+    const payer = await this.payer();
+    const [inMeta, outMeta] = await Promise.all([this.decimalsOf(params.inputMint), this.decimalsOf(params.outputMint)]);
+    const quote = await readSwapQuote({ inputMint: params.inputMint, outputMint: params.outputMint, amount: params.amountIn, slippageBps: params.slippageBps });
+    if (!quote.reachable || !quote.data) throw new Error(quote.error ?? "no swap quote available");
+    const fetched = payer ? await fetchSwapInstructions(quote.data.raw, payer) : { instructions: [], addressLookupTables: [] };
+    // The route's own compute budget (and the priority fee it adds by
+    // default) is dropped: Flightpath sizes compute from simulation and sets
+    // priority only when the operator configured it.
+    const built = {
+      instructions: fetched.instructions.filter((ix) => ix.programAddress !== COMPUTE_BUDGET_PROGRAM),
+      addressLookupTables: fetched.addressLookupTables,
+    };
+
+    const inAmount = formatUnits(params.amountIn, inMeta.decimals);
+    const minOut = formatUnits(BigInt(quote.data.otherAmountThreshold), outMeta.decimals);
+    return executeIntent(await this.context(), params.id, {
+      kind: "swap.exactIn",
+      summary: `swap ${inAmount} ${inMeta.symbol} → ≥ ${minOut} ${outMeta.symbol} via Jupiter`,
+      to: JUPITER_PROGRAM,
+      instructions: built.instructions,
+      addressLookupTables: built.addressLookupTables,
+      spendAsset: params.inputMint === WSOL_MINT ? "native" : params.inputMint,
+      spendAmount: params.amountIn,
+      meta: {
+        venue: "jupiter",
+        inputMint: params.inputMint,
+        outputMint: params.outputMint,
+        amount: inAmount,
+        symbol: inMeta.symbol,
+        decimals: String(inMeta.decimals),
+        quotedOut: formatUnits(BigInt(quote.data.outAmount), outMeta.decimals),
+        minOut,
+        slippageBps: String(params.slippageBps),
+        priceImpactPct: String(quote.data.priceImpactPct),
+        recipient: payer ?? "",
+      },
+    });
+  }
+
+  private async decimalsOf(mint: string): Promise<{ decimals: number; symbol: string }> {
+    if (mint === WSOL_MINT) return { decimals: SOL_DECIMALS, symbol: "SOL" };
+    const meta = await this.tokenData(mint);
+    return { decimals: meta.decimals, symbol: meta.symbol ?? mint };
+  }
+
+  /**
+   * Interact with an approved RWA mint. Uses intent kind "rwa.interact" so the
    * PolicyEngine hard-checks the approved registry — an agent cannot reach
    * arbitrary permissioned assets through this path.
    */
   async rwaInteract(params: {
     id: string;
-    asset: Address;
+    mint: string;
     action: "transfer" | "approve";
-    counterparty: Address;
+    counterparty: string;
     amount: bigint;
   }): Promise<ExecutionRecord> {
-    const meta = await this.tokenData(params.asset);
-    const data = encodeFunctionData({
-      abi: erc20Abi,
-      functionName: params.action,
-      args: [params.counterparty, params.amount],
-    });
-    return executeIntent(this.context(), params.id, {
+    requireAddress(params.counterparty, "counterparty");
+    const meta = await this.tokenData(params.mint);
+    const payer = await this.payer();
+    let instructions: SerializedInstruction[] = [];
+    if (payer) {
+      const { source, destination } = await this.tokenAccounts(payer, params.counterparty, meta);
+      const programAddress = { programAddress: meta.tokenProgram as Address };
+      const owner = createNoopSigner(payer as Address);
+      if (params.action === "transfer") {
+        await this.requireTokenAccount(destination, params.counterparty, meta);
+        instructions = [
+          serializeInstruction(
+            getTransferCheckedInstruction(
+              { source, mint: params.mint as Address, destination, authority: owner, amount: params.amount, decimals: meta.decimals },
+              programAddress,
+            ),
+          ),
+        ];
+      } else {
+        instructions = [
+          serializeInstruction(
+            getApproveCheckedInstruction(
+              { source, mint: params.mint as Address, delegate: params.counterparty as Address, owner, amount: params.amount, decimals: meta.decimals },
+              programAddress,
+            ),
+          ),
+        ];
+      }
+    }
+    const amount = formatUnits(params.amount, meta.decimals);
+    const symbol = meta.symbol ?? params.mint;
+    return executeIntent(await this.context(), params.id, {
       kind: "rwa.interact",
-      summary: `RWA ${params.action}: ${formatUnits(params.amount, meta.decimals)} ${meta.symbol} ↔ ${params.counterparty}`,
-      to: params.asset,
-      value: 0n,
-      data,
-      spendAsset: params.asset,
+      summary: `RWA ${params.action}: ${amount} ${symbol} ↔ ${params.counterparty}`,
+      to: params.mint,
+      instructions,
+      spendAsset: params.mint,
       spendAmount: params.amount,
-      meta: { action: params.action, counterparty: params.counterparty },
+      meta: {
+        action: params.action,
+        counterparty: params.counterparty,
+        ...(params.action === "transfer" ? { recipient: params.counterparty } : { delegate: params.counterparty }),
+        mint: params.mint,
+        amount,
+        symbol,
+        decimals: String(meta.decimals),
+      },
     });
   }
 
@@ -415,16 +522,20 @@ export class Flightpath {
   async resumeApproved(id: string, approvedBy: string): Promise<ExecutionRecord> {
     const record = await this.sink.get(id);
     if (!record) throw new FlightpathConfigError(`no execution record with id ${id}`);
-    return resumeApprovedIntent(this.context(), id, approvedBy);
+    return resumeApprovedIntent(await this.context(), id, approvedBy);
   }
 
-  txExplorerUrl(hash: Hex): string | null {
-    return explorerTxUrl(hash, this.target);
+  txExplorerUrl(signature: string): string {
+    return explorerTxUrl(signature, this.target);
   }
 
-  addressExplorerUrl(address: Address): string | null {
+  addressExplorerUrl(address: string): string {
     return explorerAddressUrl(address, this.target);
   }
+}
+
+function requireAddress(value: string, name: string): void {
+  if (!isSolanaAddress(value)) throw new FlightpathConfigError(`${name} "${value}" is not a Solana address`);
 }
 
 export function createFlightpath(options: FlightpathOptions = {}): Flightpath {

@@ -1,33 +1,45 @@
-import type { Address, Hex } from "viem";
+import type { SerializedInstruction } from "./codec.ts";
 
 /**
- * Flightpath — Finch's Robinhood Chain execution layer.
+ * Flightpath — Finch's Solana execution layer.
  *
- * Robinhood Chain is EVM. There are no Solana/Jito-style bundling assumptions
- * here: one intent → one transaction, with a mandatory lifecycle of
+ * One intent → one transaction, with a mandatory lifecycle of
  * policy check → simulation → (approval) → submission → confirmation → log.
+ *
+ * An intent carries the exact instructions it will execute. The policy engine
+ * decodes those instructions rather than trusting the summary or metadata a
+ * builder attached, and a user-signed transaction is compared against them
+ * instruction by instruction before anything is recorded as submitted.
  */
 
 export type IntentKind =
   | "transfer.native"
-  | "transfer.erc20"
-  | "erc20.approve"
-  | "contract.write"
+  | "transfer.spl"
+  | "spl.approve"
+  | "program.invoke"
   | "swap.exactIn"
   | "rwa.interact";
+
+/** "native" is SOL; anything else is an SPL mint address. */
+export type SpendAsset = "native" | string;
 
 export interface ExecutionIntent {
   kind: IntentKind;
   /** Human-readable one-line summary, shown in approvals and logs. */
   summary: string;
-  to: Address;
-  /** Native value in wei. */
-  value: bigint;
-  /** Calldata for contract interactions; undefined for plain native transfer. */
-  data?: Hex;
-  /** Asset being spent, for allowance accounting. "native" or an ERC20 address. */
-  spendAsset: "native" | Address;
-  /** Amount spent in the asset's smallest unit, for allowance accounting. */
+  /**
+   * The account the intent is about: the recipient wallet for a SOL
+   * transfer, the mint for SPL and RWA actions, the program for an invoke or
+   * a swap. Allowlists key on it; the instructions are still authoritative.
+   */
+  to: string;
+  /** The exact instructions, in order. The fee payer is the signer. */
+  instructions: SerializedInstruction[];
+  /** Address lookup tables the instructions were compiled against (swaps). */
+  addressLookupTables?: string[];
+  /** Asset being spent, for allowance accounting. */
+  spendAsset: SpendAsset;
+  /** Amount spent in the asset's smallest unit (lamports for SOL). */
   spendAmount: bigint;
   meta?: Record<string, string>;
 }
@@ -56,9 +68,12 @@ export interface PolicyDecision {
 
 export interface SimulationResult {
   ok: boolean;
-  gasEstimate?: string;
-  /** Decoded return value for contract calls, JSON-serializable. */
-  result?: unknown;
+  /** Compute units the simulation consumed. */
+  computeUnits?: string;
+  /** Network fee for the compiled message, in lamports. */
+  feeLamports?: string;
+  /** Last program log lines — where Solana puts the reason a simulation failed. */
+  logs?: string[];
   error?: string;
   simulatedAt: string;
 }
@@ -77,16 +92,17 @@ export interface ExecutionRecord {
   /** Caller-supplied idempotency key. Re-executing the same id is a no-op. */
   id: string;
   agentId?: string;
-  chainId: number;
+  /** Wallet-standard chain id, e.g. "solana:mainnet". */
+  chain: string;
   createdAt: string;
   state: ExecutionState;
   intent: {
     kind: IntentKind;
     summary: string;
-    to: Address;
-    value: string;
-    data?: Hex;
-    spendAsset: "native" | Address;
+    to: string;
+    instructions: SerializedInstruction[];
+    addressLookupTables?: string[];
+    spendAsset: SpendAsset;
     spendAmount: string;
     meta?: Record<string, string>;
   };
@@ -99,25 +115,25 @@ export interface ExecutionRecord {
   simulation?: SimulationResult;
   /**
    * The exact transaction handed to an external signer, set when the record
-   * parks at awaiting_signature. Whatever comes back as signed is compared to
-   * this field by field before the record advances.
+   * parks at awaiting_signature. Whatever lands on chain is compared to this
+   * instruction by instruction before the record advances.
    */
   prepared?: {
-    from?: Address;
-    to: Address;
-    value: string;
-    data?: Hex;
-    gas: string;
+    feePayer: string;
+    instructions: SerializedInstruction[];
+    addressLookupTables?: string[];
+    computeUnits: string;
   };
   tx?: {
-    hash: Hex;
+    signature: string;
     submittedAt: string;
   };
   receipt?: {
-    status: "success" | "reverted";
-    blockNumber: string;
-    gasUsed: string;
-    effectiveGasPrice?: string;
+    /** "failed" means the transaction landed with an instruction error: the fee was paid, nothing else changed. */
+    status: "success" | "failed";
+    slot: string;
+    feeLamports: string;
+    computeUnits?: string;
     confirmedAt: string;
   };
   error?: {
@@ -201,24 +217,28 @@ export class MemoryExecutionSink implements ExecutionSink {
 }
 
 export interface TokenData {
-  address: Address;
-  name: string;
-  symbol: string;
+  mint: string;
+  /** The token program that owns the mint: SPL Token or Token-2022. */
+  tokenProgram: string;
+  name: string | null;
+  symbol: string | null;
   decimals: number;
-  totalSupply: string;
+  supply: string;
+  mintAuthority: string | null;
+  freezeAuthority: string | null;
 }
 
 export interface TokenBalance {
-  asset: "native" | Address;
-  symbol: string;
+  asset: "native" | string;
+  symbol: string | null;
   decimals: number;
   raw: string;
   formatted: string;
 }
 
 export interface PortfolioSnapshot {
-  address: Address;
-  chainId: number;
+  address: string;
+  chain: string;
   fetchedAt: string;
   balances: TokenBalance[];
 }

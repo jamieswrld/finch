@@ -44,10 +44,10 @@ export function Footer() {
               <span className="text-[15px] font-semibold">FINCH</span>
             </div>
             <p className="mt-4 max-w-xs text-[13px] leading-relaxed text-grey">
-              A decentralized operating layer for intelligent software on Robinhood Chain. Build one finch. Coordinate
+              A decentralized operating layer for intelligent software on Solana. Build one finch. Coordinate
               millions.
             </p>
-            <p className="mt-4 label-mono">robinhood · chain 4663 · open agent infrastructure · $finch</p>
+            <p className="mt-4 label-mono">solana · open agent infrastructure · $finch</p>
           </div>
           {COLUMNS.map((column) => (
             <nav key={column.title} aria-label={column.title}>
@@ -71,9 +71,9 @@ export function Footer() {
               one finch → many finches → nest → nest-to-nest → network
             </p>
             <p className="max-w-2xl text-[11px] leading-relaxed text-grey-faint md:text-right">
-              $FINCH has not launched; nothing on this site is an offer or financial advice. Robinhood, MongoDB,
-              Hyperbolic and Pons are referenced as ecosystem infrastructure Finch builds on; no partnership or
-              endorsement is implied.
+              Nothing on this site, including anything about $FINCH, is an offer or financial advice. Solana, Jupiter,
+              DexScreener, Solscan, MongoDB, Hyperbolic, Groq and OpenRouter are referenced as infrastructure Finch
+              builds on or reads from; no endorsement or affiliation is implied.
             </p>
           </div>
         </div>

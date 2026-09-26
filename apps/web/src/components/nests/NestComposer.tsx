@@ -25,7 +25,7 @@ const PERMISSION_PRESETS = [
   "read:portfolio",
   "veto:execution",
   "wallet:operator",
-  "contracts:allowlist",
+  "programs:allowlist",
 ];
 
 function newNestTemplate(): NestDoc {
@@ -235,7 +235,7 @@ export function NestComposer() {
           + custom nest
         </button>
         <span className="ml-auto flex items-center gap-2">
-          <span title="Simulate and Live modes activate with the Robinhood execution release.">
+          <span title="Composed nests run in preview: read-only, no wallet, no writes.">
             <Badge tone="sage">read-only</Badge>
           </span>
           <DataBadge source={state.data.source === "db" ? "db" : "builtin"} />
@@ -268,7 +268,7 @@ export function NestComposer() {
                 <TextInput
                   id="fb-desc"
                   value={nest.description}
-                  placeholder="e.g. monitor pons launches and detect unusual activity"
+                  placeholder="e.g. monitor new solana token launches and detect unusual activity"
                   onChange={(event) => mutate((draft) => void (draft.description = event.target.value))}
                 />
               </Field>

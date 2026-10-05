@@ -191,7 +191,7 @@ export function validateTaskGraph(manifest: NestManifest): GraphIssue[] {
     }
     channels.add(task.outputChannel);
     if (!finchHandles.has(task.finch)) {
-      issues.push({ code: "unknown_finch", detail: `task "${task.id}" assigns unknown finch "${task.finch}"` });
+      issues.push({ code: "unknown_finch", detail: `task "${task.id}" assigns unknown agent "${task.finch}"` });
     }
   }
 
@@ -270,7 +270,7 @@ export function validateTaskGraph(manifest: NestManifest): GraphIssue[] {
     }
   }
   if (visited < manifest.tasks.length) {
-    issues.push({ code: "cycle", detail: "task graph contains a cycle — every nest must be a DAG" });
+    issues.push({ code: "cycle", detail: "task graph contains a cycle — every swarm must be a DAG" });
   }
 
   return issues;
@@ -336,7 +336,7 @@ function emptyTaskRecord(runId: string, task: NestTask, finch: NestFinch): TaskR
 export async function runNest(manifest: NestManifest, options: RunNestOptions): Promise<NestRunState> {
   const issues = validateTaskGraph(manifest);
   if (issues.length > 0) {
-    throw new Error(`nest graph invalid: ${issues.map((issue) => issue.detail).join("; ")}`);
+    throw new Error(`swarm graph invalid: ${issues.map((issue) => issue.detail).join("; ")}`);
   }
 
   const policy = manifest.executionPolicy;
@@ -404,7 +404,7 @@ export async function runNest(manifest: NestManifest, options: RunNestOptions): 
       const extra = options.hatchOptions?.(member.manifest) ?? {};
       const hatched = await Nest.hatch(member.manifest, { ...extra, provider });
 
-      const objectiveHeader = `Nest objective: ${manifest.identity.objective}\nYour task: ${task.title}\n\n`;
+      const objectiveHeader = `Swarm objective: ${manifest.identity.objective}\nYour task: ${task.title}\n\n`;
       // Enforce the declared per-task timeout, and let an aborted run stop a
       // task that is still waiting on a model. Both were previously declared
       // in the execution policy but never actually applied.
@@ -469,7 +469,7 @@ export async function runNest(manifest: NestManifest, options: RunNestOptions): 
         });
       } else {
         record.status = "failed";
-        record.error = result.error ?? `finch produced no output (halted: ${result.haltedBy ?? "unknown"})`;
+        record.error = result.error ?? `agent produced no output (halted: ${result.haltedBy ?? "unknown"})`;
         failed.add(record.id);
         failures++;
       }
@@ -569,12 +569,12 @@ export async function runNest(manifest: NestManifest, options: RunNestOptions): 
           {
             role: "system",
             content:
-              `You are the coordinator of the nest "${manifest.identity.name}". Objective: ${manifest.identity.objective}\n` +
+              `You are the coordinator of the swarm "${manifest.identity.name}". Objective: ${manifest.identity.objective}\n` +
               (manifest.coordinator.instructions || "") +
-              "\nSynthesize the member finches' outputs into one answer to the objective. Cite which channel each claim came from.\n\n" +
+              "\nSynthesize the member agents' outputs into one answer to the objective. Cite which channel each claim came from.\n\n" +
               "GROUNDING — these override everything above:\n" +
               "- You may only state what appears in the channel outputs below. You have no other source.\n" +
-              "- A member finch describing what something 'would' look like is NOT a finding. Ignore hypotheticals, " +
+              "- A member agent describing what something 'would' look like is NOT a finding. Ignore hypotheticals, " +
               "typical-case explanations and invented identifiers rather than carrying them into your answer — " +
               "formatting a guess into a table is exactly what makes it dangerous.\n" +
               "- If the members found nothing, the correct answer is one or two sentences saying so, plus what would be " +
@@ -582,7 +582,7 @@ export async function runNest(manifest: NestManifest, options: RunNestOptions): 
               "- Never invent contract functions, events, error codes, field names or standards.\n" +
               "- Match length to substance. Two real sentences beat a page of structure.",
           },
-          { role: "user", content: `Channel outputs:\n\n${body}\n\nWrite the nest's answer to its objective.` },
+          { role: "user", content: `Channel outputs:\n\n${body}\n\nWrite the swarm's answer to its objective.` },
         ],
         temperature: manifest.coordinator.model.temperature ?? 0.2,
         maxTokens: 1200,

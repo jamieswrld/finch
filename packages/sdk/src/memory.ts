@@ -112,7 +112,7 @@ export function formatRecall(items: MemoryItem[], now = Date.now()): string {
     return `- [${bits.join(" · ")}] ${item.content}`;
   });
   return (
-    "Prior findings from the hive — leads, not facts. Each came from an earlier run and is UNVERIFIED for " +
+    "Prior findings from shared memory — leads, not facts. Each came from an earlier run and is UNVERIFIED for " +
     "this one: use them to decide what to read, then re-read the tool before asserting any of it.\n" +
     lines.join("\n")
   );

@@ -23,7 +23,7 @@ export interface TrackedToken {
   relation: string;
 }
 
-const FINCH_RELATION = "the network's token — Finch reads it like any other mint";
+const FINCH_RELATION = "the network's token — read like any other mint";
 
 /** The reference assets agents most often price and move against. */
 export const REFERENCE_TOKENS: TrackedToken[] = [
@@ -32,13 +32,13 @@ export const REFERENCE_TOKENS: TrackedToken[] = [
 ];
 
 /**
- * $FINCH — the pump.fun contract address the team published ahead of launch.
- * Whether a mint account exists there yet is read, never assumed:
- * readFinchToken reports launched:false until the chain has one.
+ * The network token is hidden until a new launch: there is no default mint.
+ * FINCH_TOKEN_MINT wires one in when there is; until then every reader
+ * reports the token as unconfigured and no surface shows it.
  */
-export const FINCH_TOKEN_MINT_DEFAULT = "63GtvVxFKgXCcSAXXkrPtp7vk8oWyEfqwwdB8gNYpump";
+export const FINCH_TOKEN_MINT_DEFAULT: string | null = null;
 
-/** FINCH_TOKEN_MINT when it is a valid Solana address, else the published default. */
+/** FINCH_TOKEN_MINT when it is a valid Solana address, else the default (none). */
 export function getFinchTokenMint(): string | null {
   const value = typeof process !== "undefined" ? process.env.FINCH_TOKEN_MINT : undefined;
   if (isSolanaAddress(value)) return value;
@@ -95,7 +95,7 @@ export async function readToken(token: TrackedToken, target: FlightpathTarget = 
     const missing = result.reachable && /^no account exists/.test(result.error ?? "");
     const error = missing
       ? token.relation === FINCH_RELATION
-        ? "no mint account yet — $FINCH has not launched on pump.fun"
+        ? "no mint account yet — the token has not launched"
         : "no mint account exists at this address"
       : result.error ?? "mint could not be read";
     return { ...base, error };
@@ -152,7 +152,7 @@ export interface FinchTokenReadout {
   note?: string;
 }
 
-const PUBLISHING_NOTE = "Publishing on Finch is open and free. Holding the token is not required for anything.";
+const PUBLISHING_NOTE = "Publishing is open and free. Holding the token is not required for anything.";
 
 /** Run one sub-read in isolation: a throw becomes the given fallback, never a rejection of the whole readout. */
 async function isolated<T>(read: () => Promise<T>, fallback: (error: unknown) => T): Promise<T> {
@@ -189,7 +189,7 @@ export async function readFinchToken(target: FlightpathTarget = getFlightpathTar
       holders: { count: null, source: null },
       launchpad: null,
       gate,
-      note: "$FINCH has no Solana mint configured (FINCH_TOKEN_MINT is unset), so there is nothing to read yet.",
+      note: "No token mint is configured (FINCH_TOKEN_MINT is unset), so there is nothing to read.",
     };
   }
 
@@ -217,7 +217,7 @@ export async function readFinchToken(target: FlightpathTarget = getFlightpathTar
       holders: { count: null, source: null },
       launchpad: { ...(await readPumpCurve(mint, target)), venue: "pump.fun" },
       gate,
-      note: "No mint account exists at this address yet, so $FINCH has not launched on pump.fun yet. Curve progress, supply, holders, price and markets appear here once it does.",
+      note: "No mint account exists at this address yet, so the token has not launched. Curve progress, supply, holders, price and markets appear here once it does.",
     };
   }
 

@@ -1,7 +1,7 @@
 // Read-only checks against the deployed site. No wallet, no writes: the key
-// endpoint is exercised with a signature that cannot verify, the nest run is
-// a read-only preset with a throwaway signer address, and the chain, token
-// and registry endpoints are asked what they already know.
+// endpoint is exercised with a signature that cannot verify, the swarm run is
+// a read-only preset with a throwaway signer address, and the chain and
+// registry endpoints are asked what they already know.
 //
 // Usage: node scripts/verify-prod.mjs   (FINCH_BASE overrides the default)
 import { generateKeyPair, getAddressFromPublicKey, getBase58Decoder } from "@solana/kit";
@@ -24,10 +24,6 @@ console.log(`chain -> ${chain.status} ${c.chain ?? "?"} (${c.cluster ?? "?"}) re
 if (c.chain !== "solana:mainnet") console.log(`  !! expected chain "solana:mainnet", got ${JSON.stringify(c.chain)}`);
 for (const endpoint of c.endpoints ?? []) console.log(`  endpoint ${endpoint.url} reachable=${endpoint.reachable} slot=${endpoint.slot ?? "-"} ${endpoint.error ?? ""}`);
 
-const token = await j("/api/token");
-const t = token.body ?? {};
-console.log(`token -> ${token.status} mint=${t.mint ?? "null"} launched=${t.launched} phase=${t.launchpad?.phase ?? "-"} price=${t.price?.data?.usdPrice ?? "unread"} holders=${t.holders?.count ?? "unread"}${t.note ? ` note=${JSON.stringify(t.note).slice(0, 90)}` : ""}`);
-
 const registry = await j("/api/registry");
 console.log(`registry -> ${registry.status} configured=${registry.body.configured} authority=${registry.body.authority ?? "null"} anchored=${registry.body.registeredCount ?? "?"}/${(registry.body.registrations ?? []).length}`);
 
@@ -41,8 +37,8 @@ console.log(`keys (unverifiable signature) -> ${bogus.status} ${bogus.body.error
 const activity = await j("/api/activity");
 console.log(`activity -> ${activity.status} ${JSON.stringify(activity.body.counts ?? activity.body).slice(0, 120)} provenance=${activity.body.runsProvenance ?? activity.body.provenance?.runs ?? "?"}`);
 
-const run = await fetch(BASE + "/api/nests/run", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ nest: "chain-intelligence", objective: "one-line chain pulse", signer: address }) });
-console.log(`nests/run -> ${run.status} ${run.headers.get("content-type")}`);
+const run = await fetch(BASE + "/api/swarms/run", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ nest: "chain-intelligence", objective: "one-line chain pulse", signer: address }) });
+console.log(`swarms/run -> ${run.status} ${run.headers.get("content-type")}`);
 if (run.ok && run.body) {
   const reader = run.body.getReader();
   const decoder = new TextDecoder();

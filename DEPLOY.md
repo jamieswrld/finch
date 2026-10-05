@@ -1,8 +1,8 @@
-# Deploying FINCH
+# Deploying Yinsi
 
 ## Vercel
 
-The repo is linked to Vercel project **finch** (team `trial-1303b717`).
+The repo is linked to the Vercel project `finch` (team `trial-1303b717`).
 `vercel.json` at the root drives the monorepo build:
 
 ```json
@@ -25,10 +25,8 @@ Once the GitHub repo exists, connect it in the Vercel dashboard
 (Project → Settings → Git) for deploy-on-push, then point **finch.fun**
 at the project (Project → Settings → Domains).
 
-There is nothing to deploy on chain. Finch runs no custom Solana program: the
-registry is memo transactions signed by one address, and $FINCH — a pump.fun
-launch — is read at its published mint address like any other SPL mint (and
-reported as not launched while no mint account exists there).
+There is nothing to deploy on chain. Yinsi runs no custom Solana program: the
+registry is memo transactions signed by one address.
 
 ## Environment variables (Vercel → Project → Settings → Environment Variables)
 
@@ -38,17 +36,16 @@ functionality add these. Everything is server-side unless it starts with
 
 | Variable | Enables |
 | --- | --- |
-| `GROQ_API_KEY` (or `CEREBRAS_API_KEY`, `OPENROUTER_API_KEY`, `GEMINI_API_KEY`) | Flight School previews + agent runs on a free tier; `HYPERBOLIC_API_KEY` / `TOGETHER_API_KEY` are paid fallbacks |
-| `MONGODB_URI`, `MONGODB_DB` | live registry/nests persistence, durable per-signer allowances (then run `npm run seed -w @finch/db` once) |
+| `GROQ_API_KEY` (or `CEREBRAS_API_KEY`, `OPENROUTER_API_KEY`, `GEMINI_API_KEY`) | playground previews + agent and swarm runs on a free tier; `HYPERBOLIC_API_KEY` / `TOGETHER_API_KEY` are paid fallbacks |
+| `MONGODB_URI`, `MONGODB_DB` | live directory and swarm persistence, durable per-signer allowances (then run `npm run seed -w @finch/db` once) |
 | `SOLANA_RPC_URLS` | **production RPC** — comma-separated provider endpoints, tried in order |
 | `SOLANA_CLUSTER`, `NEXT_PUBLIC_SOLANA_CLUSTER` | `mainnet-beta` (default), `devnet` or `testnet` — keep the two equal |
 | `SOLANA_EXPLORER_URL`, `NEXT_PUBLIC_SOLANA_EXPLORER_URL` | explorer links (default `https://solscan.io`) |
 | `JUPITER_API_KEY` | higher Jupiter rate limits for prices, token records and swap quotes (keyless works) |
-| `FINCH_TOKEN_MINT` | optional override of $FINCH's baked-in contract address (`63GtvVxFKgXCcSAXXkrPtp7vk8oWyEfqwwdB8gNYpump`) |
 | `FINCH_REGISTRY_AUTHORITY` | the address whose signed memos are the registry; unset means every listing reads as not anchored |
 | `FINCH_FEE_WALLET_ADDRESS` | fee-wallet address, display only |
 | `FINCH_FEE_WALLET_PRIVATE_KEY` | **only when a workflow needs it** — see SECURITY.md; readable solely by `src/server/wallet.ts` |
-| `PUBLISH_GATE`, `PUBLISH_COST_FINCH` | publishing gate; `open` (default) keeps publishing free |
+| `PUBLISH_GATE`, `PUBLISH_COST_FINCH`, `FINCH_TOKEN_MINT` | publishing gate; `open` (default) keeps publishing free, `hold` turns on a token gate against the `FINCH_TOKEN_MINT` mint (unset by default) |
 | `RWA_APPROVED_ASSETS` | approved RWA registry (JSON; `address` is the SPL mint) |
 
 Never set on the deployment: `FINCH_REGISTRY_AUTHORITY_KEY` (it lives in
@@ -60,8 +57,8 @@ Never set on the deployment: `FINCH_REGISTRY_AUTHORITY_KEY` (it lives in
 The public mainnet endpoint (`api.mainnet-beta.solana.com`) is baked in as
 the fallback so a fresh clone works, but it is rate limited, refuses some
 methods and is not meant for production traffic. Production sets
-`SOLANA_RPC_URLS` to one or more dedicated provider endpoints; Flightpath
-tries them in order, and `/api/chain` reports each endpoint's health with any
+`SOLANA_RPC_URLS` to one or more dedicated provider endpoints; the execution
+layer tries them in order, and `/api/chain` reports each endpoint's health with any
 credentials in the URL scrubbed. A provider URL usually embeds its API key,
 so treat the variable as a secret.
 
@@ -76,10 +73,11 @@ so treat the variable as a secret.
    (base58 or the 64-number JSON array). Delete `authority.json` afterwards.
 4. `node scripts/wallet-check.mjs` confirms the key derives to that address
    and shows its balance — never the key.
-5. Anchor a manifest:
+5. Anchor a manifest. The kind is the registry's id for what you anchor —
+   `finch` for an agent, `nest` for a swarm:
 
    ```bash
-   node scripts/registry-anchor.mjs finch market-scout ./market-scout.finch.json https://…/market-scout.finch.json
+   node scripts/registry-anchor.mjs finch market-scout ./market-scout.manifest.json https://…/market-scout.manifest.json
    ```
 
    This prints the memo, the fee payer, the fee quote and a simulation, and
@@ -88,12 +86,6 @@ so treat the variable as a secret.
 
 ## GitHub
 
-When the repo is created:
-
-```bash
-git remote add origin git@github.com:<org>/finch.git
-git push -u origin main
-```
-
-Then update the landing bottom-bar GitHub link in
-`apps/web/src/components/landing/World.tsx` (currently marked pending).
+The repository is `github.com/jamieswrld/finch`, and the landing page links
+to it. Connect it in the Vercel dashboard for deploy-on-push if it is not
+already.

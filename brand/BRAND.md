@@ -1,41 +1,62 @@
-# FINCH brand assets
+# Yinsi brand assets
+
+## Name
+
+**Yinsi** — sentence case in prose and in the wordmark ("Yinsi", never
+"YINSI"); lowercase "yinsi" only inside mono labels that are lowercase
+throughout. The product's words are plain: agents, swarms, the directory, the
+playground, the execution layer, shared memory.
 
 ## The mark
 
-An origami finch that doubles as a forward arrow: the beak is the arrowhead,
-the forked tail is the fletching, one raised wing gives it flight. One closed
-polygon — no gradients, no outlines, no effects, ever.
+Seven nodes on a sheared hex lattice: one core, four neighbours, two smaller
+outliers on the diagonal. Small, it reads as a cluster; large, as a swarm
+drifting corner to corner around the node that holds it together. Circles
+only — no paths, gradients, outlines or effects.
 
 | File | What it is |
 | --- | --- |
-| `finch-mark.svg` | **The production mark** (hand-vectorized, use this everywhere) |
-| `finch-mark-source.png` | The generated concept the vector was hand-drawn from (2048px), kept as provenance |
+| `yinsi-mark.svg` | **The production mark** (ink nodes, green core) |
+| `../apps/web/public/brand/yinsi-mark.svg` | The same file, served at `/brand/yinsi-mark.svg` |
 
-In-app, the same path ships as `FINCH_MARK_PATH` in
-`apps/web/src/components/birds/FinchGlyph.tsx`. The browser/app icon is the
-rendered origami bird at `apps/web/src/app/icon.png` (bone-backed rounded
-square — a transparent black bird is invisible on dark tab bars).
+In-app, the node list ships as `YINSI_MARK_NODES` in
+`apps/web/src/components/brand/YinsiMark.tsx`, which also exports `YinsiMark`
+(the mark) and `YinsiLogo` (mark + wordmark). A single agent is drawn with
+`AgentGlyph` (`components/brand/AgentGlyph.tsx`): a core node inside its
+boundary, with one satellite on it.
+
+The browser icon, home-screen icon and share cards are generated from the same
+node list at build time — `apps/web/src/app/{icon,apple-icon,opengraph-image,twitter-image}.tsx`
+via `components/brand/share-image.tsx`. There are no raster brand files to
+keep in sync.
+
+## Colours
+
+| Token | Hex | Use |
+| --- | --- | --- |
+| bone | `#f4f2ea` | ground; icon tile |
+| ink | `#191b14` | the mark's nodes, the wordmark |
+| signal green | `#00c805` | the core node only — marks, lines and dots, never text or washes |
+| green deep | `#0a7227` | text-safe green |
+
+The mark is ink on bone, or bone on ink. The core node may take signal green;
+nothing else in the mark does. Monochrome (all nodes in one colour) is always
+allowed.
+
+## Typography
+
+- Wordmark: Geist semibold, tight tracking (about −0.03em), sentence case.
+  Mark height ≈ 1.4× the wordmark's cap height, centred on it, gap ≈ 0.4× the
+  mark.
+- Labels: Geist Mono, sentence case. No letterspaced capitals, no `uppercase`
+  with positive tracking, no italic serif.
+- The share-card fonts in `apps/web/src/components/brand/fonts/` are Geist and
+  Geist Mono (SIL Open Font License 1.1; copyright and licence URL are in each
+  file's name table).
 
 ## Usage rules
 
-- **Colors:** ink `#191b14` on bone `#f4f2ea` / white — or reversed (bone on ink).
-  Monochrome only; the mark never takes green, gold, or gradients.
-- **Clearspace:** keep at least half the mark's height clear on all sides.
-- **Minimum size:** 16px wide. Below that, use no mark at all.
-- **Lockup:** mark + `FINCH` in Geist semibold, ~0.22em tracking, mark ≈ 1.2×
-  the cap height, optically aligned to the wordmark's baseline block.
-- Never rotate arbitrarily (the hero uses a deliberate −14° flight angle),
-  never outline, never add shadows or glow.
-
-## Provenance
-
-Concepts generated 2026-09-02 with SpriteCook (`gpt-image-2`, 2K, medium),
-project "FINCH Brand" (`7790adbe-5286-4e4c-b569-76173b2f7c76`):
-
-- single-bird job `4c728d89-8b71-4d3b-aeb9-78b15996a805` → winner asset
-  `b38ace9c-9299-4c1b-b898-221e1dab6fab` (`finch-mark-source.png`)
-- murmuration job `82f43e20-6a3c-4131-b086-b294a93aeb61`
-
-The production SVG was drawn by hand against the winning concept (overlay-
-checked at 20/32/64px, reversed, and in lockup) — the raster is reference,
-the vector is the brand.
+- **Clearspace:** at least half the mark's height on all sides.
+- **Minimum size:** 14px. The favicon uses slightly heavier nodes for 16px tabs.
+- Never rotate, stretch, re-space or recolour individual satellite nodes; never
+  add outlines, shadows or glow.

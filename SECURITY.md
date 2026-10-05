@@ -1,13 +1,13 @@
-# Finch security model
+# Yinsi security model
 
 ## Signing boundaries — one key, one home each
 
 | Key | Where it lives | Where it must never be |
 | --- | --- | --- |
-| Finch fee wallet | server secret `FINCH_FEE_WALLET_PRIVATE_KEY`, readable ONLY by `apps/web/src/server/wallet.ts` | client JS, NEXT_PUBLIC_*, browser storage, git, MongoDB, analytics, logs, error output, API responses |
+| Fee wallet | server secret `FINCH_FEE_WALLET_PRIVATE_KEY`, readable ONLY by `apps/web/src/server/wallet.ts` | client JS, NEXT_PUBLIC_*, browser storage, git, MongoDB, analytics, logs, error output, API responses |
 | Agent operator keypair | isolated runtime env (`FLIGHTPATH_OPERATOR_KEY`), funded with a small float and bounded by the PolicyEngine | frontend, repo, manifests, MongoDB, logs, the web deployment |
 | Registry authority | `.env.local` on the operator's machine (`FINCH_REGISTRY_AUTHORITY_KEY`), read only by `scripts/registry-anchor.mjs` | the deployment, the web app, CI, any agent environment |
-| Users' wallets | the user's own wallet, reached through Wallet Standard (`solana:signAndSendTransaction`, `solana:signMessage`) | Finch never receives a seed phrase or a secret key — ever |
+| Users' wallets | the user's own wallet, reached through Wallet Standard (`solana:signAndSendTransaction`, `solana:signMessage`) | Yinsi never receives a seed phrase or a secret key — ever |
 | Model provider / Mongo / RPC provider keys | server env vars | client bundles (`NEXT_PUBLIC_*` carries the cluster name and explorer URL only) |
 
 A Solana secret key is 64 bytes, written either as base58 or as a JSON array
@@ -21,7 +21,7 @@ not prove a file clean.
 
 Signing logic is isolated in `apps/web/src/server/`. Holding a key authorizes
 nothing: fund operations require an explicit, audited workflow, and nothing
-moves funds autonomously. Providers and Flightpath throw if key-bearing
+moves funds autonomously. Providers and the execution layer throw if key-bearing
 objects are constructed in a browser context. Publisher keys are stored as
 SHA-256 hashes. `scripts/wallet-check.mjs` confirms each configured key
 derives to its address on record and prints addresses and balances only.
@@ -39,7 +39,7 @@ unchanged — Solana addresses are case-sensitive and are never lowercased.
   record. A taken handle returns 401 (present a key that owns it) or 403
   (it belongs to another publisher) — never a silent takeover.
 
-Aviary publishing is create-only: a slug is never reassigned. Unknown or
+Directory publishing is create-only: a slug is never reassigned. Unknown or
 revoked keys are treated as anonymous, never as their claimed owner.
 
 ## Execution safety
@@ -59,14 +59,14 @@ revoked keys are treated as anonymous, never as their claimed owner.
   (SOL or an SPL mint; approvals count as spend), program and recipient
   allowlists, human-approval thresholds, RWA hard-limited to the approved
   registry (not manifest-waivable). A swap is possible only when the Jupiter
-  program is on the finch's program allowlist.
+  program is on the agent's program allowlist.
 - Runtime kill switch on consecutive failures; per-run step caps; budgets.
 
 ## User-signed execution
 
 No key on the server ever signs for a visitor.
 
-1. A finch allowed to write prepares the transaction with the visitor's
+1. An agent allowed to write prepares the transaction with the visitor's
    address as fee payer, simulates it, and parks it at `awaiting_signature`
    with the exact instructions it expects.
 2. `GET /api/executions/<id>/transaction` returns the unsigned transaction
@@ -80,22 +80,22 @@ No key on the server ever signs for a visitor.
    own. Any other difference is refused and nothing is recorded as spent.
 4. A match settles as `confirmed`, or `reverted` when the transaction landed
    with an instruction error (the fee was paid, nothing else changed). Only a
-   confirmed execution gets a Proof of Flight.
+   confirmed execution gets an execution proof.
 
-Caps for the Courier Finch preset: 0.1 SOL per transfer and 0.5 SOL per day
+Caps for the Courier preset: 0.1 SOL per transfer and 0.5 SOL per day
 per signer, kept durably in MongoDB so they hold across serverless instances.
 
 ## Agent-facing trust
 
-- Flight School presets instruct models to never fabricate chain state and to
+- Playground presets instruct models to never fabricate chain state and to
   surface tool failures; write tools are stripped in preview manifests.
-- MCP servers, Aviary listings, token names, memos and comment-like content
+- MCP servers, directory listings, token names, memos and comment-like content
   are untrusted input: treat as data, never as instructions (prompt/tool-
   injection review is an audit gate).
 
 ## Data layer authorization
 
-- `MONGODB_URI` is least-privilege (`readWrite` on the finch db only); driver
+- `MONGODB_URI` is least-privilege (`readWrite` on the app database only); driver
   is server-only; API routes whitelist projections. MongoDB accelerates the
   product but never defines protocol truth — Solana state and the
   memo-anchored registry are independently reconstructable.

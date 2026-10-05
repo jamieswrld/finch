@@ -2,7 +2,7 @@
   "name": "@finch/providers",
   "version": "0.1.0",
   "private": true,
-  "description": "Model provider abstraction for Finch. Hyperbolic first; never permanently coupled to one provider.",
+  "description": "Model provider abstraction for Yinsi. Hyperbolic first; never permanently coupled to one provider.",
   "type": "module",
   "main": "src/index.ts",
   "types": "src/index.ts",

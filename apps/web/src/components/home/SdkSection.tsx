@@ -1,9 +1,10 @@
 import { CodeBlock } from "@/components/ui/CodeBlock";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 
-const SDK_SAMPLE = `import { createFinch, hyperbolic } from "@finch/sdk";
+// The builder's real API, verbatim — its identifiers are the package's own.
+const SDK_SAMPLE = `import { createAgent, hyperbolic } from "@finch/sdk";
 
-const nest = await createFinch("market-watcher")
+const agent = await createAgent("market-watcher")
   .describe("Watches a few Solana mints; reports notable changes.")
   .model(hyperbolic("meta-llama/Llama-3.3-70B-Instruct"))
   .memory({ kind: "mongo-vector", namespace: "market-watcher" })
@@ -14,9 +15,9 @@ const nest = await createFinch("market-watcher")
     allowedPrograms: [], // no raw program calls
     approvalThreshold: 0.5, // larger spends wait for a human
   })
-  .hatch();
+  .launch();
 
-const result = await nest.run("Summarize portfolio drift since Friday.");`;
+const result = await agent.run("Summarize portfolio drift since Friday.");`;
 
 const CAPABILITIES = [
   {
@@ -29,7 +30,7 @@ const CAPABILITIES = [
   },
   {
     title: "Tools",
-    body: "Flightpath's Solana tools plus anything published in the Aviary. Typed schemas, permission-tagged.",
+    body: "The execution layer's Solana tools plus anything published in the directory. Typed schemas, permission-tagged.",
   },
   {
     title: "Wallet permissions",
@@ -41,13 +42,13 @@ export function SdkSection() {
   return (
     <section className="container-page py-20" id="sdk">
       <SectionHeading
-        index="06"
-        kicker="Finch SDK"
-        title="Create a finch the way you'd describe one."
-        lede="TypeScript-first. A finch is a portable finch.json manifest — the SDK and the visual Finch Builder emit the same document, so anything you build can be exported, forked and self-hosted."
+        index="04"
+        kicker="SDK"
+        title="Create an agent the way you'd describe one."
+        lede="TypeScript-first. An agent is a portable JSON manifest — the SDK and the visual agent builder emit the same document, so anything you build can be exported, forked and self-hosted."
       />
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-        <CodeBlock title="hatch.ts — the whole idea" code={SDK_SAMPLE} />
+        <CodeBlock title="agent.ts — the whole idea" code={SDK_SAMPLE} />
         <dl className="grid grid-cols-1 gap-px overflow-hidden rounded-xs border border-line bg-line sm:grid-cols-2">
           {CAPABILITIES.map((capability) => (
             <div key={capability.title} className="bg-bone-raised p-5">

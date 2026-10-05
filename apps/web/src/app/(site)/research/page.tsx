@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { Badge } from "@/components/ui/Badge";
 import { SectionHeading } from "@/components/ui/SectionHeading";
-import { BENCHMARKS, EXPERIMENTS, FIPS, GRANT_TRACKS, OPEN_PROBLEMS } from "@/lib/research-content";
+import { BENCHMARKS, EXPERIMENTS, GRANT_TRACKS, OPEN_PROBLEMS, PROPOSALS } from "@/lib/research-content";
 
 export const metadata: Metadata = {
   title: "Research",
   description:
-    "Finch's open research program: experiments in agent coordination, benchmark suites, open problems, grants and Finch Improvement Proposals.",
+    "Yinsi's open research program: experiments in agent coordination, benchmark suites, open problems, grants and improvement proposals.",
 };
 
 const STATUS_TONE = {
@@ -26,7 +26,7 @@ export default function ResearchPage() {
         </p>
         <h1 className="mt-4 text-[36px] leading-[1.05] font-semibold tracking-[-0.02em] md:text-[48px]">Research</h1>
         <p className="mt-4 text-[15px] leading-relaxed text-ink-soft">
-          Agent coordination and onchain intelligence are open problems, and Finch treats them that way: experiments
+          Agent coordination and onchain intelligence are open problems, and Yinsi treats them that way: experiments
           run in public, benchmark methodology is published before numbers are, and the protocol grows through
           written proposals. No result on this page will ever appear before its run does.
         </p>
@@ -34,7 +34,7 @@ export default function ResearchPage() {
 
       {/* experiments */}
       <section id="experiments" className="scroll-mt-24 pt-16">
-        <SectionHeading index="01" kicker="Experiments" title="What the lab is flying right now." />
+        <SectionHeading index="01" kicker="Experiments" title="What the lab is running right now." />
         <div className="grid grid-cols-1 gap-px overflow-hidden rounded-xs border border-line bg-line md:grid-cols-2">
           {EXPERIMENTS.map((experiment) => (
             <article key={experiment.id} className="bg-bone-raised p-5">
@@ -56,7 +56,7 @@ export default function ResearchPage() {
           index="02"
           kicker="Benchmarks"
           title="Methodology first, numbers second."
-          lede="Suites are defined and versioned before any results are published — pre-registration for agents. First public runs land with the Flightpath devnet release."
+          lede="Suites are defined and versioned before any results are published — pre-registration for agents. First public runs land with the execution layer's devnet release."
         />
         <div className="overflow-x-auto rounded-xs border border-line">
           <table className="w-full min-w-[720px] border-collapse bg-bone text-left">
@@ -107,8 +107,8 @@ export default function ResearchPage() {
         <SectionHeading
           index="04"
           kicker="Grants"
-          title="The treasury funds the questions."
-          lede="Grant allocations are denominated in $FINCH and open after token launch; the tracks and review criteria are public now so builders can start early."
+          title="Funding for the open questions."
+          lede="The tracks and review criteria are public now so builders can start early. Amounts and the application window are not set yet — nothing here is a commitment of funds."
         />
         <div className="grid grid-cols-1 gap-px overflow-hidden rounded-xs border border-line bg-line sm:grid-cols-2 lg:grid-cols-4">
           {GRANT_TRACKS.map((grant) => (
@@ -120,27 +120,27 @@ export default function ResearchPage() {
           ))}
         </div>
         <p className="mt-3 font-mono text-[10.5px] text-grey-faint">
-          applications open at launch · draft proposals welcome in the meantime — see the fip process below
+          applications are not open yet · draft proposals welcome in the meantime — see the proposal process below
         </p>
       </section>
 
-      {/* FIPs */}
-      <section id="fips" className="scroll-mt-24 pt-16">
+      {/* improvement proposals */}
+      <section id="proposals" className="scroll-mt-24 pt-16">
         <SectionHeading
           index="05"
-          kicker="Finch Improvement Proposals"
+          kicker="Improvement proposals"
           title="The protocol changes in writing."
-          lede="A FIP is a short design document: motivation, specification, security considerations. Anything that touches manifests, execution, fees or the registry goes through one."
+          lede="A YIP — Yinsi improvement proposal — is a short design document: motivation, specification, security considerations. Anything that touches manifests, execution, fees or the registry goes through one."
         />
         <ol className="space-y-px overflow-hidden rounded-xs border border-line bg-line">
-          {FIPS.map((fip) => (
-            <li key={fip.id} className="flex flex-col gap-2 bg-bone-raised p-5 sm:flex-row sm:items-baseline sm:gap-6">
-              <span className="label-mono w-14 shrink-0 text-green-deep">{fip.id}</span>
+          {PROPOSALS.map((proposal) => (
+            <li key={proposal.id} className="flex flex-col gap-2 bg-bone-raised p-5 sm:flex-row sm:items-baseline sm:gap-6">
+              <span className="label-mono w-14 shrink-0 text-green-deep">{proposal.id}</span>
               <div className="min-w-0 flex-1">
-                <h3 className="text-[15px] font-semibold tracking-[-0.01em] text-ink">{fip.title}</h3>
-                <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-ink-soft">{fip.summary}</p>
+                <h3 className="text-[15px] font-semibold tracking-[-0.01em] text-ink">{proposal.title}</h3>
+                <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-ink-soft">{proposal.summary}</p>
               </div>
-              <Badge tone={STATUS_TONE[fip.status]}>{fip.status.replace("-", " · ")}</Badge>
+              <Badge tone={STATUS_TONE[proposal.status]}>{proposal.status.replace("-", " · ")}</Badge>
             </li>
           ))}
         </ol>

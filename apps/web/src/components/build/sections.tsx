@@ -2,17 +2,17 @@
 
 import { FLIGHTPATH_TOOLS } from "@finch/flightpath";
 import { HYPERBOLIC_MODELS } from "@finch/providers";
-import { DartGlyph, FinchGlyph } from "@/components/birds/FinchGlyph";
+import { AgentGlyph, DartGlyph } from "@/components/brand/AgentGlyph";
 import { Badge } from "@/components/ui/Badge";
 import { Field, NumberInput, OptionRow, Select, TextArea, TextInput, Toggle } from "./fields";
-import { slugify, type FinchDraft } from "./draft";
+import { slugify, type AgentDraft } from "./draft";
 
-type Update = (patch: (draft: FinchDraft) => FinchDraft) => void;
+type Update = (patch: (draft: AgentDraft) => AgentDraft) => void;
 
-export function IdentitySection({ draft, update }: { draft: FinchDraft; update: Update }) {
+export function IdentitySection({ draft, update }: { draft: AgentDraft; update: Update }) {
   return (
     <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-      <Field label="name" htmlFor="nb-name" hint="Displayed everywhere the finch appears.">
+      <Field label="name" htmlFor="nb-name" hint="Displayed everywhere the agent appears.">
         <TextInput
           id="nb-name"
           value={draft.identity.name}
@@ -43,7 +43,7 @@ export function IdentitySection({ draft, update }: { draft: FinchDraft; update: 
         />
       </Field>
       <div className="md:col-span-2">
-        <Field label="description" htmlFor="nb-desc" hint="One or two sentences; shown in the Aviary and nest views.">
+        <Field label="description" htmlFor="nb-desc" hint="One or two sentences; shown in the directory and swarm views.">
           <TextArea
             id="nb-desc"
             rows={2}
@@ -57,7 +57,7 @@ export function IdentitySection({ draft, update }: { draft: FinchDraft; update: 
         <Field
           label="instructions"
           htmlFor="nb-instructions"
-          hint="System instructions the model receives on every run. Be precise about what the finch must and must not do."
+          hint="System instructions the model receives on every run. Be precise about what the agent must and must not do."
         >
           <TextArea
             id="nb-instructions"
@@ -70,7 +70,7 @@ export function IdentitySection({ draft, update }: { draft: FinchDraft; update: 
           />
         </Field>
       </div>
-      <Field label="glyph" hint="How this finch renders in diagrams.">
+      <Field label="glyph" hint="How this agent renders in diagrams.">
         <div className="flex gap-2" role="radiogroup" aria-label="Glyph">
           {(["finch-01", "finch-02", "finch-03"] as const).map((glyph, index) => (
             <button
@@ -83,7 +83,7 @@ export function IdentitySection({ draft, update }: { draft: FinchDraft; update: 
                 draft.identity.glyph === glyph ?"border-green-deep bg-green-wash/40 text-green-deep" : "border-line text-ink-soft hover:border-line-strong"
               }`}
             >
-              {index === 0 ? <FinchGlyph size={20} /> : <DartGlyph size={16} angle={index === 1 ? -18 : 8} />}
+              {index === 0 ? <AgentGlyph size={20} /> : <DartGlyph size={16} angle={index === 1 ? -18 : 8} />}
             </button>
           ))}
         </div>
@@ -92,7 +92,7 @@ export function IdentitySection({ draft, update }: { draft: FinchDraft; update: 
   );
 }
 
-export function ModelSection({ draft, update }: { draft: FinchDraft; update: Update }) {
+export function ModelSection({ draft, update }: { draft: AgentDraft; update: Update }) {
   return (
     <div className="grid grid-cols-1 gap-5">
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Provider">
@@ -100,13 +100,13 @@ export function ModelSection({ draft, update }: { draft: FinchDraft; update: Upd
           checked={draft.model.provider === "hyperbolic"}
           onSelect={() => update((d) => ({ ...d, model: { ...d.model, provider: "hyperbolic" } }))}
           title="Hyperbolic"
-          description="Finch's first compute provider. Open models, serverless."
+          description="Yinsi's first compute provider. Open models, serverless."
         />
         <OptionRow
           checked={draft.model.provider === "openai-compatible"}
           onSelect={() => update((d) => ({ ...d, model: { ...d.model, provider: "openai-compatible" } }))}
           title="OpenAI-compatible"
-          description="Any endpoint speaking the standard — the no-lock-in escape hatch."
+          description="Any endpoint speaking the standard — no lock-in."
         />
       </div>
 
@@ -162,7 +162,7 @@ export function ModelSection({ draft, update }: { draft: FinchDraft; update: Upd
   );
 }
 
-export function MemorySection({ draft, update }: { draft: FinchDraft; update: Update }) {
+export function MemorySection({ draft, update }: { draft: AgentDraft; update: Update }) {
   return (
     <div className="grid grid-cols-1 gap-5">
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Memory kind">
@@ -187,7 +187,7 @@ export function MemorySection({ draft, update }: { draft: FinchDraft; update: Up
       </div>
       {draft.memory.kind === "mongo-vector" && (
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-          <Field label="namespace" htmlFor="nb-ns" hint="Defaults to the finch handle. Namespaces isolate recall.">
+          <Field label="namespace" htmlFor="nb-ns" hint="Defaults to the agent handle. Namespaces isolate recall.">
             <TextInput
               id="nb-ns"
               value={draft.memory.namespace}
@@ -210,7 +210,7 @@ export function MemorySection({ draft, update }: { draft: FinchDraft; update: Up
   );
 }
 
-export function ToolsSection({ draft, update }: { draft: FinchDraft; update: Update }) {
+export function ToolsSection({ draft, update }: { draft: AgentDraft; update: Update }) {
   const readTools = FLIGHTPATH_TOOLS.filter((tool) => tool.mode === "read");
   const writeTools = FLIGHTPATH_TOOLS.filter((tool) => tool.mode === "write");
   const operator = draft.wallet.mode === "operator";
@@ -220,9 +220,9 @@ export function ToolsSection({ draft, update }: { draft: FinchDraft; update: Upd
       ...d,
       tools: {
         ...d.tools,
-        flightpath: d.tools.flightpath.includes(name)
-          ? d.tools.flightpath.filter((tool) => tool !== name)
-          : [...d.tools.flightpath, name],
+        catalog: d.tools.catalog.includes(name)
+          ? d.tools.catalog.filter((tool) => tool !== name)
+          : [...d.tools.catalog, name],
       },
     }));
 
@@ -234,7 +234,7 @@ export function ToolsSection({ draft, update }: { draft: FinchDraft; update: Upd
       <input
         type="checkbox"
         disabled={disabled}
-        checked={draft.tools.flightpath.includes(tool.name)}
+        checked={draft.tools.catalog.includes(tool.name)}
         onChange={() => toggleTool(tool.name)}
         className="mt-1 size-3.5 accent-[#0a7227]"
       />
@@ -262,21 +262,21 @@ export function ToolsSection({ draft, update }: { draft: FinchDraft; update: Upd
         </div>
         {!operator && (
           <p className="mt-2 text-[11.5px] text-grey">
-            Write tools unlock when the wallet section grants operator mode — and are stripped again at hatch if it
+            Write tools unlock when the wallet section grants operator mode — and are stripped again at launch if it
             doesn't.
           </p>
         )}
       </div>
       <div className="lg:col-span-2">
-        <p className="label-mono">aviary services</p>
+        <p className="label-mono">directory services</p>
         <p className="mt-1 text-[11.5px] leading-relaxed text-gold-deep">
           Attached services are recorded in the manifest and travel with it, but the runtime does not call them yet —
-          service resolution ships with the Aviary service protocol. A hatched finch reports them as unresolved rather
-          than pretending the attachment took effect.
+          service resolution ships with the directory service protocol. A launched agent reports them as unresolved
+          rather than pretending the attachment took effect.
         </p>
         {draft.tools.services.length === 0 ? (
           <p className="mt-2 text-[12.5px] text-grey">
-            None attached. Browse the Aviary and press “Add to a finch” on any listing — it lands here.
+            None attached. Browse the directory and press “Add to an agent” on any listing — it lands here.
           </p>
         ) : (
           <ul className="mt-2 flex flex-wrap gap-2">
@@ -305,7 +305,7 @@ export function ToolsSection({ draft, update }: { draft: FinchDraft; update: Upd
   );
 }
 
-export function PermissionsSection({ draft, update }: { draft: FinchDraft; update: Update }) {
+export function PermissionsSection({ draft, update }: { draft: AgentDraft; update: Update }) {
   const operator = draft.wallet.mode === "operator";
   return (
     <div className="grid grid-cols-1 gap-5">
@@ -370,7 +370,7 @@ export function PermissionsSection({ draft, update }: { draft: FinchDraft; updat
   );
 }
 
-export function WalletSection({ draft, update }: { draft: FinchDraft; update: Update }) {
+export function WalletSection({ draft, update }: { draft: AgentDraft; update: Update }) {
   return (
     <div className="grid grid-cols-1 gap-5">
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Wallet mode">
@@ -444,7 +444,7 @@ export function WalletSection({ draft, update }: { draft: FinchDraft; update: Up
           </Field>
           <p className="rounded-xs border border-gold/40 bg-gold/10 p-3 text-[12px] leading-relaxed text-gold-deep">
             The operator key never lives in a manifest, a browser, or this site. It is injected into the runtime
-            environment that hatches this finch, and it is never the treasury key.
+            environment that launches this agent, and it is never the treasury key.
           </p>
         </>
       )}
@@ -452,7 +452,7 @@ export function WalletSection({ draft, update }: { draft: FinchDraft; update: Up
   );
 }
 
-export function TriggersSection({ draft, update }: { draft: FinchDraft; update: Update }) {
+export function TriggersSection({ draft, update }: { draft: AgentDraft; update: Update }) {
   return (
     <div className="grid grid-cols-1 gap-4">
       <div className="flex items-center justify-between rounded-xs border border-line bg-bone p-3">
@@ -505,14 +505,14 @@ export function TriggersSection({ draft, update }: { draft: FinchDraft; update: 
 
       <p className="text-[11.5px] text-grey">
         Cron and webhook triggers are <strong className="font-semibold text-ink">recorded in the manifest</strong> for
-        your own runtime to act on — nothing on Finch schedules or receives them yet, and onchain event triggers arrive
-        with the Flightpath indexer. Manual is the only trigger this product acts on today.
+        your own runtime to act on — nothing on Yinsi schedules or receives them yet, and onchain event triggers arrive
+        with the execution layer's indexer. Manual is the only trigger this product acts on today.
       </p>
     </div>
   );
 }
 
-export function BudgetSection({ draft, update }: { draft: FinchDraft; update: Update }) {
+export function BudgetSection({ draft, update }: { draft: AgentDraft; update: Update }) {
   return (
     <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
       <Field label="max actions / day" htmlFor="nb-actions">
@@ -524,7 +524,7 @@ export function BudgetSection({ draft, update }: { draft: FinchDraft; update: Up
           onChange={(event) => update((d) => ({ ...d, budget: { ...d.budget, maxActionsPerDay: Number(event.target.value) } }))}
         />
       </Field>
-      <Field label="compute credits / day" htmlFor="nb-credits" hint="Daily compute ceiling for this finch. Nothing is paid in $FINCH.">
+      <Field label="compute credits / day" htmlFor="nb-credits" hint="Daily compute ceiling for this agent.">
         <NumberInput
           id="nb-credits"
           min={1}
@@ -544,7 +544,7 @@ export function BudgetSection({ draft, update }: { draft: FinchDraft; update: Up
           onChange={(event) => update((d) => ({ ...d, budget: { ...d.budget, maxToolStepsPerRun: Number(event.target.value) } }))}
         />
       </Field>
-      <Field label="kill switch — consecutive failures" htmlFor="nb-kill" hint="The nest stops itself after this many failed tool steps in a row.">
+      <Field label="kill switch — consecutive failures" htmlFor="nb-kill" hint="The agent stops itself after this many failed tool steps in a row.">
         <NumberInput
           id="nb-kill"
           min={1}
@@ -559,7 +559,7 @@ export function BudgetSection({ draft, update }: { draft: FinchDraft; update: Up
   );
 }
 
-export function DeploymentSection({ draft, update }: { draft: FinchDraft; update: Update }) {
+export function DeploymentSection({ draft, update }: { draft: AgentDraft; update: Update }) {
   return (
     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Runtime">
       <OptionRow
@@ -573,8 +573,8 @@ export function DeploymentSection({ draft, update }: { draft: FinchDraft; update
         onSelect={() => {}}
         disabled
         tag="waitlist"
-        title="Finch Cloud"
-        description="Managed nests on Finch infrastructure. Opens with the hosted runtime."
+        title="Yinsi Cloud"
+        description="Managed swarms on Yinsi infrastructure. Opens with the hosted runtime."
       />
     </div>
   );

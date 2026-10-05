@@ -2,12 +2,12 @@ import type { NestDoc } from "@finch/db";
 import { safeValidateNestManifest, type NestManifest } from "@finch/sdk";
 
 /**
- * Lift a composed diagram into a real, runnable nest.manifest/0.1.
+ * Lift a composed diagram into a real, runnable nest.manifest/0.1 (a swarm).
  *
  * The composer draws stages, nodes and channels. That drawing is not runnable
- * on its own — a nest needs each member to be a full finch manifest and each
+ * on its own — a swarm needs each member to be a full agent manifest and each
  * task to carry an instruction. This fills those in from the drawing (role
- * becomes the finch's instructions, declared inputs become {{channel}}
+ * becomes the agent's instructions, declared inputs become {{channel}}
  * references) and validates the result, so what you export is the same
  * document runNest() executes rather than a picture of one.
  */
@@ -17,9 +17,9 @@ const MODEL = { provider: "hyperbolic", model: "meta-llama/Llama-3.3-70B-Instruc
 const HONESTY =
   "\nYou run in PREVIEW mode: read-only, no wallet, no transactions. Report tool results exactly — if something is " +
   "unconfigured, unreachable or empty, say so. Never invent chain state. Be concise and structured; downstream " +
-  "finches consume your output.";
+  "agents consume your output.";
 
-/** Map the composer's permission chips to read-only Flightpath tools. */
+/** Map the composer's permission chips to read-only execution-layer tools. */
 function toolsFor(permissions: string[]): string[] {
   const tools = new Set<string>();
   for (const permission of permissions) {
@@ -48,15 +48,15 @@ export interface LiftResult {
   notes: string[];
 }
 
-export function liftComposedNest(nest: NestDoc): LiftResult {
+export function liftComposedNest(swarm: NestDoc): LiftResult {
   const notes: string[] = [];
-  const nodes = nest.stages.flatMap((stage) => stage.finches);
+  const nodes = swarm.stages.flatMap((stage) => stage.finches);
 
   if (nodes.length === 0) {
-    return { ok: false, issues: [{ path: "stages", message: "a nest needs at least one finch" }], notes };
+    return { ok: false, issues: [{ path: "stages", message: "a swarm needs at least one agent" }], notes };
   }
 
-  const finches = nodes.map((node) => {
+  const members = nodes.map((node) => {
     const tools = toolsFor(node.permissions);
     if (node.permissions.some((permission) => permission.startsWith("wallet:") || permission.startsWith("veto:"))) {
       notes.push(
@@ -99,7 +99,7 @@ export function liftComposedNest(nest: NestDoc): LiftResult {
   // upstream channels are interpolated into the instruction.
   const taskIdOf = new Map(nodes.map((node, index) => [node.handle, `t${index + 1}`]));
   const tasks = nodes.map((node) => {
-    const incoming = nest.edges.filter((edge) => edge.to === node.handle);
+    const incoming = swarm.edges.filter((edge) => edge.to === node.handle);
     const dependsOn = incoming
       .map((edge) => taskIdOf.get(edge.from))
       .filter((id): id is string => Boolean(id));
@@ -121,17 +121,17 @@ export function liftComposedNest(nest: NestDoc): LiftResult {
   const candidate = {
     schema: "nest.manifest/0.1",
     identity: {
-      id: nest.slug,
-      name: nest.name,
-      objective: nest.description || `Coordinate ${nodes.length} finches toward the objective of ${nest.name}.`,
-      description: nest.description,
+      id: swarm.slug,
+      name: swarm.name,
+      objective: swarm.description || `Coordinate ${nodes.length} agents toward the objective of ${swarm.name}.`,
+      description: swarm.description,
     },
     coordinator: {
       model: { provider: MODEL.provider, model: MODEL.model, temperature: 0.2 },
       instructions: "Synthesize the member outputs into one answer to the objective.",
       synthesize: true,
     },
-    finches,
+    finches: members,
     tasks,
     executionPolicy: { mode: "preview", maxParallel: 3, maxTotalTokens: 120_000, maxTaskFailures: 2, taskTimeoutMs: 120_000 },
   };

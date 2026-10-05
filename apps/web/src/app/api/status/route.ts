@@ -62,7 +62,7 @@ export async function GET(): Promise<Response> {
       latencyMs: network.latencyMs,
       error: network.error,
     },
-    // The $FINCH mint Finch reads. Whether anything exists there is /api/token's job.
+    // The token mint, when one is configured (hidden until a new launch).
     token: { configured: mint !== null, mint },
     registry: { configured: registry.configured, authority: registry.authority ?? null },
     compute,

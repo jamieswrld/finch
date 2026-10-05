@@ -8,8 +8,8 @@
  * UTF-8 bytes: the wallet signs them, the route checks the ed25519 signature
  * over them, so one changed character on either side fails verification.
  */
-export const KEY_MESSAGE_PREFIX = "Finch publisher key";
+export const KEY_MESSAGE_PREFIX = "Yinsi publisher key";
 
 export function keyMessage(address: string, nonce: string): string {
-  return `${KEY_MESSAGE_PREFIX}\nAddress: ${address}\nNonce: ${nonce}\n\nSigning this issues a key for publishing to the Finch registry. It is not a transaction.`;
+  return `${KEY_MESSAGE_PREFIX}\nAddress: ${address}\nNonce: ${nonce}\n\nSigning this issues a key for publishing to the Yinsi registry. It is not a transaction.`;
 }

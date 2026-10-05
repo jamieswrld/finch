@@ -5,7 +5,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/runs — recent finch and nest runs.
+ * GET /api/runs — recent agent and swarm runs.
  *
  * `source` says where the history came from: "db" is durable, "memory" is a
  * bounded in-process buffer used when no database is configured. The UI shows

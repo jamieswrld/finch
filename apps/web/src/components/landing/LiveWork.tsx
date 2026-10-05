@@ -8,8 +8,8 @@ import { useFetch } from "@/lib/use-fetch";
  *
  * It used to print the network name, a cluster label and "status online". That is
  * plumbing — it proves a server answered a ping, which is true of every
- * website. This says what the protocol has executed instead: nests defined,
- * finches published, tasks run, proofs signed, and the last thing a nest was
+ * website. This says what the protocol has executed instead: swarms defined,
+ * agents published, tasks run, proofs signed, and the last thing a swarm was
  * actually asked to do.
  *
  * Nothing here is invented. At zero traffic it does not print a zero and call
@@ -101,11 +101,11 @@ export function LiveWork() {
   return (
     <div className="flex flex-col items-center gap-3">
       <div className="flex items-center gap-7 sm:gap-9">
-        <Metric value={counts.nests} label="nests" hint="Coordinated swarms defined in the registry" />
-        <Metric value={counts.finches} label="finches" hint="Individual agents published to the Aviary" />
+        <Metric value={counts.nests} label="swarms" hint="Coordinated swarms defined in the registry" />
+        <Metric value={counts.finches} label="agents" hint="Individual agents published to the directory" />
         <Metric value={counts.runs} label="runs" hint="Executions this protocol has carried out" />
         <Metric value={counts.tasks} label="tasks" hint="Individual tasks dispatched inside those runs" />
-        <Metric value={counts.proofs} label="proofs" hint="Signed Proof of Flight receipts for confirmed executions" />
+        <Metric value={counts.proofs} label="proofs" hint="Signed execution proofs for confirmed executions" />
       </div>
 
       {hasWork ? (

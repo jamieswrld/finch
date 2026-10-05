@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
  *
  * Rule from the spec: never invent numbers. These are actual counts of what
  * the registry currently holds (labeled seed pre-launch, live from MongoDB /
- * the onchain registry after). If the protocol contains 8 finches, show 8.
+ * the onchain registry after). If the protocol contains 8 agents, show 8.
  */
 export async function GET(): Promise<Response> {
   if (isDbConfigured()) {

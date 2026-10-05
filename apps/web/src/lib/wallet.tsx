@@ -24,9 +24,9 @@ import { walletChain } from "./chain";
  * The visitor's Solana wallet, through the Wallet Standard.
  *
  * Every wallet extension that implements the standard registers itself on the
- * page; this lists the ones that can do what Finch asks of a wallet — connect,
+ * page; this lists the ones that can do what Yinsi asks of a wallet — connect,
  * sign a plain message, and sign-and-send a transaction on this cluster — and
- * nothing else. Finch never holds a key for the visitor: the server prepares
+ * nothing else. Yinsi never holds a key for the visitor: the server prepares
  * a transaction, the wallet signs and sends it, and the only thing that comes
  * back here is the signature. The address and signatures go nowhere except
  * where a caller explicitly sends them.

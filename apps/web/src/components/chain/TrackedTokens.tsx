@@ -6,10 +6,10 @@ import { truncateAddress } from "@/lib/format";
 import { ErrorBlock, LoadingBlock } from "@/components/ui/StateBlocks";
 
 /**
- * SPL mints Finch tracks on Solana.
+ * SPL mints Yinsi tracks on Solana.
  *
  * Every value shown is read from the mint account during the request that
- * renders it. "Tracked" means exactly that Finch reads the mint — it asserts
+ * renders it. "Tracked" means exactly that Yinsi reads the mint — it asserts
  * no endorsement, listing or affiliation with whoever created it, and the UI
  * says so rather than leaving the reader to assume.
  */
@@ -150,7 +150,7 @@ export function TrackedTokens() {
       </table>
 
       <p className="mt-3 font-mono text-[8.5px] text-grey-faint">
-        read live from Solana · tracked means Finch reads the mint — not an endorsement or affiliation
+        read live from Solana · tracked means Yinsi reads the mint — not an endorsement or affiliation
       </p>
     </div>
   );

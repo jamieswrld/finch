@@ -11,15 +11,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/docs", priority: 0.7 },
     { path: "/research", priority: 0.5 },
     { path: "/app", priority: 0.9 },
-    { path: "/app/school", priority: 0.8 },
-    { path: "/app/aviary", priority: 0.8 },
-    { path: "/app/nests", priority: 0.8 },
+    { path: "/app/playground", priority: 0.8 },
+    { path: "/app/directory", priority: 0.8 },
+    { path: "/app/swarms", priority: 0.8 },
     { path: "/app/network", priority: 0.6 },
     { path: "/app/build", priority: 0.6 },
   ];
 
   const listings = REGISTRY_LISTINGS.map((listing) => ({
-    url: `${SITE_URL}/app/aviary/${listing.slug}`,
+    url: `${SITE_URL}/app/directory/${listing.slug}`,
     changeFrequency: "weekly" as const,
     priority: 0.4,
   }));

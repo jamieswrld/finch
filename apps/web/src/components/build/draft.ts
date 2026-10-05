@@ -1,12 +1,12 @@
 import { FLIGHTPATH_TOOLS } from "@finch/flightpath";
 
 /**
- * UI draft state for the Nest Builder. `toManifestCandidate` converts it into
+ * UI draft state for the agent builder. `toManifestCandidate` converts it into
  * a candidate FinchManifest; @finch/sdk's schema is the single validator —
  * the builder never invents its own rules.
  */
 
-export interface FinchDraft {
+export interface AgentDraft {
   identity: {
     name: string;
     handle: string;
@@ -28,7 +28,8 @@ export interface FinchDraft {
     retentionDays: number;
   };
   tools: {
-    flightpath: string[];
+    /** Execution-layer tool names; written to the manifest's `tools.flightpath`. */
+    catalog: string[];
     services: string[];
   };
   permissions: {
@@ -59,7 +60,7 @@ export interface FinchDraft {
   };
 }
 
-export function defaultDraft(): FinchDraft {
+export function defaultDraft(): AgentDraft {
   return {
     identity: { name: "", handle: "", handleTouched: false, description: "", instructions: "", glyph: "finch-01" },
     model: {
@@ -70,7 +71,7 @@ export function defaultDraft(): FinchDraft {
       maxTokens: 2048,
     },
     memory: { kind: "ephemeral", namespace: "", retentionDays: 90 },
-    tools: { flightpath: ["balance_native", "token_data", "portfolio_snapshot"], services: [] },
+    tools: { catalog: ["balance_native", "token_data", "portfolio_snapshot"], services: [] },
     permissions: { approvalThreshold: 50, useApprovalThreshold: true },
     wallet: { mode: "observer", nativePerDay: "0.25", nativePerTx: "0.1", allowedPrograms: "", allowedRecipients: "" },
     triggers: { cronEnabled: false, cronSchedule: "*/15 * * * *", webhookEnabled: false, webhookSlug: "" },
@@ -94,7 +95,7 @@ function parseAddressLines(value: string): string[] {
     .filter((line) => line.length > 0);
 }
 
-export function toManifestCandidate(draft: FinchDraft): Record<string, unknown> {
+export function toManifestCandidate(draft: AgentDraft): Record<string, unknown> {
   const model = draft.model.provider === "openai-compatible" ? draft.model.customModel : draft.model.model;
   const writesAllowed = draft.wallet.mode === "operator";
   const triggers: Array<Record<string, unknown>> = [{ kind: "manual" }];
@@ -125,7 +126,7 @@ export function toManifestCandidate(draft: FinchDraft): Record<string, unknown> 
           ? { kind: "ephemeral", maxItems: 64 }
           : { kind: "none" },
     tools: {
-      flightpath: draft.tools.flightpath,
+      flightpath: draft.tools.catalog,
       services: draft.tools.services.map((slug) => ({ slug })),
     },
     permissions: {
@@ -168,7 +169,7 @@ export const SECTIONS = [
 
 export type SectionId = (typeof SECTIONS)[number]["id"];
 
-export function sectionComplete(draft: FinchDraft, section: SectionId): boolean {
+export function sectionComplete(draft: AgentDraft, section: SectionId): boolean {
   switch (section) {
     case "identity":
       return draft.identity.name.length >= 2 && draft.identity.handle.length >= 2;
@@ -177,7 +178,7 @@ export function sectionComplete(draft: FinchDraft, section: SectionId): boolean 
     case "memory":
       return draft.memory.kind !== "mongo-vector" || (draft.memory.namespace || draft.identity.handle).length > 0;
     case "tools":
-      return draft.tools.flightpath.length + draft.tools.services.length > 0;
+      return draft.tools.catalog.length + draft.tools.services.length > 0;
     case "permissions":
       return true;
     case "wallet":

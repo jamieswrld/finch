@@ -6,7 +6,7 @@
 @source "../app";
 
 /*
-  FINCH design system.
+  Yinsi design system.
   Bone ground, near-black ink, a bright green as a working accent (never a
   wash), muted sage, small gold moments. Thin borders, 2px radii, tight
   spacing, editorial + technical type. No gradients, no glass, no glow.
@@ -133,7 +133,7 @@ body {
 
   /* landing entrance — killed globally under prefers-reduced-motion */
   .reveal {
-    animation: finch-rise 0.7s cubic-bezier(0.2, 0.6, 0.2, 1) both;
+    animation: yinsi-rise 0.7s cubic-bezier(0.2, 0.6, 0.2, 1) both;
   }
   .reveal-2 {
     animation-delay: 0.08s;
@@ -146,7 +146,7 @@ body {
   }
 }
 
-@keyframes finch-rise {
+@keyframes yinsi-rise {
   from {
     opacity: 0;
     transform: translateY(14px);
@@ -158,7 +158,7 @@ body {
 }
 
 /* terminal cursor */
-@keyframes finch-blink {
+@keyframes yinsi-blink {
   0%,
   49% {
     opacity: 1;
@@ -169,8 +169,8 @@ body {
   }
 }
 
-/* ambient finch crossing the corridor — slow, 26–34s cycles */
-@keyframes finch-cross-a {
+/* ambient agent cluster crossing the corridor — slow, 26–34s cycles */
+@keyframes yinsi-cross-a {
   0% {
     transform: translate(-6vw, 62vh) rotate(-10deg) scale(0.8);
     opacity: 0;
@@ -191,7 +191,7 @@ body {
   }
 }
 
-@keyframes finch-cross-b {
+@keyframes yinsi-cross-b {
   0% {
     transform: translate(104vw, 24vh) rotate(168deg) scale(0.6);
     opacity: 0;
@@ -225,31 +225,31 @@ body {
   }
 }
 
-/* Additional crossing paths. The hero flock reads as depth: far birds are
-   small, pale and slow; near birds are larger, darker and quicker. Each has
+/* Additional crossing paths. The hero swarm reads as depth: far clusters are
+   small, pale and slow; near clusters are larger, darker and quicker. Each has
    its own arc so the group never looks like a repeated sprite. */
-@keyframes finch-cross-c {
+@keyframes yinsi-cross-c {
   0% { transform: translate(-8vw, 34vh) rotate(-6deg) scale(0.5); opacity: 0; }
   10% { opacity: 0.3; }
   52% { transform: translate(48vw, 18vh) rotate(-12deg) scale(0.62); opacity: 0.3; }
   92% { opacity: 0.3; }
   100% { transform: translate(108vw, 8vh) rotate(-18deg) scale(0.5); opacity: 0; }
 }
-@keyframes finch-cross-d {
+@keyframes yinsi-cross-d {
   0% { transform: translate(106vw, 72vh) rotate(184deg) scale(0.72); opacity: 0; }
   9% { opacity: 0.42; }
   48% { transform: translate(46vw, 44vh) rotate(192deg) scale(0.9); opacity: 0.42; }
   90% { opacity: 0.42; }
   100% { transform: translate(-10vw, 26vh) rotate(200deg) scale(0.7); opacity: 0; }
 }
-@keyframes finch-cross-f {
+@keyframes yinsi-cross-f {
   0% { transform: translate(-9vw, 84vh) rotate(-20deg) scale(0.95); opacity: 0; }
   7% { opacity: 0.5; }
   46% { transform: translate(44vw, 62vh) rotate(-26deg) scale(1.15); opacity: 0.5; }
   93% { opacity: 0.5; }
   100% { transform: translate(109vw, 40vh) rotate(-32deg) scale(0.95); opacity: 0; }
 }
-@keyframes finch-cross-g {
+@keyframes yinsi-cross-g {
   0% { transform: translate(103vw, 8vh) rotate(172deg) scale(0.38); opacity: 0; }
   14% { opacity: 0.2; }
   58% { transform: translate(52vw, 24vh) rotate(178deg) scale(0.46); opacity: 0.2; }
@@ -258,36 +258,36 @@ body {
 }
 
 /* ── Corridor motion ──────────────────────────────────────────────────────
-   The hero was a still drawing with birds passing over it. These give the
+   The hero was a still drawing with clusters passing over it. These give the
    drawing itself a pulse. Everything animates transform, opacity or
    stroke-dashoffset only, so it stays on the compositor and off the main
    thread; the reduced-motion block above neutralises all of it. */
 
-/* Data in transit along the flightpath. */
-@keyframes finch-dash-flow {
+/* Data in transit along the route. */
+@keyframes yinsi-dash-flow {
   to { stroke-dashoffset: -180; }
 }
 
-/* The waypoint where the flightpath crosses the corridor throat. */
-@keyframes finch-node-pulse {
+/* The waypoint where the route crosses the corridor throat. */
+@keyframes yinsi-node-pulse {
   0%, 100% { r: 3; opacity: 0.75; }
   50% { r: 4.4; opacity: 0.35; }
 }
 
 /* A signal ring leaving the waypoint and dissipating. */
-@keyframes finch-ping {
+@keyframes yinsi-ping {
   0% { r: 3; opacity: 0.5; }
   100% { r: 26; opacity: 0; }
 }
 
 /* Barely-there breathing so the corridor never reads as a static JPEG. */
-@keyframes finch-corridor-drift {
+@keyframes yinsi-corridor-drift {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.012); }
 }
 
 /* Light travelling down a corridor edge ray. */
-@keyframes finch-ray-sweep {
+@keyframes yinsi-ray-sweep {
   0% { opacity: 0; stroke-dashoffset: 0; }
   18% { opacity: 0.5; }
   70% { opacity: 0; }

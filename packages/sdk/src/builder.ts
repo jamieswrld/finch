@@ -153,6 +153,11 @@ export class FinchBuilder {
       memory: options.memory ?? this.memoryAdapter,
     });
   }
+
+  /** Launch the agent: the same as hatch(), under the name the docs use. */
+  launch(options: Partial<HatchOptions> = {}): Promise<Nest> {
+    return this.hatch(options);
+  }
 }
 
 export function createFinch(name: string): FinchBuilder {
@@ -163,3 +168,9 @@ export function createFinch(name: string): FinchBuilder {
 export async function hatchFromManifest(manifest: FinchManifest | FinchManifestInput, options: HatchOptions): Promise<Nest> {
   return Nest.hatch(finchManifestSchema.parse(manifest), options);
 }
+
+/** Start building an agent. Same as createFinch, under the name the docs use. */
+export const createAgent = createFinch;
+
+/** Launch an agent from a stored manifest. Same as hatchFromManifest. */
+export const launchFromManifest = hatchFromManifest;

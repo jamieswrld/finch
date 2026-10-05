@@ -7,7 +7,7 @@
  * renders in currentColor: this is a monochrome brand and vendor colours
  * would fight it.
  *
- * These are third-party trademarks shown to identify the software Finch runs
+ * These are third-party trademarks shown to identify the software Yinsi runs
  * on. They are not endorsements, and no affiliation is implied by their use.
  */
 

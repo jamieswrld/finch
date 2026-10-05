@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { AppShell } from "@/components/app/AppShell";
 
 export const metadata: Metadata = {
-  title: { default: "App", template: "%s · FINCH App" },
+  title: { default: "App", template: "%s · Yinsi App" },
 };
 
 /** The product surface — everything behind Launch App. */

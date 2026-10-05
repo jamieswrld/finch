@@ -56,7 +56,7 @@ export function describeGate(): PublishGate {
       token,
       // Whether or not the token exists changes nothing about the gate; never
       // imply publishing costs something.
-      reason: "Publishing is open and free. Sign for a publisher key with any Solana wallet and list what you build; the $FINCH gate is off until the network turns it on.",
+      reason: "Publishing is open and free. Sign for a publisher key with any Solana wallet and list what you build; the token gate is off until the network turns it on.",
     };
   }
   if (!token) {
@@ -65,7 +65,7 @@ export function describeGate(): PublishGate {
       mechanism: "hold",
       cost,
       token: null,
-      reason: "The $FINCH hold gate is switched on but no mint is configured, so publishing is closed until it is.",
+      reason: "The token hold gate is switched on but no mint is configured, so publishing is closed until it is.",
     };
   }
   return {
@@ -73,7 +73,7 @@ export function describeGate(): PublishGate {
     mechanism: "hold",
     cost,
     token,
-    reason: `Publishing requires holding at least ${Number(cost).toLocaleString()} $FINCH.`,
+    reason: `Publishing requires holding at least ${Number(cost).toLocaleString()} of the network token.`,
   };
 }
 
@@ -111,7 +111,7 @@ export async function checkPublisher(publisher: string | null | undefined): Prom
     return {
       ok: false,
       status: 400,
-      reason: "publishing requires the publisher's Solana address so the $FINCH balance can be checked",
+      reason: "publishing requires the publisher's Solana address so the token balance can be checked",
       gate,
     };
   }
@@ -125,7 +125,7 @@ export async function checkPublisher(publisher: string | null | undefined): Prom
       target.rpc.getAccountInfo(gate.token as never, { encoding: "jsonParsed", commitment: "confirmed" }).send(),
     ]);
     if (!mint) {
-      return { ok: false, status: 423, reason: "the $FINCH mint does not exist on chain yet, so no balance can satisfy the hold gate", gate };
+      return { ok: false, status: 423, reason: "the token mint does not exist on chain yet, so no balance can satisfy the hold gate", gate };
     }
     let raw = 0n;
     let decimals: number | null = null;
@@ -143,18 +143,18 @@ export async function checkPublisher(publisher: string | null | undefined): Prom
       return {
         ok: false,
         status: 402,
-        reason: `this address holds ${Number(held).toLocaleString()} $FINCH; publishing requires ${Number(gate.cost).toLocaleString()}`,
+        reason: `this address holds ${Number(held).toLocaleString()} of the token; publishing requires ${Number(gate.cost).toLocaleString()}`,
         gate,
         balance: held,
       };
     }
-    return { ok: true, status: 200, reason: "publisher holds the required $FINCH", gate, balance: held };
+    return { ok: true, status: 200, reason: "publisher holds the required token balance", gate, balance: held };
   } catch (error) {
     // A balance that cannot be read is not a balance of zero, and not a pass.
     return {
       ok: false,
       status: 503,
-      reason: `could not read the $FINCH balance (${error instanceof Error ? error.message.slice(0, 120) : "unknown"}) — refusing rather than guessing`,
+      reason: `could not read the token balance (${error instanceof Error ? error.message.slice(0, 120) : "unknown"}) — refusing rather than guessing`,
       gate: { ...gate, state: "error" },
     };
   }

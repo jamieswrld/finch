@@ -1,44 +1,44 @@
 "use client";
 
 import Link from "next/link";
-import { Murmuration } from "@/components/birds/Murmuration";
+import { SwarmField } from "./SwarmField";
 import { NetworkCounters } from "./NetworkCounters";
 
 /**
- * The swarm band — the murmuration sits directly under the hero and follows
+ * The swarm band — the swarm field sits directly under the hero and follows
  * the cursor, with the whole model explained in four lines beside it. A
- * visitor should understand Finch here, without opening the docs.
+ * visitor should understand Yinsi here, without opening the docs.
  */
 
 const STEPS = [
   {
     n: "01",
-    term: "Finch",
-    line: "One specialized agent — a model, memory, a few tools and a bounded wallet, written down as a portable finch.json.",
+    term: "Agent",
+    line: "One specialized agent — a model, memory, a few tools and a bounded wallet, written down as a portable JSON manifest.",
   },
   {
     n: "02",
-    term: "Nest",
-    line: "A swarm of finches aligned to one objective by a task graph. Each task names its finch, its dependencies, and the channel it publishes on.",
+    term: "Swarm",
+    line: "Agents aligned to one objective by a task graph. Each task names its agent, its dependencies, and the channel it publishes on.",
   },
   {
     n: "03",
-    term: "Flightpath",
-    line: "How a nest touches Solana. Every write is simulated, checked against your limits, and only called confirmed once the signed transaction has landed.",
+    term: "Execution layer",
+    line: "How a swarm touches Solana. Every write is simulated, checked against your limits, and only called confirmed once the signed transaction has landed.",
   },
   {
     n: "04",
     term: "Network",
-    line: "Nests expose their capabilities to other nests. Publish to the Aviary, and the swarm compounds.",
+    line: "Swarms expose their capabilities to other swarms. Publish to the directory, and the network compounds.",
   },
 ];
 
 export function SwarmBand() {
   return (
     <section id="swarm" className="relative scroll-mt-10 border-b border-line bg-bone">
-      {/* the nest lives behind the whole band and follows the pointer */}
+      {/* the swarm lives behind the whole band and follows the pointer */}
       <div className="pointer-events-none absolute inset-0" aria-hidden>
-        <Murmuration count={240} />
+        <SwarmField count={240} />
       </div>
 
       <div className="container-page relative py-16 md:py-20">
@@ -54,8 +54,8 @@ export function SwarmBand() {
               coordinated.
             </h2>
             <p className="mt-4 max-w-sm text-[14.5px] leading-relaxed text-ink-soft">
-              A murmuration has no leader. Each bird reads the few around it, and the shape emerges. Finch works the
-              same way — which is why the whole system is four ideas, not forty.
+              A swarm has no leader. Each agent reads the few around it, and the shape emerges. Yinsi works the same
+              way — which is why the whole system is four ideas, not forty.
             </p>
             <p className="mt-4 font-mono text-[10px] text-grey-faint">
               move your cursor — the swarm follows
@@ -81,10 +81,10 @@ export function SwarmBand() {
             </ol>
             <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2">
               <Link
-                href="/app/nests"
+                href="/app/swarms"
                 className="group inline-flex items-center gap-2 font-mono text-[11.5px] text-green-deep"
               >
-                watch a nest coordinate
+                watch a swarm coordinate
                 <span className="transition-transform group-hover:translate-x-0.5" aria-hidden>
                   →
                 </span>

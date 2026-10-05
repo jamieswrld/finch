@@ -1,47 +1,46 @@
-# FINCH
+# Yinsi
 
 **A decentralized operating layer for intelligent software on Solana.**
 
-build one nest. coordinate millions.
+build one swarm. coordinate millions.
 
-[finch.fun](https://finch.fun) · [x.com/finchnests](https://x.com/finchnests) · Solana mainnet
-
-$FINCH: launches on pump.fun at `63GtvVxFKgXCcSAXXkrPtp7vk8oWyEfqwwdB8gNYpump` — until a mint account exists there, Finch reports it as not launched. Publishing is free either way.
+[finch.fun](https://finch.fun) · [X](https://x.com/finchnests) · Solana mainnet
 
 ```text
-ONE FINCH → MORE FINCHES → NEST → NEST-TO-NEST → NETWORK
+ONE AGENT → MORE AGENTS → SWARM → SWARM-TO-SWARM → NETWORK
 ```
 
-## The language is the architecture
+## Vocabulary
 
 | Term | Meaning |
 | --- | --- |
-| **Finch** | one specialized intelligent agent (Market, News, Launch, RWA, Wallet, Security, Dev, Execution…) |
-| **Nest** | a coordinated swarm of finches aligned around one objective — task graph, shared context, permissions, budget |
-| **Aviary** | the permissionless network directory: finches, nests, MCP servers, tools, APIs, datasets |
-| **Flightpath** | the Solana execution layer: policy-checked, simulated, signed, confirmed |
-| **Flight School** | try a real read-only finch in under a minute — no wallet |
-| **Proof of Flight** | verifiable execution receipts for meaningful live actions |
-| **Network** | thousands of independent finches and nests, reconstructable from Solana alone |
+| **Agent** | one specialized intelligent agent (Market, News, Launch, RWA, Wallet, Security, Dev, Execution…) |
+| **Swarm** | a coordinated group of agents aligned around one objective — task graph, shared context, permissions, budget |
+| **Directory** | the permissionless network directory: agents, swarms, MCP servers, tools, APIs, datasets |
+| **Execution layer** | how agents reach Solana: policy-checked, simulated, signed, confirmed |
+| **Playground** | try a real read-only agent in under a minute — no wallet |
+| **Shared memory** | what every swarm run teaches and every agent reads, with provenance on every finding |
+| **Execution proof** | verifiable execution receipts for meaningful live actions |
+| **Network** | thousands of independent agents and swarms, reconstructable from Solana alone |
 
 Core principles: **decentralized · accessible · interoperable · composable ·
-portable · verifiable · functional · open.** A finch is a portable
-`finch.json` manifest — import, export, fork, self-host, publish, version,
-compose. Finch must not require finch.fun to exist.
+portable · verifiable · functional · open.** An agent is a portable manifest
+(`finch.manifest/0.1`) — import, export, fork, self-host, publish, version,
+compose. An agent must not require this website to exist.
 
 ## Repository layout
 
 ```text
-apps/web              Next.js — landing world, /app (Flight School, Aviary,
-                      Nests, Network, Finch Builder), API routes,
+apps/web              Next.js — landing page, /app (playground, directory,
+                      swarms, network, agent builder), API routes,
                       src/server (the isolated fee-wallet module)
-packages/sdk          @finch/sdk — createFinch → hatch; finch.manifest/0.1
-                      (finch.json); the runtime loop
+packages/sdk          @finch/sdk — createAgent → launch; the agent manifest
+                      (finch.manifest/0.1); the runtime loop
 packages/providers    @finch/providers — model abstraction (free tiers first,
-                      openAICompatible escape hatch; never vendor-coupled)
-packages/flightpath   @finch/flightpath — Solana cluster target, PolicyEngine,
-                      mandatory execution lifecycle, tools, memo-anchored
-                      registry, $FINCH reads, RWA registry
+                      openAICompatible escape route; never vendor-coupled)
+packages/flightpath   @finch/flightpath — the execution layer: Solana cluster
+                      target, PolicyEngine, mandatory execution lifecycle,
+                      tools, memo-anchored registry, RWA registry
 packages/db           @finch/db — MongoDB schemas/indexes, memory, metering.
                       MongoDB accelerates; Solana defines truth.
 scripts               operator tools: secret scan (pre-commit), token facts,
@@ -58,8 +57,8 @@ npm run typecheck && npm run build
 ```
 
 With any one compute key set (`GROQ_API_KEY` is the quickest free tier),
-Flight School previews run on the real runtime. With `MONGODB_URI` set,
-`npm run seed -w @finch/db` loads the sample registry. The public mainnet RPC
+playground previews run on the real runtime. With `MONGODB_URI` set,
+`npm run seed -w @finch/db` loads the sample directory. The public mainnet RPC
 works out of the box but is rate limited; set `SOLANA_RPC_URLS` to a provider
 for anything beyond local use.
 
@@ -80,7 +79,7 @@ available yet.
 
 ## Registry
 
-A finch or nest is anchored by a Memo-program transaction signed by the
+An agent or swarm is anchored by a Memo-program transaction signed by the
 registry authority (`FINCH_REGISTRY_AUTHORITY`):
 `finch-registry/1 register <kind>:<handle> sha256:<manifest hash> [<uri>]`.
 The index is read from that address's signature history, and a memo counts
@@ -89,23 +88,13 @@ from Solana alone. Until the authority is configured, every listing is
 reported as not anchored. `scripts/registry-anchor.mjs` builds and prints the
 memo, and sends it only when run with `--send`.
 
-## $FINCH
+## Open and free
 
-$FINCH launches on pump.fun. Its mint address,
-`63GtvVxFKgXCcSAXXkrPtp7vk8oWyEfqwwdB8gNYpump`, is baked in as the default
-(`FINCH_TOKEN_MINT` overrides it). Until a mint account exists there, the
-site, the API (`GET /api/token`, `launched: false`) and the `finch_token`
-tool report $FINCH as not launched. Once live it trades on pump.fun's bonding
-curve and, after graduation, on pump.fun's AMM. Finch reads it live — supply
-and authorities from the mint account, the launch phase from pump.fun's
-bonding-curve account, price and holder count from Jupiter, markets from
-DexScreener — and every figure carries its source; a failed read says
-"unreachable", never 0.
-
-The token gates nothing. Core infrastructure stays free: SDK, manifests,
-self-hosting, Aviary browsing, publishing, Flight School read-only presets,
-public Solana reads. `PUBLISH_GATE=hold` is the only switch that would ever
-require holding $FINCH to publish.
+Core infrastructure stays free: SDK, manifests, self-hosting, directory
+browsing, publishing, playground read-only presets, public Solana reads.
+Publishing needs only a publisher key, which any Solana wallet gets by signing
+a plain message. `PUBLISH_GATE=hold` is the only switch that would ever put a
+token gate on publishing, and it is off by default.
 
 ## Honest-state principles
 

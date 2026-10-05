@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
  * This replaces the old infrastructure readout. "RPC reachable" is plumbing:
  * it tells a visitor the lights are on, which is the least interesting thing
  * true about a network. Work is the interesting thing — what was asked, which
- * nest answered, how many tasks it took, whether it held policy.
+ * swarm answered, how many tasks it took, whether it held policy.
  *
  * The spec rule still binds: never invent a number. Every count here is a
  * count of rows that exist. `provenance` says whether those rows are live
@@ -70,7 +70,7 @@ export async function GET(): Promise<Response> {
   }
 
   return json({
-    /** Where the finches/nests counts came from. Runs and tasks are always real. */
+    /** Where the agent/swarm counts came from. Runs and tasks are always real. */
     provenance: registryProvenance,
     registryProvenance,
     runsProvenance: history.runs.length > 0 ? "live" : "empty",

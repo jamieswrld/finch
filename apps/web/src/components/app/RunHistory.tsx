@@ -28,7 +28,7 @@ function relative(iso: string): string {
 }
 
 /**
- * What your agents actually did. Every Flight School preview and nest run
+ * What your agents actually did. Every playground preview and swarm run
  * leaves a record here with its cost, duration and outcome.
  */
 export function RunHistory({ limit = 8 }: { limit?: number }) {
@@ -52,10 +52,10 @@ export function RunHistory({ limit = 8 }: { limit?: number }) {
           (state.data.runs.length === 0 ? (
             <EmptyBlock title="no runs yet">
               Try a preset in{" "}
-              <Link href="/app/school" className="text-green-deep underline decoration-green-deep/40 underline-offset-2">
-                Flight School
+              <Link href="/app/playground" className="text-green-deep underline decoration-green-deep/40 underline-offset-2">
+                the playground
               </Link>{" "}
-              or run a nest — each one lands here with its cost and outcome.
+              or run a swarm — each one lands here with its cost and outcome.
             </EmptyBlock>
           ) : (
             <ul className="divide-y divide-line/60">

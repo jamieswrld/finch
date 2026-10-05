@@ -2,11 +2,11 @@ import { nestManifestSchema, type NestFinch, type NestManifest } from "@finch/sd
 import { SCHOOL_PRESETS } from "./school-presets";
 
 /**
- * Preset nests — real, runnable coordinated swarms.
+ * Preset swarms — real, runnable coordinated groups of agents.
  *
- * Each member is a genuine finch manifest executed by the standard runtime,
- * and each nest runs in PREVIEW mode: read-only, no wallet, no writes. The
- * Chain Intelligence nest reads Solana mainnet live, so its output is
+ * Each member is a genuine agent manifest executed by the standard runtime,
+ * and each swarm runs in PREVIEW mode: read-only, no wallet, no writes. The
+ * Chain Intelligence swarm reads Solana mainnet live, so its output is
  * actual onchain state rather than a scripted demo.
  */
 
@@ -15,7 +15,7 @@ const MODEL = { provider: "hyperbolic", model: "meta-llama/Llama-3.3-70B-Instruc
 const HONESTY =
   "\nYou run in PREVIEW mode: read-only, no wallet, no transactions. Report tool results exactly — " +
   "if a tool reports something unconfigured, unreachable or empty, say so plainly. Never invent chain " +
-  "state, prices, holders, or liquidity. Be concise and structured; downstream finches consume your output.";
+  "state, prices, holders, or liquidity. Be concise and structured; downstream agents consume your output.";
 
 function member(input: {
   handle: string;
@@ -53,14 +53,14 @@ function member(input: {
 }
 
 /**
- * A member drawn from the registry by handle — the same finch a visitor can
- * open and run in Flight School, composed into a nest unchanged. This is
- * what "a nest of everyone's finches" means in practice: the manifests are
- * shared, and the nest is just the coordination around them.
+ * A member drawn from the directory by handle — the same agent a visitor can
+ * open and run in the playground, composed into a swarm unchanged. This is
+ * what "a swarm of everyone's agents" means in practice: the manifests are
+ * shared, and the swarm is just the coordination around them.
  */
 function refMember(handle: string, role?: string): NestFinch {
   const preset = SCHOOL_PRESETS.find((entry) => entry.slug === handle);
-  if (!preset) throw new Error(`refMember: no builtin finch "${handle}"`);
+  if (!preset) throw new Error(`refMember: no builtin agent "${handle}"`);
   return {
     handle,
     name: preset.title,
@@ -69,13 +69,13 @@ function refMember(handle: string, role?: string): NestFinch {
   } as NestFinch;
 }
 
-function nest(input: {
+function swarm(input: {
   id: string;
   name: string;
   objective: string;
   description: string;
   coordinatorInstructions: string;
-  finches: NestFinch[];
+  members: NestFinch[];
   tasks: NestManifest["tasks"];
   /** Tool-heavy members on a free tier need longer than the default. */
   taskTimeoutMs?: number;
@@ -84,7 +84,7 @@ function nest(input: {
     schema: "nest.manifest/0.1",
     identity: { id: input.id, name: input.name, objective: input.objective, description: input.description },
     coordinator: { model: { ...MODEL, temperature: 0.2 }, instructions: input.coordinatorInstructions, synthesize: true },
-    finches: input.finches,
+    finches: input.members,
     tasks: input.tasks,
     executionPolicy: { mode: "preview", maxParallel: 3, maxTotalTokens: 120_000, maxTaskFailures: 2, taskTimeoutMs: input.taskTimeoutMs ?? 120_000 },
   });
@@ -92,14 +92,14 @@ function nest(input: {
 
 // ── 1. Chain Intelligence — reads Solana mainnet for real ─────────────────
 
-const chainIntelligence = nest({
+const chainIntelligence = swarm({
   id: "chain-intelligence",
-  name: "Chain Intelligence Nest",
+  name: "Chain Intelligence Swarm",
   objective: "Assess the current state and health of Solana, and explain what it means for agents executing there.",
   description: "Live network status → block analysis → fee reading → operational risk → briefing.",
   coordinatorInstructions:
-    "Produce an operator's briefing on Solana conditions right now. Lead with the concrete numbers the finches read. Fee figures are estimates from what was read, not quotes — keep them labeled that way.",
-  finches: [
+    "Produce an operator's briefing on Solana conditions right now. Lead with the concrete numbers the agents read. Fee figures are estimates from what was read, not quotes — keep them labeled that way.",
+  members: [
     member({
       handle: "network-scout",
       name: "Network Scout",
@@ -125,11 +125,11 @@ const chainIntelligence = nest({
       tools: ["network_status"],
     }),
     member({
-      handle: "risk-finch",
-      name: "Risk Finch",
+      handle: "risk-agent",
+      name: "Risk Agent",
       role: "Flags operational risk for agents executing under these conditions.",
       instructions:
-        "You are Risk Finch. Given the network status, block profile and cost reading, list the operational risks for an autonomous agent executing on Solana right now: congestion and priority fees (without an adequate priority fee a transaction can be dropped when leaders are busy), blockhash expiry (a transaction is valid only for about 150 blocks after its recent blockhash, so a slow signature or a retry must rebuild it), confirmation versus finalization (confirmed means a supermajority voted on the block; finalized means it is rooted, typically around 32 slots later — an action must say which it waits for), and RPC dependency and rate limits (one endpoint can lag, throttle or fail; failover and backoff matter). Rank them using the figures that were read, and state what an execution policy should cap.",
+        "You are Risk Agent. Given the network status, block profile and cost reading, list the operational risks for an autonomous agent executing on Solana right now: congestion and priority fees (without an adequate priority fee a transaction can be dropped when leaders are busy), blockhash expiry (a transaction is valid only for about 150 blocks after its recent blockhash, so a slow signature or a retry must rebuild it), confirmation versus finalization (confirmed means a supermajority voted on the block; finalized means it is rooted, typically around 32 slots later — an action must say which it waits for), and RPC dependency and rate limits (one endpoint can lag, throttle or fail; failover and backoff matter). Rank them using the figures that were read, and state what an execution policy should cap.",
       tools: [],
       temperature: 0.25,
     }),
@@ -161,7 +161,7 @@ const chainIntelligence = nest({
     },
     {
       id: "t4",
-      finch: "risk-finch",
+      finch: "risk-agent",
       title: "Assess operational risk",
       instruction:
         "Network status:\n{{chain.status}}\n\nBlock profile:\n{{block.profile}}\n\nCost profile:\n{{cost.profile}}\n\nAssess operational risk for agents executing here.",
@@ -173,22 +173,22 @@ const chainIntelligence = nest({
 
 // ── 2. Launch Intelligence ────────────────────────────────────────────────
 
-const launchIntelligence = nest({
+const launchIntelligence = swarm({
   id: "launch-intelligence",
   taskTimeoutMs: 240_000,
-  name: "Launch Intelligence Nest",
+  name: "Launch Intelligence Swarm",
   objective: "Analyze a Solana token launch: supply and authorities, holder concentration, markets and liquidity, and recent activity, then give a risk verdict.",
-  description: "Launch target → structure → liquidity → risk. Name a mint in the objective; with none named, the nest reads $FINCH if its mint is configured.",
+  description: "Launch target → structure → liquidity → risk. Name a mint in the objective; with none named, the swarm says so and stops.",
   coordinatorInstructions:
-    "Report the nest's findings on the mint the Launch Scout identified. Lead with what was read: supply and authorities, holder concentration, markets and liquidity, recent activity. Mark anything unreachable as exactly that. If no mint was identified, say so and stop — never imply data that was not read.",
-  finches: [
+    "Report the swarm's findings on the mint the Launch Scout identified. Lead with what was read: supply and authorities, holder concentration, markets and liquidity, recent activity. Mark anything unreachable as exactly that. If no mint was identified, say so and stop — never imply data that was not read.",
+  members: [
     member({
       handle: "launch-scout",
       name: "Launch Scout",
       role: "Identifies the mint and reads its pump.fun curve, profile and recent activity.",
       instructions:
-        "You are Launch Scout. Find the SPL mint address in the objective (base58, 32–44 characters) and use it exactly as written — Solana addresses are case-sensitive. If the objective names none, call finch_token: if it reports a configured mint, use that mint; if it reports $FINCH is not configured, say that no token was named and $FINCH has no Solana mint configured, and stop. With a mint in hand, call pump_curve first and report its phase, how much of the curve has sold and the SOL in the curve; say plainly when it reports not_on_pump (no pump.fun curve for this mint) or not_launched (no mint account yet — then say so and stop). Then call token_profile, then token_activity with limit 10. Begin your answer with the line 'mint: <address>' so the next finches read the same mint. Report name, symbol, decimals, supply, mint and freeze authority, token program, holder count, and price, liquidity and 24h volume where Jupiter has them, then what recent activity shows — noting that token_activity only sees transactions that reference the mint account.",
-      tools: ["finch_token", "pump_curve", "token_profile", "token_activity"],
+        "You are Launch Scout. Find the SPL mint address in the objective (base58, 32–44 characters) and use it exactly as written — Solana addresses are case-sensitive. If the objective names none, say that no mint was named and stop — do not pick one yourself. With a mint in hand, call pump_curve first and report its phase, how much of the curve has sold and the SOL in the curve; say plainly when it reports not_on_pump (no pump.fun curve for this mint) or not_launched (no mint account yet — then say so and stop). Then call token_profile, then token_activity with limit 10. Begin your answer with the line 'mint: <address>' so the next agents read the same mint. Report name, symbol, decimals, supply, mint and freeze authority, token program, holder count, and price, liquidity and 24h volume where Jupiter has them, then what recent activity shows — noting that token_activity only sees transactions that reference the mint account.",
+      tools: ["pump_curve", "token_profile", "token_activity"],
     }),
     member({
       handle: "structure-analyst",
@@ -207,39 +207,39 @@ const launchIntelligence = nest({
       tools: ["token_markets", "swap_quote"],
     }),
     member({
-      handle: "risk-finch",
-      name: "Risk Finch",
+      handle: "risk-agent",
+      name: "Risk Agent",
       role: "Scores launch risk and can veto an alert.",
       instructions:
-        "You are Risk Finch. From the scout, structure and liquidity findings, produce a risk assessment with an explicit confidence level. Authorities, concentration and liquidity are facts — cite which finch reported each. If the inputs are mostly 'unavailable', your verdict must be INSUFFICIENT DATA rather than a risk score.",
+        "You are Risk Agent. From the scout, structure and liquidity findings, produce a risk assessment with an explicit confidence level. Authorities, concentration and liquidity are facts — cite which agent reported each. If the inputs are mostly 'unavailable', your verdict must be INSUFFICIENT DATA rather than a risk score.",
       tools: [],
       temperature: 0.25,
     }),
   ],
   tasks: [
-    { id: "t1", finch: "launch-scout", title: "Identify and profile the launch", instruction: "Identify the mint for the objective (or $FINCH when none is named and its mint is configured) and profile it.", dependsOn: [], outputChannel: "launch.target" },
+    { id: "t1", finch: "launch-scout", title: "Identify and profile the launch", instruction: "Identify the mint named in the objective and profile it. If the objective names no mint, say so and stop.", dependsOn: [], outputChannel: "launch.target" },
     { id: "t2", finch: "structure-analyst", title: "Analyze launch structure", instruction: "Launch Scout:\n{{launch.target}}\n\nAnalyze supply structure, authorities and holder concentration for this mint, or state exactly what could not be read.", dependsOn: ["t1"], outputChannel: "launch.structure" },
     { id: "t3", finch: "liquidity-analyst", title: "Profile liquidity", instruction: "Launch Scout:\n{{launch.target}}\n\nProfile the markets and liquidity for this mint, or state exactly what could not be read.", dependsOn: ["t1"], outputChannel: "liquidity.profile" },
-    { id: "t4", finch: "risk-finch", title: "Score risk", instruction: "Launch Scout:\n{{launch.target}}\n\nStructure:\n{{launch.structure}}\n\nLiquidity:\n{{liquidity.profile}}\n\nProduce the risk verdict.", dependsOn: ["t2", "t3"], outputChannel: "risk.score" },
+    { id: "t4", finch: "risk-agent", title: "Score risk", instruction: "Launch Scout:\n{{launch.target}}\n\nStructure:\n{{launch.structure}}\n\nLiquidity:\n{{liquidity.profile}}\n\nProduce the risk verdict.", dependsOn: ["t2", "t3"], outputChannel: "risk.score" },
   ],
 });
 
 // ── 3. RWA Research ───────────────────────────────────────────────────────
 
-const rwaResearch = nest({
+const rwaResearch = swarm({
   id: "rwa-research",
-  name: "RWA Research Nest",
+  name: "RWA Research Swarm",
   objective: "Research tokenized real-world assets available to agents on Solana and report what is approved and why.",
   description: "Approved registry → asset structure → eligibility and restrictions → risk → report.",
   coordinatorInstructions:
     "Report what the approved RWA registry actually contains. If it is empty, state that no assets are approved for agent interaction yet and explain the gate.",
-  finches: [
+  members: [
     member({
       handle: "registry-scout",
       name: "Registry Scout",
       role: "Lists RWA assets approved for agent interaction.",
       instructions:
-        "You are Registry Scout. Call rwa_registry and report exactly what it returns, including an empty registry. Explain that Finch hard-limits agent RWA interaction to this approved registry and that the gate cannot be waived from a manifest.",
+        "You are Registry Scout. Call rwa_registry and report exactly what it returns, including an empty registry. Explain that Yinsi hard-limits agent RWA interaction to this approved registry and that the gate cannot be waived from a manifest.",
       tools: ["rwa_registry"],
     }),
     member({
@@ -251,11 +251,11 @@ const rwaResearch = nest({
       tools: ["rwa_registry", "token_data", "account_read"],
     }),
     member({
-      handle: "eligibility-finch",
-      name: "Eligibility Finch",
+      handle: "eligibility-agent",
+      name: "Eligibility Agent",
       role: "Explains permissioning and agent eligibility.",
       instructions:
-        "You are Eligibility Finch. Explain how permissioned RWA rails interact with autonomous agents: identified counterparties, transfer restrictions, jurisdiction gates, and what an agent must prove before touching such an asset. Ground every claim in what the registry actually reports.",
+        "You are Eligibility Agent. Explain how permissioned RWA rails interact with autonomous agents: identified counterparties, transfer restrictions, jurisdiction gates, and what an agent must prove before touching such an asset. Ground every claim in what the registry actually reports.",
       tools: [],
       temperature: 0.25,
     }),
@@ -263,20 +263,20 @@ const rwaResearch = nest({
   tasks: [
     { id: "t1", finch: "registry-scout", title: "Read approved registry", instruction: "Report the approved RWA registry contents.", dependsOn: [], outputChannel: "rwa.registry" },
     { id: "t2", finch: "asset-analyst", title: "Analyze asset structure", instruction: "Registry:\n{{rwa.registry}}\n\nAnalyze the structure of approved assets.", dependsOn: ["t1"], outputChannel: "asset.profile" },
-    { id: "t3", finch: "eligibility-finch", title: "Explain eligibility", instruction: "Registry:\n{{rwa.registry}}\n\nAssets:\n{{asset.profile}}\n\nExplain agent eligibility and restrictions.", dependsOn: ["t2"], outputChannel: "eligibility.notes" },
+    { id: "t3", finch: "eligibility-agent", title: "Explain eligibility", instruction: "Registry:\n{{rwa.registry}}\n\nAssets:\n{{asset.profile}}\n\nExplain agent eligibility and restrictions.", dependsOn: ["t2"], outputChannel: "eligibility.notes" },
   ],
 });
 
 // ── 4. Address Watch ──────────────────────────────────────────────────────
 
-const addressWatch = nest({
+const addressWatch = swarm({
   id: "address-watch",
-  name: "Address Watch Nest",
+  name: "Address Watch Swarm",
   objective: "Profile an address on Solana and describe what a monitoring policy over it should watch.",
   description: "Balance read → holdings profile → activity context → monitoring policy.",
   coordinatorInstructions:
-    "Produce a monitoring brief for the address in the objective. If no address was supplied, say so and explain what the nest needs.",
-  finches: [
+    "Produce a monitoring brief for the address in the objective. If no address was supplied, say so and explain what the swarm needs.",
+  members: [
     member({
       handle: "balance-scout",
       name: "Balance Scout",
@@ -286,81 +286,81 @@ const addressWatch = nest({
       tools: ["balance_native", "balance_spl", "portfolio_snapshot"],
     }),
     member({
-      handle: "context-finch",
-      name: "Context Finch",
+      handle: "context-agent",
+      name: "Context Agent",
       role: "Places the address in current network conditions.",
       instructions:
-        "You are Context Finch. Call network_status and relate the address's SOL balance to current conditions: how many typical actions it funds at the fee per signature plus the median priority fee on a 200,000 compute-unit limit (micro-lamports × 200,000 ÷ 1,000,000 = lamports). Show the arithmetic, and label the result an estimate.",
+        "You are Context Agent. Call network_status and relate the address's SOL balance to current conditions: how many typical actions it funds at the fee per signature plus the median priority fee on a 200,000 compute-unit limit (micro-lamports × 200,000 ÷ 1,000,000 = lamports). Show the arithmetic, and label the result an estimate.",
       tools: ["network_status"],
     }),
     member({
-      handle: "policy-finch",
-      name: "Policy Finch",
+      handle: "policy-agent",
+      name: "Policy Agent",
       role: "Drafts the monitoring and execution policy.",
       instructions:
-        "You are Policy Finch. From the balance and context findings, draft a concrete monitoring policy: which SOL and token balance deltas warrant an alert, sensible daily and per-transaction allowance caps in SOL if an agent were to operate this address, and which programs an allowlist should contain. Express caps as numbers.",
+        "You are Policy Agent. From the balance and context findings, draft a concrete monitoring policy: which SOL and token balance deltas warrant an alert, sensible daily and per-transaction allowance caps in SOL if an agent were to operate this address, and which programs an allowlist should contain. Express caps as numbers.",
       tools: [],
       temperature: 0.25,
     }),
   ],
   tasks: [
     { id: "t1", finch: "balance-scout", title: "Read balances", instruction: "Read balances for the address in the objective.", dependsOn: [], outputChannel: "address.balances" },
-    { id: "t2", finch: "context-finch", title: "Contextualize", instruction: "Balances:\n{{address.balances}}\n\nRelate these to current network conditions.", dependsOn: ["t1"], outputChannel: "address.context" },
-    { id: "t3", finch: "policy-finch", title: "Draft monitoring policy", instruction: "Balances:\n{{address.balances}}\n\nContext:\n{{address.context}}\n\nDraft the monitoring and execution policy.", dependsOn: ["t2"], outputChannel: "policy.draft" },
+    { id: "t2", finch: "context-agent", title: "Contextualize", instruction: "Balances:\n{{address.balances}}\n\nRelate these to current network conditions.", dependsOn: ["t1"], outputChannel: "address.context" },
+    { id: "t3", finch: "policy-agent", title: "Draft monitoring policy", instruction: "Balances:\n{{address.balances}}\n\nContext:\n{{address.context}}\n\nDraft the monitoring and execution policy.", dependsOn: ["t2"], outputChannel: "policy.draft" },
   ],
 });
 
 // ── 5. Token Due Diligence — a real token, read three ways, then judged ────
 
-const tokenDueDiligence = nest({
+const tokenDueDiligence = swarm({
   id: "token-due-diligence",
-  name: "Token Due Diligence Nest",
+  name: "Token Due Diligence Swarm",
   objective: "Assess a token on Solana from its onchain facts: supply, authorities, holder concentration, and recent activity.",
   description: "Token profile → holder concentration → recent activity → risk read. Set the objective to a mint address.",
   coordinatorInstructions:
-    "Write a due-diligence note on the token named in the objective. Lead with the hard numbers the finches read: supply, mint and freeze authority, holders, top-holder share, recent activity pattern. Concentration and activity are facts; whether they are good or bad depends on the token's purpose, so say what the numbers are before saying what they might mean. If the objective contains no mint address, say so and stop.",
-  finches: [
+    "Write a due-diligence note on the token named in the objective. Lead with the hard numbers the agents read: supply, mint and freeze authority, holders, top-holder share, recent activity pattern. Concentration and activity are facts; whether they are good or bad depends on the token's purpose, so say what the numbers are before saying what they might mean. If the objective contains no mint address, say so and stop.",
+  members: [
     member({
-      handle: "profile-finch",
-      name: "Profile Finch",
+      handle: "profile-agent",
+      name: "Profile Agent",
       role: "Reads the token's identity, supply, authorities and market data.",
       instructions:
-        "You are Profile Finch. Extract the mint address from the objective and call token_profile, then token_data for the mint account's own view. Report name, symbol, decimals, supply, mint and freeze authority, token program, holder count, price, market cap, liquidity, 24h volume and Jupiter's verification flag exactly as returned; say 'unpriced' where Jupiter has no price. If no address is present in the objective, say exactly that.",
+        "You are Profile Agent. Extract the mint address from the objective and call token_profile, then token_data for the mint account's own view. Report name, symbol, decimals, supply, mint and freeze authority, token program, holder count, price, market cap, liquidity, 24h volume and Jupiter's verification flag exactly as returned; say 'unpriced' where Jupiter has no price. If no address is present in the objective, say exactly that.",
       tools: ["token_profile", "token_data"],
     }),
     member({
-      handle: "holder-finch",
-      name: "Holder Finch",
+      handle: "holder-agent",
+      name: "Holder Agent",
       role: "Measures how concentrated ownership is.",
       instructions:
-        "You are Holder Finch. Call token_holders with limit 10 for the mint in the objective. Report the top 10 token accounts with balance and share of supply, mark which owners are program-derived addresses (usually a pool, vault or program), note when one owner holds several of the accounts, and compute the combined share of the top 1, top 5 and top 10. Identify the incinerator (1nc1nerator11111111111111111111111111111111) as a burn address, not as a holder. Numbers only, then one line on what the concentration pattern is.",
+        "You are Holder Agent. Call token_holders with limit 10 for the mint in the objective. Report the top 10 token accounts with balance and share of supply, mark which owners are program-derived addresses (usually a pool, vault or program), note when one owner holds several of the accounts, and compute the combined share of the top 1, top 5 and top 10. Identify the incinerator (1nc1nerator11111111111111111111111111111111) as a burn address, not as a holder. Numbers only, then one line on what the concentration pattern is.",
       tools: ["token_holders"],
     }),
     member({
-      handle: "activity-finch",
-      name: "Activity Finch",
+      handle: "activity-agent",
+      name: "Activity Agent",
       role: "Reads recent token activity.",
       instructions:
-        "You are Activity Finch. Call token_activity with limit 20 for the mint in the objective. Report how many transactions you see, the slot range and time span they cover, the largest balance change in this token, and whether flow is concentrated between a few addresses or spread out. token_activity only sees transactions that reference the mint account — transfers that don't pass the mint are not visible — so state that the view is partial. Do not infer trading volume beyond what the transactions show.",
+        "You are Activity Agent. Call token_activity with limit 20 for the mint in the objective. Report how many transactions you see, the slot range and time span they cover, the largest balance change in this token, and whether flow is concentrated between a few addresses or spread out. token_activity only sees transactions that reference the mint account — transfers that don't pass the mint are not visible — so state that the view is partial. Do not infer trading volume beyond what the transactions show.",
       tools: ["token_activity"],
     }),
     member({
-      handle: "diligence-finch",
-      name: "Diligence Finch",
+      handle: "diligence-agent",
+      name: "Diligence Agent",
       role: "Reads the three channels and writes the risk section.",
       instructions:
-        "You are Diligence Finch. You receive the profile, holder analysis and activity read. Write a short risk section: supply and authority facts, concentration facts, activity facts, and verification status. Each point cites which channel it came from. Where the data cannot support a conclusion, say what would be needed. No tools; work only from the channels.",
+        "You are Diligence Agent. You receive the profile, holder analysis and activity read. Write a short risk section: supply and authority facts, concentration facts, activity facts, and verification status. Each point cites which channel it came from. Where the data cannot support a conclusion, say what would be needed. No tools; work only from the channels.",
       tools: [],
       temperature: 0.1,
     }),
   ],
   tasks: [
-    { id: "t1", finch: "profile-finch", title: "Profile the token", instruction: "Profile the token named in the objective.", dependsOn: [], outputChannel: "token.profile" },
-    { id: "t2", finch: "holder-finch", title: "Measure holder concentration", instruction: "Token profile:\n{{token.profile}}\n\nMeasure holder concentration for this token.", dependsOn: ["t1"], outputChannel: "token.holders" },
-    { id: "t3", finch: "activity-finch", title: "Read recent activity", instruction: "Token profile:\n{{token.profile}}\n\nRead this token's recent activity.", dependsOn: ["t1"], outputChannel: "token.activity" },
+    { id: "t1", finch: "profile-agent", title: "Profile the token", instruction: "Profile the token named in the objective.", dependsOn: [], outputChannel: "token.profile" },
+    { id: "t2", finch: "holder-agent", title: "Measure holder concentration", instruction: "Token profile:\n{{token.profile}}\n\nMeasure holder concentration for this token.", dependsOn: ["t1"], outputChannel: "token.holders" },
+    { id: "t3", finch: "activity-agent", title: "Read recent activity", instruction: "Token profile:\n{{token.profile}}\n\nRead this token's recent activity.", dependsOn: ["t1"], outputChannel: "token.activity" },
     {
       id: "t4",
-      finch: "diligence-finch",
+      finch: "diligence-agent",
       title: "Write the risk read",
       instruction: "Profile:\n{{token.profile}}\n\nHolders:\n{{token.holders}}\n\nActivity:\n{{token.activity}}\n\nWrite the risk section.",
       dependsOn: ["t2", "t3"],
@@ -369,30 +369,30 @@ const tokenDueDiligence = nest({
   ],
 });
 
-// ── 6. Network Due Diligence — everyone's finches, one objective, in parallel ─
+// ── 6. Network Due Diligence — everyone's agents, one objective, in parallel ─
 //
-// The giga-brain: the registry's own analysts composed into one nest by
+// The giga-brain: the directory's own analysts composed into one swarm by
 // reference, fanned out on a single token at once, then synthesized. Every
-// member is a finch a visitor can open and run alone; here they work together.
+// member is an agent a visitor can open and run alone; here they work together.
 
-const networkDd = nest({
+const networkDd = swarm({
   id: "network-dd",
   taskTimeoutMs: 240_000,
-  name: "Network Due Diligence Nest",
+  name: "Network Due Diligence Swarm",
   objective: "Full due diligence on a token on Solana: network context, token structure, mint authority, liquidity, and a cited verdict.",
-  description: "Chain Pulse ∥ Token Inspector ∥ Wallet Analyst → synthesis. Composed by reference from registry finches. Set the objective to a mint address.",
+  description: "Chain Pulse ∥ Token Inspector ∥ Wallet Analyst → synthesis. Composed by reference from directory agents. Set the objective to a mint address.",
   coordinatorInstructions:
     "Write a due-diligence memo on the token named in the objective, built only from the channels. Sections: network conditions, token structure and concentration, mint authority profile, liquidity, verdict. Each figure cites its channel. The verdict is one of: PROCEED / CAUTION / INSUFFICIENT DATA, with the exact facts that decided it. If the objective contains no mint address, say so and stop.",
-  finches: [
+  members: [
     refMember("chain-pulse", "Reads live and cumulative network conditions."),
     refMember("token-inspector", "Profiles the token: supply, authorities, holders, concentration, activity."),
     refMember("wallet-analyst", "Profiles the mint account and its mint authority."),
     member({
       handle: "dd-synthesis",
-      name: "DD Synthesis Finch",
+      name: "DD Synthesis Agent",
       role: "Reads every channel and writes the verdict section.",
       instructions:
-        "You are DD Synthesis Finch. You receive network conditions, the token profile, and the mint authority profile. Write the verdict section: list the decisive facts with their channel, then one of PROCEED / CAUTION / INSUFFICIENT DATA. A missing input is a fact that lowers confidence, not a gap to fill. No tools.",
+        "You are DD Synthesis Agent. You receive network conditions, the token profile, and the mint authority profile. Write the verdict section: list the decisive facts with their channel, then one of PROCEED / CAUTION / INSUFFICIENT DATA. A missing input is a fact that lowers confidence, not a gap to fill. No tools.",
       tools: [],
       temperature: 0.1,
     }),

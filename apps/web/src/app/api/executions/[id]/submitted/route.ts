@@ -26,7 +26,7 @@ export const maxDuration = 120;
  *
  * This is where user-signed execution becomes real, and it is deliberately
  * suspicious. The signature is looked up on chain and the transaction it
- * names is compared instruction by instruction to what the finch prepared —
+ * names is compared instruction by instruction to what the agent prepared —
  * same fee payer as the only signer, same programs, accounts and data, with
  * nothing added but compute-budget or wallet assertion instructions. A
  * signature that points at some other transaction moves nothing. Only a match

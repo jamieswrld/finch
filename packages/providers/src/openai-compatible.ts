@@ -33,7 +33,7 @@ function assertServerSide(provider: string): void {
   if (typeof (globalThis as { window?: unknown }).window !== "undefined") {
     throw new ProviderError(
       "unsupported",
-      `${provider}: model providers are server-side only. Route model calls through an API route or the Finch runtime.`,
+      `${provider}: model providers are server-side only. Route model calls through an API route or the agent runtime.`,
     );
   }
 }

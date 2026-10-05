@@ -1,18 +1,18 @@
 import Link from "next/link";
-import { FinchGlyph } from "@/components/birds/FinchGlyph";
+import { YinsiLogo } from "@/components/brand/YinsiMark";
 import { WorldBackground } from "./WorldBackground";
 import { RunsOn } from "./RunsOn";
 import { LiveWork } from "./LiveWork";
 
 const SYSTEM_ICONS: Array<{ href: string; label: string; icon: React.ReactNode }> = [
   {
-    href: "/app/school",
-    label: "flight school",
-    icon: <path d="M3 10 L15 4 L10.5 10 L15 16 Z M10.5 10 H3.5" fill="none" stroke="currentColor" strokeWidth="1.1" />,
+    href: "/app/playground",
+    label: "playground",
+    icon: <path d="M5 5.5 L9.5 9.5 L5 13.5 M10.5 14 H14.5" fill="none" stroke="currentColor" strokeWidth="1.1" />,
   },
   {
-    href: "/app/aviary",
-    label: "aviary",
+    href: "/app/directory",
+    label: "directory",
     icon: (
       <g fill="currentColor">
         <circle cx="6.5" cy="6.5" r="1.4" />
@@ -23,8 +23,8 @@ const SYSTEM_ICONS: Array<{ href: string; label: string; icon: React.ReactNode }
     ),
   },
   {
-    href: "/app/nests",
-    label: "nests",
+    href: "/app/swarms",
+    label: "swarms",
     icon: (
       <g stroke="currentColor" strokeWidth="1.1" fill="none">
         <circle cx="9.5" cy="5.5" r="1.6" />
@@ -84,10 +84,10 @@ function SystemIcons() {
 }
 
 const ACTIONS = [
-  { href: "/app/school", label: "flight school", primary: true, arrow: "→" },
+  { href: "/app/playground", label: "playground", primary: true, arrow: "→" },
   { href: "/how-it-works", label: "how it works", arrow: "→" },
-  { href: "/app/nests", label: "run a nest", arrow: "→" },
-  { href: "/app/aviary", label: "aviary", arrow: "→" },
+  { href: "/app/swarms", label: "run a swarm", arrow: "→" },
+  { href: "/app/directory", label: "directory", arrow: "→" },
 ];
 
 function ActionMatrix() {
@@ -121,7 +121,7 @@ function BottomBar() {
           href="#one"
           className="flex items-center gap-2 font-mono text-[9.5px] text-grey transition-colors hover:text-ink"
         >
-          <FinchGlyph size={14} className="rotate-[-90deg]" />
+          <span aria-hidden>↓</span>
           descend
         </a>
         <div className="flex items-center gap-4 font-mono text-[9.5px]">
@@ -131,7 +131,7 @@ function BottomBar() {
             rel="noopener noreferrer"
             className="text-grey transition-colors hover:text-ink"
           >
-            x ↗
+            X ↗
           </a>
           <a
             href="https://github.com/jamieswrld/finch"
@@ -157,22 +157,21 @@ export function World() {
       <WorldBackground />
 
       <header className="relative z-10 mx-auto flex h-14 w-full max-w-[1500px] items-center justify-between px-4">
-        <Link href="/" className="flex items-center gap-2.5 text-ink" aria-label="Finch">
-          <FinchGlyph size={22} />
-          <span className="text-[13px] font-semibold">FINCH</span>
+        <Link href="/" className="flex items-center text-ink" aria-label="Yinsi">
+          <YinsiLogo size={20} textClassName="text-[14px]" />
         </Link>
         <SystemIcons />
       </header>
 
       <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 py-8 text-center">
-        <h1 className="reveal text-[56px] leading-none font-semibold text-ink sm:text-[76px] md:text-[88px]">
-          FINCH
+        <h1 className="reveal text-[56px] leading-none font-semibold tracking-[-0.04em] text-ink sm:text-[76px] md:text-[88px]">
+          Yinsi
         </h1>
         <p className="reveal reveal-2 serif-note mt-4 text-[20px] leading-snug sm:text-[24px]">
-          build one nest. coordinate millions.
+          build one agent. coordinate millions.
         </p>
         <p className="reveal reveal-3 mt-3 text-balance font-mono text-[9.5px] text-grey sm:text-[10.5px]">
-          permissionless agents · interoperable nests · solana native
+          permissionless agents · interoperable swarms · solana native
         </p>
 
         <div className="reveal reveal-3 mt-8 w-full">

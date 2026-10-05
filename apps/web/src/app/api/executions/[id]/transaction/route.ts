@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
  *
  * Built at the moment of asking, from the record's prepared instructions and
  * fee payer, with a fresh blockhash: a Solana transaction expires about a
- * minute after its blockhash, so building it when the finch prepared the
+ * minute after its blockhash, so building it when the agent prepared the
  * intent would hand the wallet something already stale. Nothing is signed
  * here and nothing is stored — the wallet signs and sends, and /submitted
  * checks what landed against the prepared instructions, not against these

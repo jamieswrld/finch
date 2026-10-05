@@ -46,13 +46,13 @@ const listing = (overrides) => ({
   pricing: { model: "free" }, chains: ["solana"], toolNames: [], version: "0.1.0",
   ...overrides,
 });
-const pub = await j("/api/aviary", { method: "POST", headers: { "content-type": "application/json", "x-finch-key": key }, body: JSON.stringify(listing({})) });
-console.log("aviary publish (free gate) ->", pub.status, JSON.stringify(pub.body).slice(0, 140));
-const anon = await j("/api/aviary", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(listing({ slug: slug + "-anon", name: "x", description: "x" })) });
-console.log("aviary publish (no key) ->", anon.status, anon.body.error ?? "");
+const pub = await j("/api/directory", { method: "POST", headers: { "content-type": "application/json", "x-finch-key": key }, body: JSON.stringify(listing({})) });
+console.log("directory publish (free gate) ->", pub.status, JSON.stringify(pub.body).slice(0, 140));
+const anon = await j("/api/directory", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(listing({ slug: slug + "-anon", name: "x", description: "x" })) });
+console.log("directory publish (no key) ->", anon.status, anon.body.error ?? "");
 
-// nest run with a signer on a read-only nest: signing must report "none"
-const run = await fetch(BASE + "/api/nests/run", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ nest: "chain-intelligence", objective: "one-line chain pulse", signer: address }) });
+// swarm run with a signer on a read-only swarm: signing must report "none"
+const run = await fetch(BASE + "/api/swarms/run", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ nest: "chain-intelligence", objective: "one-line chain pulse", signer: address }) });
 const reader = run.body.getReader();
 const decoder = new TextDecoder();
 let buf = "", config = null, started = Date.now();
@@ -65,5 +65,5 @@ while (!config && Date.now() - started < 20_000) {
 }
 await reader.cancel().catch(() => {});
 const sig = config?.match(/"signing":(\{[^}]*\})/)?.[1] ?? "(no run.config seen)";
-console.log("nests/run (preview nest + signer) -> signing", sig);
+console.log("swarms/run (preview swarm + signer) -> signing", sig);
 console.log("TEST_SLUG=" + slug);

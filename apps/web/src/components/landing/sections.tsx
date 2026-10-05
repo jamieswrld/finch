@@ -1,9 +1,9 @@
-import { DartGlyph } from "@/components/birds/FinchGlyph";
+import { AgentGlyph } from "@/components/brand/AgentGlyph";
 import { Badge } from "@/components/ui/Badge";
 import { ButtonLink } from "@/components/ui/Button";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 
-/** Scroll narrative: ONE → SPECIALIZE → COORDINATE → NEST → CONNECT → NETWORK */
+/** Scroll narrative: one → specialize → coordinate → swarm → connect → network */
 
 const SPECIALISTS = [
   { key: "MARKET", note: "Solana tokens, markets, movement." },
@@ -16,25 +16,25 @@ const SPECIALISTS = [
   { key: "EXECUTION", note: "Policied, simulated onchain action." },
 ];
 
-export function OneFinchSection() {
+export function OneAgentSection() {
   return (
     <section id="one" className="container-page scroll-mt-10 py-20">
       <SectionHeading
         index="01"
-        kicker="one finch"
-        title="One finch does one thing well."
-        lede="A finch is one specialized intelligent agent with a narrow, understandable purpose — not another general-purpose chatbot. Every finch is a portable manifest: fork it, self-host it, compose it."
+        kicker="one agent"
+        title="One agent does one thing well."
+        lede="An agent is a specialist with one narrow, understandable purpose — not another general-purpose chatbot. Every agent is a portable manifest: fork it, self-host it, compose it."
       />
       <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xs border border-line bg-line md:grid-cols-4">
         {SPECIALISTS.map((specialist, index) => (
           <div key={specialist.key} className="group bg-bone-raised p-4 transition-colors hover:bg-bone">
             <div className="flex items-center justify-between">
               <span className="font-mono text-[12px] font-medium text-ink">{specialist.key}</span>
-              <DartGlyph size={11} angle={-14} className="text-grey-faint transition-colors group-hover:text-green-deep" />
+              <AgentGlyph size={12} className="text-grey-faint transition-colors group-hover:text-green-deep" />
             </div>
             <p className="mt-2 text-[12px] leading-snug text-grey">{specialist.note}</p>
             <p className="mt-3 font-mono text-[9px] text-grey-faint">
-              finch/{String(index + 1).padStart(3, "0")}
+              agent/{String(index + 1).padStart(3, "0")}
             </p>
           </div>
         ))}
@@ -44,41 +44,41 @@ export function OneFinchSection() {
 }
 
 // The members and channels of the launch-intelligence preset, as it runs.
-const LAUNCH_NEST = [
+const LAUNCH_SWARM = [
   { name: "Launch Scout", out: "launch.target" },
   { name: "Structure Analyst", out: "launch.structure" },
   { name: "Liquidity Analyst", out: "liquidity.profile" },
-  { name: "Risk Finch", out: "risk.score" },
+  { name: "Risk Agent", out: "risk.score" },
 ];
 
-export function NestSection() {
+export function SwarmSection() {
   return (
     <section className="border-y border-line bg-bone-raised py-20">
       <div className="container-page">
         <SectionHeading
           index="02"
-          kicker="the nest"
+          kicker="the swarm"
           title="Align them."
-          lede="A nest is a coordinated swarm of finches sharing one objective, one context, one task graph. The coordinator decomposes the objective; every task carries its finch, inputs, dependencies, cost and provenance."
+          lede="A swarm is a coordinated group of agents sharing one objective, one context, one task graph. The coordinator decomposes the objective; every task carries its agent, inputs, dependencies, cost and provenance."
         />
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.15fr_0.85fr]">
           <figure className="grid-paper overflow-x-auto rounded-xs border border-line bg-bone p-5">
-            <p className="label-mono">launch intelligence nest</p>
+            <p className="label-mono">Launch Intelligence Swarm</p>
             <p className="mt-1 max-w-md text-[12px] leading-snug text-grey">
               objective: analyze a Solana token launch — supply and authorities, holders, markets and liquidity,
               activity — then give a risk verdict.
             </p>
             <div className="mt-5 flex min-w-[600px] items-stretch gap-0">
-              {LAUNCH_NEST.map((finch, index) => (
-                <div key={finch.name} className="flex items-center">
+              {LAUNCH_SWARM.map((member, index) => (
+                <div key={member.name} className="flex items-center">
                   <div className="rounded-xs border border-line bg-bone-raised px-3 py-2.5">
                     <p className="flex items-center gap-1.5 whitespace-nowrap font-mono text-[11px] font-medium text-ink">
-                      <DartGlyph size={10} angle={-14} className="text-ink-soft" />
-                      {finch.name}
+                      <AgentGlyph size={11} className="text-ink-soft" />
+                      {member.name}
                     </p>
-                    <p className="mt-1 font-mono text-[9px] text-sage-deep">→ {finch.out}</p>
+                    <p className="mt-1 font-mono text-[9px] text-sage-deep">→ {member.out}</p>
                   </div>
-                  {index < LAUNCH_NEST.length - 1 && <span className="mx-1.5 font-mono text-[11px] text-sage-deep">→</span>}
+                  {index < LAUNCH_SWARM.length - 1 && <span className="mx-1.5 font-mono text-[11px] text-sage-deep">→</span>}
                 </div>
               ))}
             </div>
@@ -98,8 +98,8 @@ export function NestSection() {
               )}
             </ul>
             <div className="mt-6 flex flex-wrap gap-3">
-              <ButtonLink href="/app/nests?preset=launch-intelligence">Try this nest</ButtonLink>
-              <ButtonLink href="/app/nests" variant="secondary">
+              <ButtonLink href="/app/swarms?preset=launch-intelligence">Try this swarm</ButtonLink>
+              <ButtonLink href="/app/swarms" variant="secondary">
                 View flow
               </ButtonLink>
             </div>
@@ -110,44 +110,44 @@ export function NestSection() {
   );
 }
 
-export function NestMeshSection() {
+export function SwarmMeshSection() {
   const box = "rounded-xs border border-line bg-bone-raised px-4 py-3";
   const chip = "rounded-xs border border-sage/60 bg-sage/10 px-2 py-1 font-mono text-[9.5px] text-sage-deep whitespace-nowrap";
   return (
     <section className="container-page py-20">
       <SectionHeading
         index="03"
-        kicker="nest-to-nest"
-        title="Let nests talk."
-        lede="A nest exposes structured capabilities with explicit input and output schemas — over Finch protocols, HTTP or Flightpath. Discoverable interfaces, no tight coupling. That's what turns a dashboard into a network."
+        kicker="swarm-to-swarm"
+        title="Let swarms talk."
+        lede="A swarm exposes structured capabilities with explicit input and output schemas — over Yinsi protocols, HTTP or the execution layer. Discoverable interfaces, no tight coupling. That's what turns a dashboard into a network."
       />
       <div className="grid-paper overflow-x-auto rounded-xs border border-line bg-bone-raised p-6">
         <div className="flex min-w-[640px] items-center justify-center gap-3">
           <div className={box}>
-            <p className="font-mono text-[11px] font-medium text-ink">RESEARCH NEST</p>
-            <p className="mt-1 font-mono text-[9px] text-grey">5 finches · read-only</p>
+            <p className="font-mono text-[11px] font-medium text-ink">research swarm</p>
+            <p className="mt-1 font-mono text-[9px] text-grey">5 agents · read-only</p>
           </div>
           <div className="flex flex-col items-center gap-1">
             <span className={chip}>research.report/v1</span>
             <span className="font-mono text-[11px] text-sage-deep">→</span>
           </div>
           <div className={box}>
-            <p className="font-mono text-[11px] font-medium text-ink">MARKET NEST</p>
-            <p className="mt-1 font-mono text-[9px] text-grey">4 finches · read-only</p>
+            <p className="font-mono text-[11px] font-medium text-ink">market swarm</p>
+            <p className="mt-1 font-mono text-[9px] text-grey">4 agents · read-only</p>
           </div>
           <div className="flex flex-col items-center gap-1">
             <span className={chip}>risk.decision/v1</span>
             <span className="font-mono text-[11px] text-sage-deep">→</span>
           </div>
           <div className={box}>
-            <p className="font-mono text-[11px] font-medium text-ink">EXECUTION NEST</p>
+            <p className="font-mono text-[11px] font-medium text-ink">execution swarm</p>
             <p className="mt-1 flex items-center gap-1.5 font-mono text-[9px] text-grey">
               policied writes <Badge tone="gold">simulate → live</Badge>
             </p>
           </div>
         </div>
         <p className="mt-5 text-center font-mono text-[9.5px] text-grey-faint">
-          http · webhooks · onchain · finch→finch · nest→nest
+          http · webhooks · onchain · agent→agent · swarm→swarm
         </p>
       </div>
     </section>

@@ -3,15 +3,15 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { FinchGlyph } from "@/components/birds/FinchGlyph";
+import { YinsiMark } from "@/components/brand/YinsiMark";
 import { ConnectButton } from "@/components/site/ConnectButton";
 import { useFetch } from "@/lib/use-fetch";
 
 const TABS = [
   { href: "/app", label: "Overview", exact: true },
-  { href: "/app/school", label: "Flight School" },
-  { href: "/app/aviary", label: "Aviary" },
-  { href: "/app/nests", label: "Nests" },
+  { href: "/app/playground", label: "Playground" },
+  { href: "/app/directory", label: "Directory" },
+  { href: "/app/swarms", label: "Swarms" },
   { href: "/app/network", label: "Network" },
   { href: "/app/build", label: "Build" },
 ];
@@ -38,8 +38,8 @@ function WorkStrip() {
   // Every figure here is a count of things that exist and run. There is no
   // sample tier to mark.
   const items = [
-    { value: counts.nests, label: "nests", hint: "Coordinated swarms in the registry" },
-    { value: counts.finches, label: "finches", hint: "Finches in the registry — builtin and published" },
+    { value: counts.nests, label: "swarms", hint: "Coordinated swarms in the registry" },
+    { value: counts.finches, label: "agents", hint: "Agents in the registry — builtin and published" },
     { value: counts.runs, label: "runs", hint: "Executions carried out" },
     { value: counts.tasks, label: "tasks", hint: "Tasks dispatched inside those runs" },
   ];
@@ -72,9 +72,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-40 border-b border-line bg-bone/95 backdrop-blur-[2px]">
         <div className="container-page flex h-14 items-center gap-4">
-          <Link href="/" className="flex items-center gap-2 text-ink" aria-label="Finch — back to overview">
-            <FinchGlyph size={22} />
-            <span className="hidden font-sans text-[13px] font-semibold sm:block">FINCH</span>
+          <Link href="/" className="flex items-center gap-2 text-ink" aria-label="Yinsi — back to overview">
+            <YinsiMark size={20} accent />
+            <span className="hidden font-sans text-[13px] font-semibold sm:block">Yinsi</span>
           </Link>
           <span className="hidden h-5 w-px bg-line-strong sm:block" aria-hidden />
           <span className="hidden font-mono text-[10px] text-grey sm:block">app</span>
@@ -138,7 +138,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <footer className="border-t border-line bg-bone-raised">
         <div className="container-page flex flex-col gap-2 py-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="font-mono text-[10px] text-grey-faint">
-            finch app · build → hatch → connect → execute → earn
+            yinsi app · build → launch → connect → execute → earn
           </p>
           <div className="flex items-center gap-4 font-mono text-[10.5px]">
             <Link href="/docs" className="text-ink-soft hover:text-green-deep">docs</Link>

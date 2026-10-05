@@ -17,7 +17,6 @@ import { readMarketPair, readSwapQuote, readTokenList, readTokenMarkets, readTok
 import { getNetworkStatus } from "./network.ts";
 import { readPumpCurve } from "./pump.ts";
 import { loadApprovedRwaAssets } from "./rwa.ts";
-import { readFinchToken } from "./tokens.ts";
 
 /**
  * The Flightpath tool catalog.
@@ -287,15 +286,6 @@ export const FLIGHTPATH_TOOLS: FlightpathToolMeta[] = [
     inputSchema: { type: "object", properties: { address }, required: ["address"] },
   },
   {
-    name: "finch_token",
-    mode: "read",
-    category: "tokens",
-    risk: "none",
-    description:
-      "The $FINCH token as it stands right now: its pump.fun launch (bonding-curve progress or graduation), mint supply and authorities, holders, USD price and DEX markets. Until a mint account exists at its contract address it reports launched:false — $FINCH has not launched — and nothing else is read.",
-    inputSchema: { type: "object", properties: {} },
-  },
-  {
     name: "rwa_registry",
     mode: "read",
     category: "rwa",
@@ -344,7 +334,7 @@ export const FLIGHTPATH_TOOLS: FlightpathToolMeta[] = [
     category: "programs",
     risk: "high",
     description:
-      "Send one raw instruction to a program. The program must be on the allowlist, the only signer may be this finch's wallet, and any System or Token instruction inside must be one the policy can price.",
+      "Send one raw instruction to a program. The program must be on the allowlist, the only signer may be this agent's wallet, and any System or Token instruction inside must be one the policy can price.",
     inputSchema: {
       type: "object",
       properties: {
@@ -560,15 +550,6 @@ export function createFlightpathTools(fp: Flightpath, selection?: string[]): Exe
         Array.isArray(args.mints) ? args.mints.filter((entry): entry is string => isSolanaAddress(entry)).slice(0, 25) : [],
       ),
     account_read: async (args) => fp.accountRead(addr(args, "address")),
-    finch_token: async () => {
-      const readout = await readFinchToken(target);
-      return {
-        ...readout,
-        note:
-          readout.note ??
-          "Each block carries its own reachable/error. Price and holders come from Jupiter, markets from DexScreener, everything else from the mint account itself.",
-      };
-    },
     rwa_registry: async () => loadApprovedRwaAssets(),
     transfer_native: async (args, ctx) =>
       fp.transferNative({ id: ctx.executionId, to: addr(args, "to"), amount: parseUnits(str(args, "amount"), SOL_DECIMALS) }),

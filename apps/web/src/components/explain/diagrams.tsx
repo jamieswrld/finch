@@ -102,13 +102,13 @@ function Frame({ children, viewBox, caption }: { children: React.ReactNode; view
   );
 }
 
-/** The finch runtime loop, as implemented in packages/sdk/src/runtime.ts. */
-export function FinchLoopDiagram() {
+/** The agent runtime loop, as implemented in packages/sdk/src/runtime.ts. */
+export function AgentLoopDiagram() {
   return (
-    <Frame viewBox="0 0 720 220" caption="fig. 01 — the finch runtime loop (packages/sdk/src/runtime.ts)">
-      <Box x={16} y={86} w={96} h={44} label="finch.json" sub="manifest" />
-      <Arrow from={[116, 108]} to={[152, 108]} label="hatch" />
-      <Box x={156} y={86} w={92} h={44} label="Nest" sub="bound runtime" accent />
+    <Frame viewBox="0 0 720 220" caption="fig. 01 — the agent runtime loop (packages/sdk/src/runtime.ts)">
+      <Box x={16} y={86} w={96} h={44} label="agent.json" sub="manifest" />
+      <Arrow from={[116, 108]} to={[152, 108]} label="launch" />
+      <Box x={156} y={86} w={92} h={44} label="agent" sub="bound runtime" accent />
       <Arrow from={[252, 108]} to={[292, 108]} />
 
       <rect x={296} y={30} width={272} height={158} rx={2} fill="none" stroke={FAINT} strokeDasharray="3 3" />
@@ -133,10 +133,10 @@ export function FinchLoopDiagram() {
   );
 }
 
-/** DAG scheduling, as implemented in packages/sdk/src/nest.ts runNest(). */
-export function NestSchedulerDiagram() {
+/** DAG scheduling, as implemented in the SDK's swarm scheduler (packages/sdk/src/nest.ts). */
+export function SwarmSchedulerDiagram() {
   return (
-    <Frame viewBox="0 0 720 250" caption="fig. 02 — nest scheduling: dependency waves and typed channels (packages/sdk/src/nest.ts)">
+    <Frame viewBox="0 0 720 250" caption="fig. 02 — swarm scheduling: dependency waves and typed channels">
       <Label x={70} y={20} color={GREY}>stage 01</Label>
       <Label x={270} y={20} color={GREY}>stage 02 — parallel</Label>
       <Label x={500} y={20} color={GREY}>stage 03</Label>
@@ -152,7 +152,7 @@ export function NestSchedulerDiagram() {
       <Arrow from={[312, 68]} to={[400, 100]} label="block.profile" />
       <Arrow from={[312, 162]} to={[400, 132]} label="cost.profile" />
 
-      <Box x={404} y={92} w={104} h={46} label="risk-finch" sub="task t4" />
+      <Box x={404} y={92} w={104} h={46} label="risk-agent" sub="task t4" />
       <Arrow from={[512, 115]} to={[576, 115]} label="risk.assessment" />
       <Box x={580} y={92} w={116} h={46} label="synthesis" sub="terminal channels" accent />
 
@@ -167,7 +167,7 @@ export function NestSchedulerDiagram() {
   );
 }
 
-/** The mandatory write lifecycle, as implemented in flightpath executeIntent(). */
+/** The mandatory write lifecycle, as implemented in the execution layer's executeIntent(). */
 export function ExecutionLifecycleDiagram() {
   const stages = [
     { label: "construct", sub: "intent" },
@@ -179,7 +179,7 @@ export function ExecutionLifecycleDiagram() {
     { label: "log", sub: "record + proof" },
   ];
   return (
-    <Frame viewBox="0 0 720 190" caption="fig. 03 — the only path to a write (packages/flightpath/src/execution.ts)">
+    <Frame viewBox="0 0 720 190" caption="fig. 03 — the only path to a write">
       {stages.map((stage, index) => {
         const x = 12 + index * 101;
         return (
@@ -245,7 +245,7 @@ export function PermissionDiagram() {
 export function RegistryDiagram() {
   return (
     <Frame viewBox="0 0 720 200" caption="fig. 05 — identity: Solana is the record, the index is a convenience">
-      <Box x={16} y={78} w={110} h={46} label="finch.json" sub="portable manifest" />
+      <Box x={16} y={78} w={110} h={46} label="agent.json" sub="portable manifest" />
       <Arrow from={[130, 90]} to={[196, 66]} label="sha256" />
       <Arrow from={[130, 112]} to={[196, 140]} label="publish" />
 
@@ -257,7 +257,7 @@ export function RegistryDiagram() {
 
       <Box x={424} y={82} w={130} h={44} label="indexer" sub="MongoDB" />
       <Arrow from={[558, 104]} to={[610, 104]} />
-      <Box x={614} y={82} w={92} h={44} label="Aviary" sub="discovery" />
+      <Box x={614} y={82} w={92} h={44} label="directory" sub="discovery" />
 
       <line x1={16} y1={172} x2={704} y2={172} stroke={FAINT} strokeDasharray="2 4" />
       <Label x={16} y={190} anchor="start" color={INK} size={8}>

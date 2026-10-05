@@ -5,7 +5,7 @@
  *   add Solana wallet permissions → hatch
  */
 
-export { createFinch, hatchFromManifest, FinchBuilder, type WalletInput } from "./builder.ts";
+export { createAgent, createFinch, hatchFromManifest, launchFromManifest, FinchBuilder, type WalletInput } from "./builder.ts";
 export {
   nestExecutionPolicySchema,
   nestFinchSchema,

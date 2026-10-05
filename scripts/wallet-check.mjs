@@ -1,4 +1,4 @@
-// Confirm every Solana wallet Finch relies on: that its secret key in
+// Confirm every Solana wallet Yinsi relies on: that its secret key in
 // .env.local parses, which PUBLIC address it derives to, whether that matches
 // the address on record, and its SOL balance right now. Prints addresses,
 // balances and a verdict only. Never prints, logs, or copies key material —

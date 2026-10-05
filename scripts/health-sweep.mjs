@@ -1,6 +1,6 @@
 // What a visitor actually experiences on the deployed site, checked from the
-// outside: every page, every read API, one real read-only finch run, one real
-// nest run to completion. Reports status, timing and the first error text.
+// outside: every page, every read API, one real read-only agent run, one real
+// swarm run to completion. Reports status, timing and the first error text.
 // Usage: FINCH_BASE=https://finch1.vercel.app node scripts/health-sweep.mjs
 const BASE = (process.env.FINCH_BASE ?? "https://finch1.vercel.app").replace(/\/$/, "");
 const t0 = Date.now();
@@ -29,40 +29,39 @@ async function api(path, pick) {
 }
 
 console.log(`base ${BASE}`);
-for (const p of ["/", "/app", "/app/school", "/app/nests", "/app/aviary", "/app/network", "/docs", "/how-it-works", "/research"]) await page(p);
+for (const p of ["/", "/app", "/app/playground", "/app/swarms", "/app/directory", "/app/network", "/docs", "/how-it-works", "/research"]) await page(p);
 
 const status = await api("/api/status", (b) => `providers=${(b.compute?.available ?? []).map((p) => `${p.id}:${p.probe?.status ?? "?"}`).join(",")} invalidKeys=${JSON.stringify(b.compute?.invalidKeys ?? null)} chain=${b.chain?.chain ?? "?"} reachable=${b.chain?.reachable ?? "?"} slot=${b.chain?.slot ?? "null"} token=${b.token?.configured ?? "?"} registry=${b.registry?.configured ?? "?"} db=${b.db?.configured ?? "?"}`);
 if (status) console.log(`     status keys: ${Object.keys(status).join(", ")}`);
 await api("/api/chain", (b) => `${b.chain ?? "?"} reachable=${b.reachable} genesisMatches=${b.genesisMatches} slot=${b.slot ?? "null"} tps=${b.tps ?? "null"} endpoints=${(b.endpoints ?? []).map((e) => `${e.url}:${e.reachable ? "up" : "down"}`).join(",")}`);
-await api("/api/token", (b) => `mint=${b.mint ?? "null"} launched=${b.launched} phase=${b.launchpad?.phase ?? "-"} price=${b.price?.data?.usdPrice ?? "unread"} holders=${b.holders?.count ?? "unread"}${b.note ? ` note=${String(b.note).slice(0, 60)}` : ""}`);
 await api("/api/activity", (b) => `counts=${JSON.stringify(b.counts)} runs=${b.runsProvenance ?? "?"}`);
 await api("/api/publish/status", (b) => `${b.state}/${b.mechanism}`);
 await api("/api/tokens", (b) => `${(b.tokens ?? []).length} tokens on ${b.chain ?? "?"}; reachable=${(b.tokens ?? []).map((t) => t.reachable).join(",")}`);
-await api("/api/finches", (b) => `${(b.finches ?? b.items ?? []).length} finches`);
-await api("/api/nests", (b) => `${(b.nests ?? b.items ?? []).length} nests`);
-await api("/api/aviary", (b) => `${(b.listings ?? b.items ?? []).length} listings`);
-await api("/api/hive", (b) => `${b.count ?? (b.findings ?? b.items ?? []).length} findings`);
+await api("/api/agents", (b) => `${(b.agents ?? b.finches ?? b.items ?? []).length} agents`);
+await api("/api/swarms", (b) => `${(b.swarms ?? b.nests ?? b.items ?? []).length} swarms`);
+await api("/api/directory", (b) => `${(b.listings ?? b.items ?? []).length} listings`);
+await api("/api/memory", (b) => `${b.count ?? (b.findings ?? b.items ?? []).length} findings`);
 await api("/api/registry", (b) => `configured=${b.configured} authority=${b.authority ?? "null"} anchored=${b.registeredCount ?? "?"}/${(b.registrations ?? []).length}${b.note ? ` note=${String(b.note).slice(0, 60)}` : ""}`);
 
-// One real read-only finch run, as a visitor would do it.
+// One real read-only agent run, as a visitor would do it.
 {
   const started = Date.now();
   try {
-    const r = await fetch(BASE + "/api/school/run", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ preset: "chain-pulse", input: "Give me a one-line chain pulse." }) });
+    const r = await fetch(BASE + "/api/playground/run", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ preset: "chain-pulse", input: "Give me a one-line chain pulse." }) });
     const text = await r.text();
     let body; try { body = JSON.parse(text); } catch { body = null; }
     const out = body?.output ?? body?.result?.output ?? null;
-    console.log(`run  school chain-pulse   ${r.status} ${ms(started)} ok=${body?.ok ?? "?"} haltedBy=${body?.haltedBy ?? body?.result?.haltedBy ?? "?"} error=${body?.error ?? "-"} output=${out ? JSON.stringify(out).slice(0, 100) : "(none)"}`);
+    console.log(`run  playground chain-pulse ${r.status} ${ms(started)} ok=${body?.ok ?? "?"} haltedBy=${body?.haltedBy ?? body?.result?.haltedBy ?? "?"} error=${body?.error ?? "-"} output=${out ? JSON.stringify(out).slice(0, 100) : "(none)"}`);
     if (!r.ok) console.log(`     body: ${text.slice(0, 300)}`);
-  } catch (e) { console.log(`run  school chain-pulse   FAILED ${e.message}`); }
+  } catch (e) { console.log(`run  playground chain-pulse FAILED ${e.message}`); }
 }
 
-// One real nest run, streamed to completion.
+// One real swarm run, streamed to completion.
 {
   const started = Date.now();
   try {
-    const r = await fetch(BASE + "/api/nests/run", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ nest: "chain-intelligence", objective: "one-line chain pulse" }) });
-    console.log(`run  nest chain-intel     ${r.status} ${r.headers.get("content-type")}`);
+    const r = await fetch(BASE + "/api/swarms/run", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ nest: "chain-intelligence", objective: "one-line chain pulse" }) });
+    console.log(`run  swarm chain-intel    ${r.status} ${r.headers.get("content-type")}`);
     if (r.ok && r.body) {
       const reader = r.body.getReader(); const dec = new TextDecoder();
       let buf = "", done = false; const statuses = {}; let errors = []; let finished = null;
@@ -86,6 +85,6 @@ await api("/api/registry", (b) => `configured=${b.configured} authority=${b.auth
       console.log(`     ${ms(started)} tasks=${JSON.stringify(statuses)} finished=${finished ? (finished.status ?? finished.run?.status ?? "yes") : "NO (timeout or stream ended)"}`);
       for (const e of errors.slice(0, 6)) console.log(`     !! ${e}`);
     }
-  } catch (e) { console.log(`run  nest chain-intel     FAILED ${e.message}`); }
+  } catch (e) { console.log(`run  swarm chain-intel    FAILED ${e.message}`); }
 }
 console.log(`total ${ms(t0)}`);

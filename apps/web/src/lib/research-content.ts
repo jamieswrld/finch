@@ -6,11 +6,11 @@
 export const EXPERIMENTS = [
   {
     id: "EXP-001",
-    title: "Murmuration routing",
+    title: "Swarm routing",
     status: "active" as const,
     area: "coordination",
     summary:
-      "How should messages route through a nest as it grows? Compares staged pipelines (current Nest model) against gossip and quorum topologies on task completion and token cost.",
+      "How should messages route through a swarm as it grows? Compares staged pipelines (the current swarm model) against gossip and quorum topologies on task completion and token cost.",
   },
   {
     id: "EXP-002",
@@ -26,7 +26,7 @@ export const EXPERIMENTS = [
     status: "design" as const,
     area: "verification",
     summary:
-      "Can a nest prove what it did? Signed execution receipts (Flightpath logs → onchain attestations) as a primitive for trust between nests that have never met.",
+      "Can a swarm prove what it did? Signed execution receipts (execution-layer logs → onchain attestations) as a primitive for trust between swarms that have never met.",
   },
   {
     id: "EXP-004",
@@ -40,17 +40,17 @@ export const EXPERIMENTS = [
 
 export const BENCHMARKS = [
   {
-    suite: "flightpath-bench",
+    suite: "execution-bench",
     tasks: 48,
     metric: "execution correctness",
     description: "Transfer, approval, swap and read tasks against a local validator — did the agent produce the right instructions, and did it respect policy?",
     status: "harness ready — first public run pending",
   },
   {
-    suite: "nest-relay",
+    suite: "swarm-relay",
     tasks: 24,
     metric: "end-to-end task completion",
-    description: "Multi-agent relay tasks through 2–4 stage nests; measures completion, latency and token cost per stage.",
+    description: "Multi-agent relay tasks through 2–4 stage swarms; measures completion, latency and token cost per stage.",
     status: "in design",
   },
   {
@@ -71,7 +71,7 @@ export const OPEN_PROBLEMS = [
   {
     id: "OP-02",
     title: "Inter-agent pricing",
-    body: "When finches buy services from finches, what discovers the price? Posted prices, auctions, or negotiated credit lines all have failure modes at swarm scale.",
+    body: "When agents buy services from agents, what discovers the price? Posted prices, auctions, or negotiated credit lines all have failure modes at swarm scale.",
   },
   {
     id: "OP-03",
@@ -80,8 +80,8 @@ export const OPEN_PROBLEMS = [
   },
   {
     id: "OP-04",
-    title: "Memory consistency across a nest",
-    body: "Two finches with different memories of the same event will disagree productively — or catastrophically. When should memory be shared vs. private?",
+    title: "Memory consistency across a swarm",
+    body: "Two agents with different memories of the same event will disagree productively — or catastrophically. When should memory be shared vs. private?",
   },
   {
     id: "OP-05",
@@ -90,41 +90,43 @@ export const OPEN_PROBLEMS = [
   },
 ];
 
+// Amounts are deliberately absent: none are set, and a figure here before one
+// is would be an invented number.
 export const GRANT_TRACKS = [
-  { track: "Open-source tooling", note: "SDK adapters, indexers, testing harnesses.", size: "up to 25k $FINCH" },
-  { track: "Aviary services", note: "High-quality data feeds, risk modules, attestation services.", size: "up to 40k $FINCH" },
-  { track: "Coordination research", note: "Published experiments on nest/swarm behavior, with code.", size: "up to 60k $FINCH" },
+  { track: "Open-source tooling", note: "SDK adapters, indexers, testing harnesses.", size: "amount not set" },
+  { track: "Directory services", note: "High-quality data feeds, risk modules, attestation services.", size: "amount not set" },
+  { track: "Coordination research", note: "Published experiments on swarm behavior, with code.", size: "amount not set" },
   { track: "Security", note: "Audits, fuzzing suites, policy-bypass bounties.", size: "case by case" },
 ];
 
-export const FIPS = [
+export const PROPOSALS = [
   {
-    id: "FIP-0",
+    id: "YIP-0",
     title: "finch.manifest/0.1 — the agent manifest",
     status: "implemented-draft" as const,
-    summary: "One serializable document describing identity, model, memory, tools, permissions, wallet, triggers, budget. Implemented in @finch/sdk and the Nest Builder.",
+    summary: "One serializable document describing identity, model, memory, tools, permissions, wallet, triggers, budget. Implemented in @finch/sdk and the agent builder.",
   },
   {
-    id: "FIP-1",
-    title: "Flightpath execution records",
+    id: "YIP-1",
+    title: "Execution records",
     status: "implemented-draft" as const,
     summary: "The mandatory lifecycle (policy → simulate → approve → submit → confirm → log) and the ExecutionRecord shape every write produces.",
   },
   {
-    id: "FIP-2",
-    title: "Aviary service listings",
+    id: "YIP-2",
+    title: "Directory service listings",
     status: "draft" as const,
-    summary: "Listing metadata, verification levels, uptime probes and per-call metering for services published to the registry.",
+    summary: "Listing metadata, verification levels, uptime probes and per-call metering for services published to the directory.",
   },
   {
-    id: "FIP-3",
-    title: "Credits accounting & $FINCH settlement",
+    id: "YIP-3",
+    title: "Credits accounting & settlement",
     status: "draft" as const,
-    summary: "Double-entry credit ledger (live), and a design not yet written for binding $FINCH deposits to credit issuance once $FINCH has launched.",
+    summary: "Double-entry credit ledger (live), and a design not yet written for how credits are issued against onchain deposits.",
   },
   {
-    id: "FIP-4",
-    title: "Onchain registry & Proof of Flight",
+    id: "YIP-4",
+    title: "Onchain registry & execution proofs",
     status: "implemented-draft" as const,
     summary: "The memo-anchored registry (finch-registry/1: kind, handle, manifest sha256 and URI, signed by the registry authority, rebuildable from Solana alone) and the proof-of-flight/0.2 receipt format for verifiable executions.",
   },

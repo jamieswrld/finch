@@ -1,15 +1,14 @@
 import { Footer } from "@/components/site/Footer";
 import { FinalCta } from "@/components/home/FinalCta";
-import { FlightpathSection } from "@/components/home/FlightpathSection";
+import { ExecutionSection } from "@/components/home/ExecutionSection";
 import { SdkSection } from "@/components/home/SdkSection";
-import { TokenSection } from "@/components/home/TokenSection";
 import { SwarmBand } from "@/components/landing/SwarmBand";
 import { World } from "@/components/landing/World";
-import { NestMeshSection, NestSection, OneFinchSection } from "@/components/landing/sections";
+import { OneAgentSection, SwarmMeshSection, SwarmSection } from "@/components/landing/sections";
 
 /**
- * finch.fun — the world first, then the story:
- * ONE → SPECIALIZE → COORDINATE → NEST → CONNECT → NETWORK
+ * The landing page — the world first, then the story:
+ * one → specialize → coordinate → swarm → connect → network
  */
 export default function LandingPage() {
   return (
@@ -17,12 +16,11 @@ export default function LandingPage() {
       <World />
       <main>
         <SwarmBand />
-        <OneFinchSection />
-        <NestSection />
-        <NestMeshSection />
-        <TokenSection />
+        <OneAgentSection />
+        <SwarmSection />
+        <SwarmMeshSection />
         <SdkSection />
-        <FlightpathSection />
+        <ExecutionSection />
         <FinalCta />
       </main>
       <Footer />

@@ -7,9 +7,9 @@
 // failed read.
 //
 // Usage: node scripts/token-facts.mjs [mint]
-// With no mint it reads $FINCH: FINCH_TOKEN_MINT (env, then .env.local) when
-// set, otherwise its published pump.fun mint address — and says plainly when no
-// mint account exists there yet, which means $FINCH has not launched.
+// With no mint argument it reads FINCH_TOKEN_MINT (env, then .env.local) when
+// that is set, and says plainly when no mint account exists there yet. There
+// is no default mint: with neither, it asks for one.
 import { existsSync, readFileSync } from "node:fs";
 import { address, createSolanaRpc, getAddressEncoder, getProgramDerivedAddress, isAddress } from "@solana/kit";
 
@@ -22,11 +22,14 @@ if (existsSync(".env.local")) {
   }
 }
 
-// Same default as FINCH_TOKEN_MINT_DEFAULT in packages/flightpath/src/tokens.ts.
-const FINCH_DEFAULT = "63GtvVxFKgXCcSAXXkrPtp7vk8oWyEfqwwdB8gNYpump";
+// No default, matching FINCH_TOKEN_MINT_DEFAULT in packages/flightpath/src/tokens.ts.
 const fromArg = process.argv[2];
-const mint = fromArg ?? process.env.FINCH_TOKEN_MINT ?? FINCH_DEFAULT;
-const source = fromArg ? "" : process.env.FINCH_TOKEN_MINT ? " ($FINCH, from FINCH_TOKEN_MINT)" : " ($FINCH, its published pump.fun mint address)";
+const mint = fromArg ?? process.env.FINCH_TOKEN_MINT;
+if (!mint) {
+  console.error("usage: node scripts/token-facts.mjs <mint>   (or set FINCH_TOKEN_MINT)");
+  process.exit(1);
+}
+const source = fromArg ? "" : " (from FINCH_TOKEN_MINT)";
 if (!isAddress(mint)) {
   console.error(`not a Solana address: ${mint}`);
   process.exit(1);
@@ -58,7 +61,7 @@ try {
   const program = account ? TOKEN_PROGRAMS[account.owner] : undefined;
   const parsed = account?.data?.parsed;
   if (!account) {
-    console.log(`account   NONE — no mint account at ${mint} on this cluster${fromArg ? "" : ", so $FINCH has not launched"}`);
+    console.log(`account   NONE — no mint account at ${mint} on this cluster${fromArg ? "" : ", so the configured token has not launched"}`);
     done = true;
   } else if (!program || parsed?.type !== "mint") {
     console.log(`account   exists but is not a mint (owner ${account.owner}, type ${parsed?.type ?? "unparsed"})`);

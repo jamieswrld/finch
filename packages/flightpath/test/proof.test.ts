@@ -12,7 +12,7 @@ const RECIPIENT = "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU";
 
 const confirmed = (): ExecutionRecord => ({
   id: "exec-1",
-  agentId: "courier-finch",
+  agentId: "courier",
   chain: "solana:mainnet",
   createdAt: "2026-09-26T00:00:00.000Z",
   state: "confirmed",
@@ -40,7 +40,7 @@ const confirmed = (): ExecutionRecord => ({
 test("a confirmed execution yields a verifiable proof", async () => {
   const proof = await buildProofOfFlight(confirmed(), { nestId: "chain-intelligence", taskId: "t1" });
   assert.equal(proof.version, "proof-of-flight/0.2");
-  assert.equal(proof.finchId, "courier-finch");
+  assert.equal(proof.finchId, "courier");
   assert.equal(proof.nestId, "chain-intelligence");
   assert.equal(proof.chain, "solana:mainnet");
   assert.equal(proof.signature, SIGNATURE);

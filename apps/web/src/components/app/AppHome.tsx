@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { AviaryListing, NestDoc, FinchDoc } from "@finch/db";
-import { DartGlyph, FinchGlyph } from "@/components/birds/FinchGlyph";
+import { AgentGlyph, DartGlyph } from "@/components/brand/AgentGlyph";
 import { Badge, DataBadge } from "@/components/ui/Badge";
 import { ButtonLink } from "@/components/ui/Button";
 import { EmptyBlock, ErrorBlock, LoadingBlock } from "@/components/ui/StateBlocks";
@@ -21,33 +21,36 @@ function PanelHeader({ title, href, hrefLabel }: { title: string; href: string; 
   );
 }
 
-function FinchesPanel() {
-  const state = useFetch<{ source: string; finches: FinchDoc[] }>("/api/finches");
+/** Stored agent status values, in the words the product uses. */
+const AGENT_STATUS_LABEL: Record<string, string> = { draft: "draft", hatched: "launched" };
+
+function AgentsPanel() {
+  const state = useFetch<{ source: string; finches: FinchDoc[] }>("/api/agents");
   return (
-    <section className="rounded-xs border border-line bg-bone-raised" aria-label="Your finches">
-      <PanelHeader title="finches" href="/app/build" hrefLabel="hatch" />
+    <section className="rounded-xs border border-line bg-bone-raised" aria-label="Your agents">
+      <PanelHeader title="agents" href="/app/build" hrefLabel="launch" />
       <div className="p-4">
-        {state.status === "loading" && <LoadingBlock label="loading finches" />}
+        {state.status === "loading" && <LoadingBlock label="loading agents" />}
         {state.status === "error" && <ErrorBlock message={state.message} onRetry={state.retry} />}
         {state.status === "ready" &&
           (state.data.finches.length === 0 ? (
-            <EmptyBlock title="no finches yet">Assemble your first finch in the builder — or start in Flight School.</EmptyBlock>
+            <EmptyBlock title="no agents yet">Assemble your first agent in the builder — or start in the playground.</EmptyBlock>
           ) : (
             <ul className="divide-y divide-line/60">
-              {state.data.finches.slice(0, 5).map((finch) => {
-                const manifest = finch.manifest as { identity?: { name?: string; description?: string }; model?: { model?: string } };
+              {state.data.finches.slice(0, 5).map((agent) => {
+                const manifest = agent.manifest as { identity?: { name?: string; description?: string }; model?: { model?: string } };
                 return (
-                  <li key={finch.handle} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
-                    <FinchGlyph size={16} className="shrink-0 text-ink-soft" />
+                  <li key={agent.handle} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+                    <AgentGlyph size={16} className="shrink-0 text-ink-soft" />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[13.5px] font-semibold tracking-[-0.01em] text-ink">
-                        {manifest.identity?.name ?? finch.handle}
+                        {manifest.identity?.name ?? agent.handle}
                       </p>
                       <p className="truncate font-mono text-[10.5px] text-grey">
-                        {finch.handle} · {manifest.model?.model ?? "model unset"}
+                        {agent.handle} · {manifest.model?.model ?? "model unset"}
                       </p>
                     </div>
-                    <Badge tone={finch.status === "hatched" ? "green" : "sage"}>{finch.status}</Badge>
+                    <Badge tone={agent.status === "hatched" ? "green" : "sage"}>{AGENT_STATUS_LABEL[agent.status] ?? agent.status}</Badge>
                   </li>
                 );
               })}
@@ -56,7 +59,7 @@ function FinchesPanel() {
         {state.status === "ready" && state.data.source === "builtin" && state.data.finches.length > 0 && (
           <p className="mt-3 flex items-center gap-2">
             <DataBadge source="builtin" />
-            <span className="text-[11px] text-grey">builtin finches — runnable now; yours appear here once published</span>
+            <span className="text-[11px] text-grey">builtin agents — runnable now; yours appear here once published</span>
           </p>
         )}
       </div>
@@ -64,11 +67,11 @@ function FinchesPanel() {
   );
 }
 
-function AviaryPanel() {
-  const state = useFetch<{ source: "db" | "builtin"; listings: AviaryListing[] }>("/api/aviary");
+function DirectoryPanel() {
+  const state = useFetch<{ source: "db" | "builtin"; listings: AviaryListing[] }>("/api/directory");
   return (
-    <section className="rounded-xs border border-line bg-bone-raised" aria-label="Aviary highlights">
-      <PanelHeader title="aviary — most called" href="/app/aviary" hrefLabel="browse" />
+    <section className="rounded-xs border border-line bg-bone-raised" aria-label="Directory highlights">
+      <PanelHeader title="directory — most called" href="/app/directory" hrefLabel="browse" />
       <div className="p-4">
         {state.status === "loading" && <LoadingBlock label="loading registry" />}
         {state.status === "error" && <ErrorBlock message={state.message} onRetry={state.retry} />}
@@ -109,26 +112,26 @@ function AviaryPanel() {
   );
 }
 
-function SchoolPanel() {
+function PlaygroundPanel() {
   return (
-    <section className="flex flex-col rounded-xs border border-line bg-ink text-bone" aria-label="Flight School">
+    <section className="flex flex-col rounded-xs border border-line bg-ink text-bone" aria-label="Playground">
       <header className="flex items-baseline justify-between border-b border-bone/15 px-4 py-2.5">
-        <span className="font-mono text-[11px] text-sage">flight school</span>
+        <span className="font-mono text-[11px] text-sage">playground</span>
         <span className="font-mono text-[10px] text-green">no wallet needed</span>
       </header>
       <div className="flex flex-1 flex-col p-4">
-        <p className="serif-note text-[19px] leading-snug !text-bone/90">what should your first finch learn?</p>
+        <p className="serif-note text-[19px] leading-snug !text-bone/90">what should your first agent learn?</p>
         <p className="mt-2 text-[12.5px] leading-relaxed text-bone/60">
           Presets on the real runtime — Market Scout, Wallet Analyst, Token Inspector, Launch Scout and more read
-          Solana; Courier Finch prepares a SOL transfer for your own wallet to sign. Try one, view its manifest, fork
+          Solana; Courier prepares a SOL transfer for your own wallet to sign. Try one, view its manifest, fork
           it into the builder.
         </p>
         <div className="mt-auto pt-4">
           <Link
-            href="/app/school"
+            href="/app/playground"
             className="inline-flex h-9 items-center gap-2 rounded-xs border border-green bg-green px-3.5 font-mono text-[11px] text-ink transition-colors hover:bg-bone hover:border-bone"
           >
-            enter flight school <span aria-hidden>→</span>
+            enter the playground <span aria-hidden>→</span>
           </Link>
         </div>
       </div>
@@ -136,30 +139,30 @@ function SchoolPanel() {
   );
 }
 
-function NestsPanel() {
-  const state = useFetch<{ source: "db" | "builtin"; nests: NestDoc[] }>("/api/nests");
+function SwarmsPanel() {
+  const state = useFetch<{ source: "db" | "builtin"; nests: NestDoc[] }>("/api/swarms");
   return (
-    <section className="rounded-xs border border-line bg-bone-raised" aria-label="Nests">
-      <PanelHeader title="nests" href="/app/nests?tab=compose" hrefLabel="compose" />
+    <section className="rounded-xs border border-line bg-bone-raised" aria-label="Swarms">
+      <PanelHeader title="swarms" href="/app/swarms?tab=compose" hrefLabel="compose" />
       <div className="p-4">
-        {state.status === "loading" && <LoadingBlock label="loading nests" />}
+        {state.status === "loading" && <LoadingBlock label="loading swarms" />}
         {state.status === "error" && <ErrorBlock message={state.message} onRetry={state.retry} />}
         {state.status === "ready" && (
           <ul className="divide-y divide-line/60">
-            {state.data.nests.slice(0, 4).map((nest) => (
-              <li key={nest.slug} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+            {state.data.nests.slice(0, 4).map((swarm) => (
+              <li key={swarm.slug} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
                 <span className="flex shrink-0 -space-x-1">
-                  {nest.stages.slice(0, 4).map((stage) => (
+                  {swarm.stages.slice(0, 4).map((stage) => (
                     <DartGlyph key={stage.id} size={11} angle={-14} className="text-sage-deep" />
                   ))}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[13.5px] font-semibold tracking-[-0.01em] text-ink">{nest.name}</p>
+                  <p className="truncate text-[13.5px] font-semibold tracking-[-0.01em] text-ink">{swarm.name}</p>
                   <p className="truncate font-mono text-[10.5px] text-grey">
-                    {nest.stages.length} stages · {nest.stages.reduce((sum, stage) => sum + stage.finches.length, 0)} finches
+                    {swarm.stages.length} stages · {swarm.stages.reduce((sum, stage) => sum + stage.finches.length, 0)} agents
                   </p>
                 </div>
-                <Badge tone="sage">{nest.status}</Badge>
+                <Badge tone="sage">{swarm.status}</Badge>
               </li>
             ))}
           </ul>
@@ -167,7 +170,7 @@ function NestsPanel() {
         {state.status === "ready" && state.data.source === "builtin" && state.data.nests.length > 0 && (
           <p className="mt-3 flex items-center gap-2">
             <DataBadge source="builtin" />
-            <span className="text-[11px] text-grey">builtin nests — every one runs</span>
+            <span className="text-[11px] text-grey">builtin swarms — every one runs</span>
           </p>
         )}
       </div>
@@ -185,18 +188,18 @@ export function AppHome() {
             mission control
           </p>
           <h1 className="mt-2 text-[28px] leading-[1.05] font-semibold tracking-[-0.02em] md:text-[34px]">
-            The nest, at a glance.
+            The swarm, at a glance.
           </h1>
         </div>
-        <ButtonLink href="/app/build">Hatch a Finch</ButtonLink>
+        <ButtonLink href="/app/build">Launch an agent</ButtonLink>
       </div>
 
       <div className="mt-8 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <SchoolPanel />
+        <PlaygroundPanel />
         <RunHistory />
-        <FinchesPanel />
-        <AviaryPanel />
-        <NestsPanel />
+        <AgentsPanel />
+        <DirectoryPanel />
+        <SwarmsPanel />
       </div>
     </div>
   );

@@ -1,15 +1,15 @@
 import Link from "next/link";
-import { FinchGlyph } from "@/components/birds/FinchGlyph";
+import { YinsiLogo } from "@/components/brand/YinsiMark";
 
 const COLUMNS = [
   {
     title: "Network",
     links: [
-      { href: "/app/school", label: "Flight School" },
-      { href: "/app/aviary", label: "Aviary" },
-      { href: "/app/nests", label: "Nests" },
+      { href: "/app/playground", label: "Playground" },
+      { href: "/app/directory", label: "Directory" },
+      { href: "/app/swarms", label: "Swarms" },
       { href: "/app/network", label: "Network" },
-      { href: "/app/build", label: "Finch Builder" },
+      { href: "/app/build", label: "Agent builder" },
     ],
   },
   {
@@ -17,17 +17,16 @@ const COLUMNS = [
     links: [
       { href: "/how-it-works", label: "How it works" },
       { href: "/docs", label: "Documentation" },
-      { href: "/docs#sdk", label: "Finch SDK" },
-      { href: "/docs#flightpath", label: "Flightpath" },
+      { href: "/docs#sdk", label: "SDK" },
+      { href: "/docs#execution", label: "Execution layer" },
       { href: "/research", label: "Research" },
     ],
   },
   {
     title: "Protocol",
     links: [
-      { href: "/research#fips", label: "Improvement Proposals" },
+      { href: "/research#proposals", label: "Improvement Proposals" },
       { href: "/research#grants", label: "Grants" },
-      { href: "/#finch", label: "$FINCH" },
       { href: "/docs#security", label: "Security model" },
     ],
   },
@@ -39,15 +38,30 @@ export function Footer() {
       <div className="container-page py-12">
         <div className="grid grid-cols-1 gap-10 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
           <div>
-            <div className="flex items-center gap-2.5">
-              <FinchGlyph size={22} className="text-ink" />
-              <span className="text-[15px] font-semibold">FINCH</span>
-            </div>
+            <YinsiLogo size={20} textClassName="text-[15px]" className="text-ink" />
             <p className="mt-4 max-w-xs text-[13px] leading-relaxed text-grey">
-              A decentralized operating layer for intelligent software on Solana. Build one finch. Coordinate
+              A decentralized operating layer for intelligent software on Solana. Build one agent. Coordinate
               millions.
             </p>
-            <p className="mt-4 label-mono">solana · open agent infrastructure · $finch</p>
+            <p className="mt-4 label-mono">solana · open agent infrastructure</p>
+            <div className="mt-3 flex items-center gap-4 font-mono text-[11px]">
+              <a
+                href="https://x.com/finchnests"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-ink-soft transition-colors hover:text-green-deep"
+              >
+                X ↗
+              </a>
+              <a
+                href="https://github.com/jamieswrld/finch"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-ink-soft transition-colors hover:text-green-deep"
+              >
+                GitHub ↗
+              </a>
+            </div>
           </div>
           {COLUMNS.map((column) => (
             <nav key={column.title} aria-label={column.title}>
@@ -68,12 +82,12 @@ export function Footer() {
         <div className="mt-12 border-t border-line pt-6">
           <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
             <p className="font-mono text-[10.5px] text-grey-faint">
-              one finch → many finches → nest → nest-to-nest → network
+              one agent → many agents → swarm → swarm-to-swarm → network
             </p>
             <p className="max-w-2xl text-[11px] leading-relaxed text-grey-faint md:text-right">
-              Nothing on this site, including anything about $FINCH, is an offer or financial advice. Solana, Jupiter,
-              DexScreener, Solscan, MongoDB, Hyperbolic, Groq and OpenRouter are referenced as infrastructure Finch
-              builds on or reads from; no endorsement or affiliation is implied.
+              Nothing on this site is an offer or financial advice. Solana, Jupiter, DexScreener, Solscan, MongoDB,
+              Hyperbolic, Groq and OpenRouter are referenced as infrastructure Yinsi builds on or reads from; no
+              endorsement or affiliation is implied.
             </p>
           </div>
         </div>

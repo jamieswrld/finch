@@ -50,7 +50,7 @@ export const HYPERBOLIC_MODELS = [
     label: "Llama 3.1 8B Instruct",
     contextWindow: 131072,
     toolCalling: true,
-    notes: "Cheap routing / classification finches.",
+    notes: "Cheap routing / classification agents.",
   },
 ] as const;
 

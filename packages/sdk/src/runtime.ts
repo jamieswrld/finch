@@ -76,7 +76,7 @@ export async function resolveWalletPolicy(manifest: FinchManifest, fp: Flightpat
 
 function buildSystemPrompt(manifest: FinchManifest): string {
   const lines = [
-    `You are ${manifest.identity.name} ("${manifest.identity.handle}"), a Finch — an autonomous agent on Solana.`,
+    `You are ${manifest.identity.name} ("${manifest.identity.handle}"), an autonomous agent on Yinsi, running on Solana.`,
     manifest.identity.description && `Purpose: ${manifest.identity.description}`,
     manifest.identity.instructions,
     "",
@@ -196,7 +196,7 @@ export class Nest {
 
   async run(input: string): Promise<NestRunResult> {
     if (this.stopped) {
-      return { output: null, steps: [], executions: [], usage: { inputTokens: 0, outputTokens: 0 }, haltedBy: "kill_switch", error: "nest is stopped" };
+      return { output: null, steps: [], executions: [], usage: { inputTokens: 0, outputTokens: 0 }, haltedBy: "kill_switch", error: "agent is stopped" };
     }
 
     const steps: RunStep[] = [];
@@ -230,7 +230,7 @@ export class Nest {
         usage.outputTokens += response.usage.outputTokens;
 
         if (this.stopped) {
-          return { output: null, steps, executions, usage, haltedBy: "kill_switch", error: "nest was stopped mid-run" };
+          return { output: null, steps, executions, usage, haltedBy: "kill_switch", error: "agent was stopped mid-run" };
         }
 
         if (response.toolCalls.length === 0) {

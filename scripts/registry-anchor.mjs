@@ -1,4 +1,4 @@
-// Anchor a finch or nest in the registry: one Memo-program transaction,
+// Anchor an agent or a swarm in the registry: one Memo-program transaction,
 // signed and paid for by the registry authority, whose text is
 //
 //   finch-registry/1 register <kind>:<handle> sha256:<manifest sha256 hex> [<uri>]
@@ -18,6 +18,9 @@
 //
 // Usage:
 //   node scripts/registry-anchor.mjs <finch|nest> <handle> <manifest.json> [uri] [--send]
+//
+// The kind is the registry's id for what is anchored: finch for an agent,
+// nest for a swarm.
 //
 // The hash is SHA-256 over the file's exact bytes, so anchor the same bytes
 // you publish: reformatting the JSON changes the hash.
@@ -55,9 +58,10 @@ const [kind, handle, manifestPath, uri] = args.filter((arg) => arg !== "--send")
 function usage(problem) {
   if (problem) console.error(problem);
   console.error("usage: node scripts/registry-anchor.mjs <finch|nest> <handle> <manifest.json> [uri] [--send]");
+  console.error("       kind: finch = an agent, nest = a swarm (the registry's ids)");
   process.exit(1);
 }
-if (kind !== "finch" && kind !== "nest") usage(`kind must be "finch" or "nest", got ${JSON.stringify(kind)}`);
+if (kind !== "finch" && kind !== "nest") usage(`kind must be "finch" (an agent) or "nest" (a swarm), got ${JSON.stringify(kind)}`);
 if (!handle || !/^[a-z0-9][a-z0-9-]{1,63}$/.test(handle)) usage("handle must be 2-64 lowercase letters, digits and hyphens");
 if (!manifestPath || !existsSync(manifestPath)) usage(`manifest file not found: ${manifestPath ?? "(none given)"}`);
 // Fields are space-separated, so a URI with whitespace would break parsing.

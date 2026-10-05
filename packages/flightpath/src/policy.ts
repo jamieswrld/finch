@@ -190,7 +190,7 @@ export const POLICY_RULES = [
     id: "wallet.mode",
     verdict: "deny",
     when: "The wallet is not in operator mode.",
-    why: "Observer and none-mode finches have no write authority at all. This is the default, so a finch is read-only until you deliberately grant otherwise.",
+    why: "Observer and none-mode agents have no write authority at all. This is the default, so an agent is read-only until you deliberately grant otherwise.",
   },
   {
     id: "instructions.recognized",

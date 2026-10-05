@@ -5,7 +5,7 @@ import { useFetch } from "@/lib/use-fetch";
 /**
  * Ambient telemetry at the edges of the hero.
  *
- * This used to print invented strings — FINCH/00192, NEST 04 SYNC, PING 42ms.
+ * This used to print invented strings — serial numbers, sync states, ping times.
  * Nothing generated them; they were set dressing that looked like data, which
  * is the one thing this project cannot ship. Everything here now comes from
  * /api/activity, and when the protocol has done nothing yet it says what the
@@ -50,8 +50,8 @@ function TopologySketch({ nodes }: { nodes: number }) {
           opacity={index < lit ? 0.85 : 0.4}
         />
       ))}
-      <text x="12" y="112" fontFamily="var(--font-geist-mono), monospace" fontSize="8" fill="#9b9e93" letterSpacing="1">
-        NEST TOPOLOGY
+      <text x="12" y="112" fontFamily="var(--font-geist-mono), monospace" fontSize="8" fill="#9b9e93">
+        swarm topology
       </text>
     </svg>
   );
@@ -65,11 +65,11 @@ export function WorldTelemetry() {
   // Every count is of something that exists and runs; nothing here is a sample.
   const left = data
     ? [
-        `NESTS ${data.counts.nests}`,
-        `FINCHES ${data.counts.finches}`,
-        `RUNS ${data.counts.runs}`,
-        `TASKS ${data.counts.tasks}`,
-        `PROOFS ${data.counts.proofs}`,
+        `swarms ${data.counts.nests}`,
+        `agents ${data.counts.finches}`,
+        `runs ${data.counts.runs}`,
+        `tasks ${data.counts.tasks}`,
+        `proofs ${data.counts.proofs}`,
       ]
     : [];
 
@@ -77,13 +77,13 @@ export function WorldTelemetry() {
     ? data.recent.length > 0
       ? data.recent
           .slice(0, 5)
-          .map((run) => `${run.subject.slice(0, 16).toUpperCase()} ${run.status === "completed" ? "✓" : "·"}`)
+          .map((run) => `${run.subject.slice(0, 16)} ${run.status === "completed" ? "✓" : "·"}`)
       : [
-          `${data.guarantees.policyRules} POLICY RULES`,
-          "DENY BY DEFAULT",
-          "SIMULATE → APPROVE → SIGN",
-          "PROOF/FLIGHT SIGNED",
-          "IDEMPOTENT EXECUTION",
+          `${data.guarantees.policyRules} policy rules`,
+          "deny by default",
+          "simulate → approve → sign",
+          "execution proof signed",
+          "idempotent execution",
         ]
     : [];
 
@@ -101,7 +101,7 @@ export function WorldTelemetry() {
       <div className="absolute right-5 top-1/2 hidden -translate-y-1/2 xl:block">
         <div className="w-[178px] border-l border-line-strong/60 pl-3">
           <p className="font-mono text-[8.5px] text-grey-faint">
-            {data && data.recent.length > 0 ? "recent flights" : "engine"}
+            {data && data.recent.length > 0 ? "recent runs" : "engine"}
           </p>
           <ul className="mt-2 space-y-1.5 font-mono text-[9px] text-grey opacity-80">
             {right.map((line) => (
@@ -110,7 +110,7 @@ export function WorldTelemetry() {
               </li>
             ))}
             <li className="text-ink-soft">
-              <span style={{ animation: "finch-blink 1.2s steps(1) infinite" }}>▮</span>
+              <span style={{ animation: "yinsi-blink 1.2s steps(1) infinite" }}>▮</span>
             </li>
           </ul>
         </div>

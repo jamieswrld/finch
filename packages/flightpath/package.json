@@ -2,7 +2,7 @@
   "name": "@finch/flightpath",
   "version": "0.1.0",
   "private": true,
-  "description": "Flightpath — Finch's Solana execution layer. Simulation-first, policy-checked tooling for agents.",
+  "description": "Yinsi's Solana execution layer. Simulation-first, policy-checked tooling for agents.",
   "type": "module",
   "main": "src/index.ts",
   "types": "src/index.ts",

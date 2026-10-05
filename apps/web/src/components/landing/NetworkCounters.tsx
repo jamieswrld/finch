@@ -14,10 +14,10 @@ export function NetworkCounters() {
 
   const counts = state.status === "ready" ? state.data.counts : null;
   const rows: Array<{ label: string; value: string }> = [
-    { label: "registered finches", value: counts ? String(counts.finches) : "—" },
-    { label: "registered nests", value: counts ? String(counts.nests) : "—" },
+    { label: "registered agents", value: counts ? String(counts.finches) : "—" },
+    { label: "registered swarms", value: counts ? String(counts.nests) : "—" },
     { label: "executions", value: counts ? String(counts.executions) : "—" },
-    { label: "proofs of flight", value: counts ? String(counts.proofsOfFlight) : "—" },
+    { label: "execution proofs", value: counts ? String(counts.proofsOfFlight) : "—" },
   ];
 
   return (

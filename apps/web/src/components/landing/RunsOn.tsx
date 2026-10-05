@@ -1,13 +1,13 @@
 import { BrandMark } from "@/components/brand/BrandMark";
 
 /**
- * Infrastructure Finch runs on.
+ * Infrastructure Yinsi runs on.
  *
  * Deliberately short. An exhaustive rail of every provider in the catalog read
  * as noise at the bottom of the hero; a few names that matter reads as a fact.
  *
  * The heading is "infrastructure" — and that word is doing the work. Every
- * name here is software or a network Finch actually uses, which is a
+ * name here is software or a network Yinsi actually uses, which is a
  * checkable claim. A word that implies a relationship would assert one none of
  * them agreed to, so the heading must never drift from "infrastructure".
  */

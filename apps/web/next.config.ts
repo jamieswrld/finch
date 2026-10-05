@@ -54,17 +54,43 @@ const nextConfig: NextConfig = {
   },
 
   async redirects() {
-    // The product lives behind /app. "Flock" was retired as a public noun in
-    // favour of "nest", so the old paths still resolve; treasury UI removed.
+    // The product lives behind /app. Pages were renamed (directory,
+    // playground, swarms); every older path still lands on its successor so
+    // shared links keep working. Treasury UI removed.
     return [
       { source: "/build", destination: "/app/build", permanent: false },
-      { source: "/aviary", destination: "/app/aviary", permanent: false },
-      { source: "/nests", destination: "/app/nests", permanent: false },
-      { source: "/flocks", destination: "/app/nests", permanent: false },
-      { source: "/app/flocks", destination: "/app/nests", permanent: false },
+      { source: "/directory", destination: "/app/directory", permanent: false },
+      { source: "/aviary", destination: "/app/directory", permanent: false },
+      { source: "/app/aviary", destination: "/app/directory", permanent: false },
+      // Two presets were renamed; their old slugs land on the new canonical pages.
+      { source: "/app/:dir(aviary|directory)/courier-finch", destination: "/app/directory/courier", permanent: false },
+      { source: "/app/:dir(aviary|directory)/developer-finch", destination: "/app/directory/developer-agent", permanent: false },
+      { source: "/app/aviary/:slug", destination: "/app/directory/:slug", permanent: false },
+      { source: "/swarms", destination: "/app/swarms", permanent: false },
+      { source: "/nests", destination: "/app/swarms", permanent: false },
+      { source: "/app/nests", destination: "/app/swarms", permanent: false },
+      { source: "/flocks", destination: "/app/swarms", permanent: false },
+      { source: "/app/flocks", destination: "/app/swarms", permanent: false },
+      { source: "/playground", destination: "/app/playground", permanent: false },
+      { source: "/school", destination: "/app/playground", permanent: false },
+      { source: "/app/school", destination: "/app/playground", permanent: false },
       { source: "/treasury", destination: "/", permanent: false },
       { source: "/app/treasury", destination: "/app", permanent: false },
-      { source: "/school", destination: "/app/school", permanent: false },
+    ];
+  },
+
+  async rewrites() {
+    // The API moved to the new names too. Rewrites (not redirects) keep the
+    // old paths answering in place, so existing clients — including POSTs,
+    // which a redirect would turn into GETs — keep working unchanged.
+    return [
+      { source: "/api/nests", destination: "/api/swarms" },
+      { source: "/api/nests/:path*", destination: "/api/swarms/:path*" },
+      { source: "/api/finches", destination: "/api/agents" },
+      { source: "/api/aviary", destination: "/api/directory" },
+      { source: "/api/aviary/:path*", destination: "/api/directory/:path*" },
+      { source: "/api/school/:path*", destination: "/api/playground/:path*" },
+      { source: "/api/hive", destination: "/api/memory" },
     ];
   },
 };

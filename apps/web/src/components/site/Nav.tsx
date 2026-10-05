@@ -3,14 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { FinchGlyph } from "@/components/birds/FinchGlyph";
+import { YinsiLogo } from "@/components/brand/YinsiMark";
 
 const LINKS = [
   { href: "/how-it-works", label: "How it works" },
-  { href: "/app/school", label: "Flight School" },
-  { href: "/app/aviary", label: "Aviary" },
+  { href: "/app/playground", label: "Playground" },
+  { href: "/app/directory", label: "Directory" },
+  { href: "/app/swarms", label: "Swarms" },
   { href: "/app/network", label: "Network" },
-  { href: "/#finch", label: "$FINCH" },
   { href: "/docs", label: "Docs" },
 ];
 
@@ -35,9 +35,8 @@ export function Nav() {
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-bone/95 backdrop-blur-[2px]">
       <div className="container-page flex h-14 items-center gap-6">
-        <Link href="/" className="flex items-center gap-2.5 text-ink" aria-label="Finch — overview">
-          <FinchGlyph size={24} className="text-ink" />
-          <span className="font-sans text-[15px] font-semibold">FINCH</span>
+        <Link href="/" className="flex items-center text-ink" aria-label="Yinsi — overview">
+          <YinsiLogo size={22} textClassName="text-[15px]" />
         </Link>
 
         <nav className="ml-auto hidden items-center gap-1 lg:flex" aria-label="Primary">

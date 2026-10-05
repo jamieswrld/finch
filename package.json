@@ -2,7 +2,7 @@
   "name": "finch",
   "version": "0.1.0",
   "private": true,
-  "description": "FINCH — infrastructure for intelligent systems on Solana.",
+  "description": "Yinsi — infrastructure for intelligent systems on Solana.",
   "workspaces": [
     "apps/*",
     "packages/*"

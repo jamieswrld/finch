@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Yinsi mark v1 — seven nodes on a sheared hex lattice. Ink #191b14 on bone #f4f2ea (or bone on ink); core node in signal green #00c805. -->
+  <g fill="#191b14">
+    <circle cx="12" cy="4.5" r="2.2"/>
+    <circle cx="4.5" cy="12" r="2.2"/>
+    <circle cx="19.5" cy="12" r="2.2"/>
+    <circle cx="12" cy="19.5" r="2.2"/>
+    <circle cx="4.5" cy="4.5" r="1.6"/>
+    <circle cx="19.5" cy="19.5" r="1.6"/>
+  </g>
+  <circle cx="12" cy="12" r="3.2" fill="#00c805"/>
+</svg>

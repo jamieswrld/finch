@@ -43,8 +43,8 @@ export function OneAgentSection() {
   );
 }
 
-// The members and channels of the launch-intelligence preset, as it runs.
-const LAUNCH_SWARM = [
+// An example of a swarm's shape: members and the typed channels between them.
+const EXAMPLE_SWARM = [
   { name: "Launch Scout", out: "launch.target" },
   { name: "Structure Analyst", out: "launch.structure" },
   { name: "Liquidity Analyst", out: "liquidity.profile" },
@@ -63,13 +63,13 @@ export function SwarmSection() {
         />
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.15fr_0.85fr]">
           <figure className="grid-paper overflow-x-auto rounded-xs border border-line bg-bone p-5">
-            <p className="label-mono">Launch Intelligence Swarm</p>
+            <p className="label-mono">example swarm</p>
             <p className="mt-1 max-w-md text-[12px] leading-snug text-grey">
               objective: analyze a Solana token launch — supply and authorities, holders, markets and liquidity,
-              activity — then give a risk verdict.
+              activity — then give a risk verdict. Compose this, or anything else, from the agents in the directory.
             </p>
             <div className="mt-5 flex min-w-[600px] items-stretch gap-0">
-              {LAUNCH_SWARM.map((member, index) => (
+              {EXAMPLE_SWARM.map((member, index) => (
                 <div key={member.name} className="flex items-center">
                   <div className="rounded-xs border border-line bg-bone-raised px-3 py-2.5">
                     <p className="flex items-center gap-1.5 whitespace-nowrap font-mono text-[11px] font-medium text-ink">
@@ -78,7 +78,7 @@ export function SwarmSection() {
                     </p>
                     <p className="mt-1 font-mono text-[9px] text-sage-deep">→ {member.out}</p>
                   </div>
-                  {index < LAUNCH_SWARM.length - 1 && <span className="mx-1.5 font-mono text-[11px] text-sage-deep">→</span>}
+                  {index < EXAMPLE_SWARM.length - 1 && <span className="mx-1.5 font-mono text-[11px] text-sage-deep">→</span>}
                 </div>
               ))}
             </div>
@@ -98,9 +98,9 @@ export function SwarmSection() {
               )}
             </ul>
             <div className="mt-6 flex flex-wrap gap-3">
-              <ButtonLink href="/app/swarms?preset=launch-intelligence">Try this swarm</ButtonLink>
-              <ButtonLink href="/app/swarms" variant="secondary">
-                View flow
+              <ButtonLink href="/app/swarms">Compose a swarm</ButtonLink>
+              <ButtonLink href="/app/directory" variant="secondary">
+                Browse agents
               </ButtonLink>
             </div>
           </div>

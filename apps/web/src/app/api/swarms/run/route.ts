@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 /**
- * POST /api/swarms/run — execute a preset swarm in PREVIEW mode, streaming every
+ * POST /api/swarms/run — execute a swarm (a built-in by id, or a submitted manifest) in PREVIEW mode, streaming every
  * task transition as Server-Sent Events.
  *
  * SSE (not polling) because a nest run is a long-lived sequence of discrete

@@ -6,6 +6,16 @@
 // Usage: node scripts/verify-prod.mjs   (FINCH_BASE overrides the default)
 import { generateKeyPair, getAddressFromPublicKey, getBase58Decoder } from "@solana/kit";
 
+// No swarm ships built in; this one-task swarm runs a playground agent by reference.
+const HEALTH_SWARM = {
+  schema: "nest.manifest/0.1",
+  identity: { id: "health-check", name: "Health check", objective: "one-line chain pulse", description: "" },
+  coordinator: { model: { provider: "hyperbolic", model: "meta-llama/Llama-3.3-70B-Instruct" }, instructions: "Report the result in one line.", synthesize: false },
+  finches: [{ handle: "chain-pulse", ref: "registry" }],
+  tasks: [{ id: "t1", finch: "chain-pulse", title: "Chain pulse", instruction: "Report current Solana network status in one line.", dependsOn: [], outputChannel: "chain.pulse" }],
+  executionPolicy: { mode: "preview", maxParallel: 1, maxTotalTokens: 20000, maxTaskFailures: 1, taskTimeoutMs: 90000 },
+};
+
 const BASE = (process.env.FINCH_BASE ?? "https://finch1.vercel.app").replace(/\/$/, "");
 const j = async (path, init) => {
   const r = await fetch(BASE + path, init);
@@ -37,7 +47,7 @@ console.log(`keys (unverifiable signature) -> ${bogus.status} ${bogus.body.error
 const activity = await j("/api/activity");
 console.log(`activity -> ${activity.status} ${JSON.stringify(activity.body.counts ?? activity.body).slice(0, 120)} provenance=${activity.body.runsProvenance ?? activity.body.provenance?.runs ?? "?"}`);
 
-const run = await fetch(BASE + "/api/swarms/run", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ nest: "chain-intelligence", objective: "one-line chain pulse", signer: address }) });
+const run = await fetch(BASE + "/api/swarms/run", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ manifest: HEALTH_SWARM, objective: "one-line chain pulse", signer: address }) });
 console.log(`swarms/run -> ${run.status} ${run.headers.get("content-type")}`);
 if (run.ok && run.body) {
   const reader = run.body.getReader();

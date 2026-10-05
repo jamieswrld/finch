@@ -1,3 +1,13 @@
+
+// No swarm ships built in; this one-task swarm runs a playground agent by reference.
+const HEALTH_SWARM = {
+  schema: "nest.manifest/0.1",
+  identity: { id: "health-check", name: "Health check", objective: "one-line chain pulse", description: "" },
+  coordinator: { model: { provider: "hyperbolic", model: "meta-llama/Llama-3.3-70B-Instruct" }, instructions: "Report the result in one line.", synthesize: false },
+  finches: [{ handle: "chain-pulse", ref: "registry" }],
+  tasks: [{ id: "t1", finch: "chain-pulse", title: "Chain pulse", instruction: "Report current Solana network status in one line.", dependsOn: [], outputChannel: "chain.pulse" }],
+  executionPolicy: { mode: "preview", maxParallel: 1, maxTotalTokens: 20000, maxTaskFailures: 1, taskTimeoutMs: 90000 },
+};
 // What a visitor actually experiences on the deployed site, checked from the
 // outside: every page, every read API, one real read-only agent run, one real
 // swarm run to completion. Reports status, timing and the first error text.
@@ -60,8 +70,8 @@ await api("/api/registry", (b) => `configured=${b.configured} authority=${b.auth
 {
   const started = Date.now();
   try {
-    const r = await fetch(BASE + "/api/swarms/run", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ nest: "chain-intelligence", objective: "one-line chain pulse" }) });
-    console.log(`run  swarm chain-intel    ${r.status} ${r.headers.get("content-type")}`);
+    const r = await fetch(BASE + "/api/swarms/run", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ manifest: HEALTH_SWARM, objective: "one-line chain pulse" }) });
+    console.log(`run  swarm health-check   ${r.status} ${r.headers.get("content-type")}`);
     if (r.ok && r.body) {
       const reader = r.body.getReader(); const dec = new TextDecoder();
       let buf = "", done = false; const statuses = {}; let errors = []; let finished = null;
@@ -85,6 +95,6 @@ await api("/api/registry", (b) => `configured=${b.configured} authority=${b.auth
       console.log(`     ${ms(started)} tasks=${JSON.stringify(statuses)} finished=${finished ? (finished.status ?? finished.run?.status ?? "yes") : "NO (timeout or stream ended)"}`);
       for (const e of errors.slice(0, 6)) console.log(`     !! ${e}`);
     }
-  } catch (e) { console.log(`run  swarm chain-intel    FAILED ${e.message}`); }
+  } catch (e) { console.log(`run  swarm health-check   FAILED ${e.message}`); }
 }
 console.log(`total ${ms(t0)}`);

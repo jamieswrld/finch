@@ -127,7 +127,7 @@ for (const trigger of manifest.triggers) {
 const PROOF_SHAPE = `{
   "version":       "proof-of-flight/0.2",
   "finchId":       "execution-agent",       // which agent acted
-  "nestId":        "launch-intelligence",   // set when it came from a swarm task
+  "nestId":        "my-swarm",              // set when it came from a swarm task
   "taskId":        "t4",
   "action":        "transfer.native",
   "summary":       "transfer 0.01 SOL → <recipient>",
@@ -186,7 +186,7 @@ GET /api/executions/exec_…`;
 const PROOF_USAGE = `import { buildProofOfFlight, verifyProofOfFlight } from "@finch/flightpath";
 
 // record is the ExecutionRecord returned by any execution-layer write
-const proof = await buildProofOfFlight(record, { nestId: "launch-intelligence", taskId: "t4" });
+const proof = await buildProofOfFlight(record, { nestId: "my-swarm", taskId: "t4" });
 
 const { valid, expectedHash } = await verifyProofOfFlight(proof);
 // valid === false for any edited field`;
@@ -553,11 +553,11 @@ export default function DocsPage() {
             log: it accepts only <strong className="font-semibold text-ink">observations with provenance</strong> —
             which run, which swarm, which agent, which channel, and the address the finding is about. An agent
             recalling a prior finding sees it labelled exactly that way,{" "}
-            <code className="font-mono text-[12.5px]">[prior finding · launch-intelligence · 3h ago · unverified]</code>,
+            <code className="font-mono text-[12.5px]">[prior finding · my-swarm · 3h ago · unverified]</code>,
             so it can build on it without mistaking it for something it verified itself.
           </P>
           <P>
-            Only the network&apos;s builtin swarms write to shared memory today; published swarms read from it. The subject
+            Built-in swarms write to shared memory and every swarm reads from it; none ship right now, so what it holds is what earlier runs found. The subject
             of a finding is the first address in the objective, so a token due-diligence run and a wallet analysis of
             the same mint meet in the same place.{" "}
             <code className="font-mono text-[12.5px]">GET /api/memory</code> shows what shared memory holds, with the

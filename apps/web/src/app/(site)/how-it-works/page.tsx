@@ -91,7 +91,7 @@ const AGENT_JSON = `{
 
 const SWARM_JSON = `{
   "schema": "nest.manifest/0.1",
-  "identity": { "id": "chain-intelligence",
+  "identity": { "id": "chain-check",
                 "objective": "Assess the current state and health of Solana, and explain what it means for agents executing there." },
   "coordinator": { "model": {…}, "synthesize": true },
   "finches": [ { "handle": "network-scout", "manifest": { …a full agent manifest… } }, … ],
@@ -154,7 +154,7 @@ export default function HowItWorksPage() {
               executes it. The document is the agent: you can read it, diff it, fork it, publish it, and run it
               somewhere else. Nothing about an agent requires this website to exist.
             </P>
-            <CodeBlock title="a real agent — the Network Scout that runs in the Chain Intelligence swarm" code={AGENT_JSON} />
+            <CodeBlock title="an agent manifest — a network scout" code={AGENT_JSON} />
             <P>
               Launching resolves that document against live infrastructure and returns a bound runtime. The loop is
               deliberately small: recall memory, call the model with the declared tools, execute any tool calls,
@@ -179,7 +179,7 @@ export default function HowItWorksPage() {
               with <Mono>{"{{channel}}"}</Mono>, and the coordinator substitutes the producing task's real output before
               the agent ever sees it.
             </P>
-            <CodeBlock title="swarm manifest (nest.manifest/0.1) — abbreviated, from the Chain Intelligence swarm" code={SWARM_JSON} />
+            <CodeBlock title="swarm manifest (nest.manifest/0.1) — abbreviated example" code={SWARM_JSON} />
             <SwarmSchedulerDiagram />
             <P>
               The scheduler is plain topological execution: validate the graph (unknown agent, unknown dependency,

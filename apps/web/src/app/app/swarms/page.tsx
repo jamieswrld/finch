@@ -7,7 +7,7 @@ import { NEST_PRESETS } from "@/lib/nest-presets";
 export const metadata: Metadata = {
   title: "Swarms",
   description:
-    "A swarm is a coordinated group of agents around one objective. Run a real preset swarm and watch it coordinate task by task, or compose your own.",
+    "A swarm is a coordinated group of agents around one objective. Compose one from the agents in the directory and run it task by task.",
 };
 
 export default function SwarmsPage() {
@@ -23,8 +23,9 @@ export default function SwarmsPage() {
         </h1>
         <p className="mt-4 text-[14.5px] leading-relaxed text-ink-soft">
           A swarm aligns many specialized agents to one objective through a task graph: each task names its agent, its
-          dependencies and the typed channel it publishes on. Run one below and watch it coordinate — every task shows
-          the exact input its agent received, what it returned, what it cost, and which tools it called.
+          dependencies and the typed channel it publishes on. Compose one below from the agents in the directory and run
+          it — every task shows the exact input its agent received, what it returned, what it cost, and which tools it
+          called.
         </p>
       </header>
       <div className="mt-8">

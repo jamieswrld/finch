@@ -10,6 +10,16 @@
 import { generateKeyPair, getAddressFromPublicKey, getBase58Decoder, signBytes } from "@solana/kit";
 import { keyMessage } from "../apps/web/src/lib/key-message.ts";
 
+// No swarm ships built in; this one-task swarm runs a playground agent by reference.
+const HEALTH_SWARM = {
+  schema: "nest.manifest/0.1",
+  identity: { id: "health-check", name: "Health check", objective: "one-line chain pulse", description: "" },
+  coordinator: { model: { provider: "hyperbolic", model: "meta-llama/Llama-3.3-70B-Instruct" }, instructions: "Report the result in one line.", synthesize: false },
+  finches: [{ handle: "chain-pulse", ref: "registry" }],
+  tasks: [{ id: "t1", finch: "chain-pulse", title: "Chain pulse", instruction: "Report current Solana network status in one line.", dependsOn: [], outputChannel: "chain.pulse" }],
+  executionPolicy: { mode: "preview", maxParallel: 1, maxTotalTokens: 20000, maxTaskFailures: 1, taskTimeoutMs: 90000 },
+};
+
 const BASE = process.env.FINCH_BASE ?? "http://127.0.0.1:3100";
 const j = async (path, init) => {
   const r = await fetch(BASE + path, init);
@@ -52,7 +62,7 @@ const anon = await j("/api/directory", { method: "POST", headers: { "content-typ
 console.log("directory publish (no key) ->", anon.status, anon.body.error ?? "");
 
 // swarm run with a signer on a read-only swarm: signing must report "none"
-const run = await fetch(BASE + "/api/swarms/run", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ nest: "chain-intelligence", objective: "one-line chain pulse", signer: address }) });
+const run = await fetch(BASE + "/api/swarms/run", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ manifest: HEALTH_SWARM, objective: "one-line chain pulse", signer: address }) });
 const reader = run.body.getReader();
 const decoder = new TextDecoder();
 let buf = "", config = null, started = Date.now();

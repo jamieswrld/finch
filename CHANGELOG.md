@@ -2,6 +2,15 @@
 
 Plain record of what changed, what was broken, and what fixed it. Dates are UTC.
 
+## v0.6.1 — 2026-10-04 — No built-in swarms
+
+The six preset swarms are removed. Swarms are composed by the people using Yinsi, in the swarm composer or as a submitted manifest, and run through the same runtime.
+
+- **The swarms page opens on the composer**; the directory, the network counts and `/api/swarms/presets` now list no built-in swarms. A run request naming a removed preset by id gets a 404 that says the swarm is unknown.
+- **The home page** shows the shape of a swarm as an example and links to the composer.
+- **Agents are unchanged**: every playground agent stays and can be composed into a swarm by reference.
+- `scripts/health-sweep.mjs`, `verify-local.mjs` and `verify-prod.mjs` submit a one-task swarm built from the `chain-pulse` agent instead of calling a preset.
+
 ## v0.6.0 — 2026-10-04 — Yinsi
 
 The product is now Yinsi, and everything a person reads uses plain words: agents and swarms. How agents run, what they may touch and how writes are checked do not change.

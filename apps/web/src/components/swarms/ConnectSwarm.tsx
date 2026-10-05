@@ -109,7 +109,7 @@ export function ConnectSwarm({ manifest, origin }: { manifest: NestManifest; ori
           <Snippet label="run a swarm you wrote yourself" code={own} />
 
           <p className="max-w-2xl text-[12px] leading-relaxed text-grey-faint">
-            No key needed — builtin swarms and your own manifests both run as-is. A manifest is capped at 8 agents and
+            No key needed — swarm manifests run as-is. A manifest is capped at 8 agents and
             12 tasks per request. Every run is read-only unless you supply a signer: observer wallet, writes denied by
             policy.
           </p>

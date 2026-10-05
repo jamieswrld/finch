@@ -13,11 +13,14 @@ import { SwarmRunner } from "./SwarmRunner";
  */
 export function SwarmsWorkbench({ presets }: { presets: NestManifest[] }) {
   const params = useSearchParams();
+  // With no built-in swarms there is nothing to run here yet: Compose is the
+  // only mode, rather than a Run tab that opens onto nothing.
+  const hasPresets = presets.length > 0;
   // "compose →" and "add to swarm" both land here meaning the Compose view.
   // `finch` is the query name older links used for a carried agent; still honoured.
   // Opening Run instead silently discarded what the user asked for.
   const [tab, setTab] = useState<"run" | "compose">(() =>
-    params.get("tab") === "compose" || params.get("agent") || params.get("finch") ? "compose" : "run",
+    !hasPresets || params.get("tab") === "compose" || params.get("agent") || params.get("finch") ? "compose" : "run",
   );
   // Honour ?preset= so "Try this swarm" opens the swarm it named, rather than
   // silently landing on whichever preset happens to be first.
@@ -37,7 +40,7 @@ export function SwarmsWorkbench({ presets }: { presets: NestManifest[] }) {
               { key: "run", label: "Run" },
               { key: "compose", label: "Compose" },
             ] as const
-          ).map((entry) => (
+          ).filter((entry) => hasPresets || entry.key === "compose").map((entry) => (
             <button
               key={entry.key}
               type="button"
